@@ -84,7 +84,7 @@ struct ftp_repo {
 int getosreldate(void);
 
 static struct pkg *ftp_get_pkg(struct pkg_repo *, const char *);
-static int ftp_free(struct pkg_object *);
+static int ftp_free(struct pkg_repo *);
 
 //static int pkg_in_All(const char *);
 static int pkg_name_has_extension(const char *);
@@ -260,12 +260,10 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
  * Free the struct ftp_repo
  */
 static int
-ftp_free(struct pkg_object *obj)
+ftp_free(struct pkg_repo *repo)
 {
-	struct pkg_repo *repo;
 	struct ftp_repo *f_repo;
 
-	repo = (struct pkg_repo *)obj;
 	if (!repo) {
 		pkg_error_set(&pkg_null, "No package repo specified");
 		return PKG_FAIL;

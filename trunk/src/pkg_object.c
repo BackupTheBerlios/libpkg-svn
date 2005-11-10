@@ -27,55 +27,14 @@
  *
  */
 
-#ifndef __LIBPKG_PKG_PRIVATE_H__
-#define __LIBPKG_PKG_PRIVATE_H__
+#include "pkg.h"
+#include "pkg_private.h"
 
-#include <archive.h>
+int
+pkg_object_free(struct pkg_object *obj)
+{
+	if (obj->free)
+		obj->free(obj);
 
-int archive_read_open_stream(struct archive *, FILE *, size_t);
-
-struct pkg_file {
-	struct pkg_object	 pkg_object;
-
-	char		*filename;
-	uint64_t	 len;
-	char		*contents;
-	struct stat	*stat;
-};
-
-struct pkg_list {
-	struct pkg_object	 pkg_object;
-
-	struct pkg_list		*next;
-	struct pkg_object	*obj;
-};
-
-struct pkg {
-	struct pkg_object	 pkg_object;
-
-	char	*pkg_name;
-	pkg_get_control_files_callback	*pkg_get_control_files;
-	pkg_get_next_file_callback	*pkg_get_next_file;
-	pkg_free_callback		*pkg_free;
-};
-
-struct pkg_db {
-	struct pkg_object	 pkg_object;
-
-	char	*db_base;
-
-	pkg_db_install_pkg_callback	*pkg_install;
-	pkg_db_is_installed_callback	*pkg_is_installed;
-};
-
-struct pkg_repo {
-	struct pkg_object	 pkg_object;
-
-	pkg_repo_get_pkg_callback	*pkg_get;
-	pkg_repo_free_callback		*pkg_free;
-};
-
-int pkg_dir_build(const char *);
-int pkg_checksum_md5(struct pkg_file *, char *);
-
-#endif /* __LIBPKG_PKG_PRIVATE_H__ */
+	return PKG_OK;
+}

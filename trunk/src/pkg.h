@@ -48,16 +48,19 @@
  */
 struct pkg_object;
 
-typedef int	pkg_free_callback(struct pkg_object *);
+/* This is used to call the individual callback */
+typedef int	pkg_object_free_callback(struct pkg_object *);
 
 /* This must be the first item in child structs so we know where it is. */
 struct pkg_object {
 	/* The Error string for the user */
-	char			*error_str;
+	char				*error_str;
 	/* Object internal data */
-	void			*data;
-	pkg_free_callback	*free;
+	void				*data;
+	pkg_object_free_callback	*free;
 };
+
+int	pkg_object_free(struct pkg_object *);
 
 /* This is the struct to read the error from when NULL is returned */
 extern struct pkg_object pkg_null;
@@ -75,21 +78,18 @@ struct pkg_file	*pkg_file_new_from_buffer(const char *, uint64_t, char *,
 int		 pkg_file_free(struct pkg_file *);
 int		 pkg_file_write(struct pkg_file *);
 
-struct pkg_file_list;
-
-struct pkg_file_list	*pkg_file_list_add(struct pkg_file_list *,
-				struct pkg_file *);
-struct pkg_file		*pkg_file_list_get_file(struct pkg_file_list *,
+struct pkg_list	*pkg_file_list_add(struct pkg_list *, struct pkg_file *);
+struct pkg_file	*pkg_file_list_get_file(struct pkg_list *,
 				const char *);
-int			 pkg_file_list_free(struct pkg_file_list *);
 
 /*
  * The package handling functions
  */
 struct pkg;
 
-typedef struct pkg_file_list	*pkg_get_control_files_callback(struct pkg *);
-typedef struct pkg_file		*pkg_get_next_file_callback(struct pkg *);
+typedef struct pkg_list	*pkg_get_control_files_callback(struct pkg *);
+typedef struct pkg_file	*pkg_get_next_file_callback(struct pkg *);
+typedef int		 pkg_free_callback(struct pkg *);
 
 struct pkg		*pkg_new(const char *,
 				pkg_get_control_files_callback *,
@@ -109,10 +109,10 @@ int		 pkg_list_free(struct pkg_list *);
  * Returns all control files from the package
  * Eg. +CONTENTS from FreeBSD Packages
  */
-struct pkg_file_list	*pkg_get_control_files(struct pkg *);
+struct pkg_list	*pkg_get_control_files(struct pkg *);
 /* Returns the next non-control file */
-struct pkg_file		*pkg_get_next_file(struct pkg *);
-int			 pkg_free(struct pkg *);
+struct pkg_file	*pkg_get_next_file(struct pkg *);
+int		 pkg_free(struct pkg *);
 
 /*
  * A place to install packages to and uninstall packages from
@@ -139,9 +139,10 @@ typedef int	 pkg_repo_mark_callback(struct pkg_repo *, const char *);
 typedef int	 pkg_repo_unmark_callback(struct pkg_repo *, const char *);
 typedef int	 pkg_repo_install_callback(struct pkg_repo *, struct pkg_db *);
 typedef struct pkg *pkg_repo_get_pkg_callback(struct pkg_repo *, const char *);
+typedef int	 pkg_repo_free_callback(struct pkg_repo *);
 
 struct pkg_repo	*pkg_repo_new(pkg_repo_get_pkg_callback *,
-			pkg_free_callback *);
+			pkg_repo_free_callback *);
 struct pkg_repo	*pkg_repo_new_files(void);
 struct pkg_repo	*pkg_repo_new_ftp(const char *, const char *);
 struct pkg	*pkg_repo_get_pkg(struct pkg_repo *, const char *);

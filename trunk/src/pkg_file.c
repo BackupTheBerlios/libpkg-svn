@@ -34,6 +34,8 @@
 #include "pkg.h"
 #include "pkg_private.h"
 
+static int file_free(struct pkg_object *obj);
+
 /*
  * Creates a new pkg_file from a buffer
  */
@@ -70,7 +72,9 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 	file->len = length;
 	file->contents = buffer;
 
+	file->pkg_object.data = NULL;
 	file->pkg_object.error_str = NULL;
+	file->pkg_object.free = file_free;
 
 	return file;
 }
@@ -98,6 +102,13 @@ pkg_file_free(struct pkg_file *file)
 	free(file);
 
 	return PKG_OK;
+}
+
+/* A callback for pkg_object_free */
+static int
+file_free(struct pkg_object *obj)
+{
+	return pkg_file_free((struct pkg_file *)obj);
 }
 
 /* Writes a file to the filesystem */
@@ -169,9 +180,11 @@ pkg_file_write(struct pkg_file *file)
 /*
  * Adds a file to the head of a list
  */
-struct pkg_file_list *
-pkg_file_list_add(struct pkg_file_list *list, struct pkg_file *file)
+struct pkg_list *
+pkg_file_list_add(struct pkg_list *list, struct pkg_file *file)
 {
+	return pkg_list_add(list, (struct pkg_object *)file);
+	/*
 	struct pkg_file_list *new;
 
 	new = malloc(sizeof(struct pkg_file_list));
@@ -186,15 +199,16 @@ pkg_file_list_add(struct pkg_file_list *list, struct pkg_file *file)
 	new->pkg_object.error_str = NULL;
 
 	return new;
+	*/
 }
 
 /*
  * Finds a file in a list
  */
 struct pkg_file *
-pkg_file_list_get_file(struct pkg_file_list *list, const char *name)
+pkg_file_list_get_file(struct pkg_list *list, const char *name)
 {
-	struct pkg_file_list *cur;
+	struct pkg_list *cur;
 
 	if (!list) {
 		pkg_error_set(&pkg_null, "No file list specified");
@@ -209,37 +223,10 @@ pkg_file_list_get_file(struct pkg_file_list *list, const char *name)
 	cur = list;
 
 	while (cur) {
-		if (!strcmp(cur->file->filename, name))
-			return cur->file;
+		if (!strcmp(((struct pkg_file *)cur->obj)->filename, name))
+			return (struct pkg_file *)cur->obj;
 
 		cur = cur->next;
 	}
 	return NULL;
-}
-
-/*
- * Frees a file list
- */
-int
-pkg_file_list_free(struct pkg_file_list *list)
-{
-	struct pkg_file_list *current;
-
-	current = list;
-
-	while(current) {
-		struct pkg_file_list *next;
-
-		next = current->next;
-		pkg_file_free(current->file);
-		if (current->pkg_object.error_str) {
-			free(current->pkg_object.error_str);
-			current->pkg_object.error_str = NULL;
-		}
-		free(current);
-
-		current = next;
-	}
-
-	return PKG_OK;
 }

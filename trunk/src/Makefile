@@ -18,7 +18,7 @@ SRCS+=	pkg_db.c pkg_db_freebsd.c
 SRCS+=	pkg_repo.c pkg_repo_files.c pkg_repo_ftp.c
 
 # Misc functions
-SRCS+=	pkg_error.c pkg_util.c pkg_list.c
+SRCS+=	pkg_object.c pkg_error.c pkg_util.c pkg_list.c
 
 INC=	pkg.h
 

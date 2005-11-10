@@ -88,7 +88,7 @@ static int
 freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 {
 	struct pkg_file	*contents_file;
-	struct pkg_file_list *control;
+	struct pkg_list *control;
 	struct pkg_freebsd_contents *contents;
 	char *cwd;
 	char *directory, *last_file;
@@ -108,7 +108,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	contents_file = pkg_file_list_get_file(control, "+CONTENTS");
 	if (!contents_file) {
 		char *str;
-		pkg_file_list_free(control);
+		pkg_list_free(control);
 		str = pkg_error_string(&pkg_null);
 		pkg_error_set((struct pkg_object *)db, str);
 		return PKG_FAIL;
@@ -117,7 +117,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	contents = pkg_freebsd_contents_new(contents_file->contents);
 	if (!contents) {
 		char *str;
-		pkg_file_list_free(control);
+		pkg_list_free(control);
 		str = pkg_error_string(&pkg_null);
 		pkg_error_set((struct pkg_object *)db, str);
 		return PKG_FAIL;
@@ -125,7 +125,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 	cwd = getcwd(NULL, 0);
 	if (!cwd) {
-		pkg_file_list_free(control);
+		pkg_list_free(control);
 		pkg_freebsd_contents_free(contents);
 		pkg_error_set((struct pkg_object *)db, "Get the current working directory");
 		return PKG_FAIL;
@@ -133,7 +133,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 	i = freebsd_check_contents(db, contents);
 	if (i == -1) {
-		pkg_file_list_free(control);
+		pkg_list_free(control);
 		pkg_freebsd_contents_free(contents);
 		chdir(cwd);
 		free(cwd);
@@ -158,7 +158,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			    == PKG_FAIL) {
 				chdir(cwd);
 				free(cwd);
-				pkg_file_list_free(control);
+				pkg_list_free(control);
 				pkg_freebsd_contents_free(contents);
 				return PKG_FAIL;
 			}
@@ -221,7 +221,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			contents_sum++;
 			if (pkg_checksum_md5(file, contents_sum) == PKG_FAIL) {
 				char *str;
-				pkg_file_list_free(control);
+				pkg_list_free(control);
 
 				str = pkg_error_string(
 				    (struct pkg_object *)file);
@@ -237,7 +237,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 				str = pkg_error_string(
 				    (struct pkg_object *)file);
 				pkg_error_set((struct pkg_object *)db, str);
-				pkg_file_list_free(control);
+				pkg_list_free(control);
 				pkg_file_free(file);
 				pkg_freebsd_contents_free(contents);
 				return PKG_FAIL;

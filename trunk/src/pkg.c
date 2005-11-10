@@ -56,15 +56,16 @@ pkg_new(const char *name,
 
 	pkg->pkg_get_control_files = control_files;
 	pkg->pkg_get_next_file = next_file;
-	pkg->pkg_object.free = free_pkg;
+	pkg->pkg_free = free_pkg;
 
 	pkg->pkg_object.data = NULL;
 	pkg->pkg_object.error_str = NULL;
+	pkg->pkg_object.free = NULL;
 
 	return pkg;
 }
 
-struct pkg_file_list *
+struct pkg_list *
 pkg_get_control_files(struct pkg *pkg)
 {
 	if (!pkg) {
@@ -111,8 +112,8 @@ pkg_free(struct pkg *pkg)
 	if (pkg->pkg_name)
 		free(pkg->pkg_name);
 
-	if (pkg->pkg_object.free)
-		pkg->pkg_object.free((struct pkg_object *)pkg);
+	if (pkg->pkg_free)
+		pkg->pkg_free(pkg);
 
 	free(pkg);
 

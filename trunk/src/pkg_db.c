@@ -68,7 +68,9 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	db->pkg_install = install_pkg;
 	db->pkg_is_installed = is_installed;
 
+	db->pkg_object.data = NULL;
 	db->pkg_object.error_str = NULL;
+	db->pkg_object.free = NULL;
 
 	return db;
 }
