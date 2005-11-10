@@ -27,50 +27,22 @@
  *
  */
 
-#include <sys/stat.h>
+#ifndef __LIBPKG_PKG_REPO_PRIVATE_H__
+#define __LIBPKG_PKG_REPO_PRIVATE_H__
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+typedef int	 pkg_repo_mark_callback(struct pkg_repo *, const char *);
+typedef int	 pkg_repo_unmark_callback(struct pkg_repo *, const char *);
+typedef struct pkg *pkg_repo_get_pkg_callback(struct pkg_repo *, const char *);
+typedef int	 pkg_repo_free_callback(struct pkg_repo *);
 
-#include "pkg.h"
-#include "pkg_repo.h"
-#include "pkg_private.h"
-#include "pkg_repo_private.h"
+struct pkg_repo	*pkg_repo_new(pkg_repo_get_pkg_callback *,
+			pkg_repo_free_callback *);
 
-static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
+struct pkg_repo {
+	struct pkg_object	 pkg_object;
 
-/*
- * A repo where local files can be added to be installed
- */
-struct pkg_repo *
-pkg_repo_new_files()
-{
-	return pkg_repo_new(file_get_pkg, NULL);
-}
+	pkg_repo_get_pkg_callback	*pkg_get;
+	pkg_repo_free_callback		*pkg_free;
+};
 
-static struct pkg *
-file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
-{
-	struct pkg *pkg;
-	FILE *fd;
-
-	assert(repo != NULL);
-	assert(pkg_name != NULL);
-
-	/* Open the package file */
-	fd = fopen(pkg_name, "r");
-	if (!fd) {
-		return NULL;
-	}
-
-	/* Create the package */
-	/* XXX auto detect package type */
-	pkg = pkg_new_freebsd(fd);
-	if (!pkg) {
-		fclose(fd);
-		return NULL;
-	}
-
-	return pkg;
-}
+#endif /* __LIBPKG_PKG_REPO_PRIVATE_H__ */

@@ -104,15 +104,4 @@ int		 pkg_db_install_pkg(struct pkg_db *, struct pkg *);
 int		 pkg_db_is_installed(struct pkg_db *, const char *);
 int		 pkg_db_free(struct pkg_db *);
 
-/*
- * A Repo is a store of 0 or more packages.
- * eg. ftp server, cdrom, local directory.
- */
-struct pkg_repo;
-
-struct pkg_repo	*pkg_repo_new_files(void);
-struct pkg_repo	*pkg_repo_new_ftp(const char *, const char *);
-struct pkg	*pkg_repo_get_pkg(struct pkg_repo *, const char *);
-int		 pkg_repo_free(struct pkg_repo *);
-
 #endif /* __LIBPKG_PKG_H__ */

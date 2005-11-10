@@ -30,7 +30,9 @@
 #include <stdlib.h>
 
 #include "pkg.h"
+#include "pkg_repo.h"
 #include "pkg_private.h"
+#include "pkg_repo_private.h"
 
 /*
  * Returns a new package repo

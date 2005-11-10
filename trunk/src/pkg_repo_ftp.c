@@ -39,7 +39,9 @@
 #include <fetch.h>
 
 #include "pkg.h"
+#include "pkg_repo.h"
 #include "pkg_private.h"
+#include "pkg_repo_private.h"
 
 #define MAX_VERSION 9999999
 static struct {

@@ -27,50 +27,18 @@
  *
  */
 
-#include <sys/stat.h>
-
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "pkg.h"
-#include "pkg_repo.h"
-#include "pkg_private.h"
-#include "pkg_repo_private.h"
-
-static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
+#ifndef __LIBPKG_PKG_REPO_H__
+#define __LIBPKG_PKG_REPO_H__
 
 /*
- * A repo where local files can be added to be installed
+ * A Repo is a store of 0 or more packages.
+ * eg. ftp server, cdrom, local directory.
  */
-struct pkg_repo *
-pkg_repo_new_files()
-{
-	return pkg_repo_new(file_get_pkg, NULL);
-}
+struct pkg_repo;
 
-static struct pkg *
-file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
-{
-	struct pkg *pkg;
-	FILE *fd;
+struct pkg_repo	*pkg_repo_new_files(void);
+struct pkg_repo	*pkg_repo_new_ftp(const char *, const char *);
+struct pkg	*pkg_repo_get_pkg(struct pkg_repo *, const char *);
+int		 pkg_repo_free(struct pkg_repo *);
 
-	assert(repo != NULL);
-	assert(pkg_name != NULL);
-
-	/* Open the package file */
-	fd = fopen(pkg_name, "r");
-	if (!fd) {
-		return NULL;
-	}
-
-	/* Create the package */
-	/* XXX auto detect package type */
-	pkg = pkg_new_freebsd(fd);
-	if (!pkg) {
-		fclose(fd);
-		return NULL;
-	}
-
-	return pkg;
-}
+#endif /* __LIBPKG_PKG_REPO_H__ */
