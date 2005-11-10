@@ -60,11 +60,13 @@
 .Fn pkg_error_set "struct pkg_object *obj" "const char *fmt" "..."
 .Ft char *
 .Fn pkg_error_string "struct pkg_object *obj"
+.Ft int
+.Fn pkg_object_free "struct pkg_object *obj"
 .Ft struct pkg *
 .Fn pkg_new "const char *name" "pkg_get_control_files_callback *control_files" "pkg_get_next_file_callback *next_file" "pkg_free_callback *free_pkg"
 .Ft struct pkg *
 .Fn pkg_new_freebsd "FILE *fd"
-.Ft struct pkg_file_list *
+.Ft struct pkg_list *
 .Fn pkg_get_control_files "struct pkg *pkg"
 .Ft struct pkg_file *
 .Fn pkg_get_next_file "struct pkg *pkg"
@@ -90,18 +92,20 @@
 .Fn pkg_db_is_installed "struct pkg_db *db" "const char *package"
 .Ft int
 .Fn pkg_db_free "struct pkg_db *db"
+.Ft struct pkg_list *
+.Fn pkg_list_add "struct pkg_list *list" "struct pkg_object *obj"
+.Ft int
+.Fn pkg_list_free "struct pkg_list *list"
 .Ft struct pkg_file *
 .Fn pkg_file_new_from_buffer "const char *filename" "uint64_t length" "char *buffer" "const struct stat *sb"
 .Ft int
 .Fn pkg_file_write "strict pkg_file *file"
 .Ft int
 .Fn pkg_file_free "struct pkg_file *file"
-.Ft struct pkg_file_list *
-.Fn pkg_file_list_add "struct pkg_file_list *list" "struct pkg_file *file"
+.Ft struct pkg_list *
+.Fn pkg_file_list_add "struct pkg_list *list" "struct pkg_file *file"
 .Ft struct pkg_file *
-.Fn pkg_file_list_get_file "struct pkg_file_list *list" "const char *name"
-.Ft int
-.Fn pkg_file_list_free "struct pkg_file_list *list"
+.Fn pkg_file_list_get_file "struct pkg_list *list" "const char *name"
 .Sh OVERVIEW
 The
 .Nm
@@ -152,7 +156,9 @@ is expected to be the same format as
 .Xr printf 3 .
 .It Fn pkg_error_string
 Retreives the error string as written by
-.Fn pkg_error_set
+.Fn pkg_error_set .
+.It Fn pkg_object_free
+Will free the object pointed to it by obj.
 .El
 .Ss Packages
 A package is represented by a
@@ -267,24 +273,27 @@ to the correct place relative to the current directory.
 Frees a
 .Tn struct pkg_file .
 .El
-.Ss Package File List
-A Package file list contains one or more Package files
+.Ss Package List
+A Package list contains one or more Package Objects
 within the
-.Tn struct pkg_file_list .
-It is a singularly linked list.
+.Tn struct pkg_list .
 .Bl -tag -compact -width indent
+.It Fn pkg_list_add
+Adds a Package Object
+.Vt obj
+to the list pointed at by
+.Vt list .
+If list is NULL it will create a new list.
+.Fn pkg_list_add
+will return the new location of the list as it will change.
+.It Fn pkg_list_free
+Frees the pkg_list and objects contained within it.
 .It Fn pkg_file_list_add
-Returns a new root to a linked list.
-.Vt file
-is the file to be contained in the list.
-.Vt list
-will become the next item in the list.
+Adds a new Package File to a list by calling
+.Fn pkg_list_add .
 .It Fn pkg_file_list_get_file
 Returns the first file named
 .Vt name
 from
-.Vt list .
-.It Fn pkg_file_list_free
-Frees all items in the list with the head at
 .Vt list .
 .El
