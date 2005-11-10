@@ -75,5 +75,5 @@ pkg_list_free(struct pkg_list *list)
 		current = next;
 	}
 
-	return PKG_OK;
+	return 0;
 }

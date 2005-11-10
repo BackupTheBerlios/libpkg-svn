@@ -36,5 +36,5 @@ pkg_object_free(struct pkg_object *obj)
 	if (obj->free)
 		obj->free(obj);
 
-	return PKG_OK;
+	return 0;
 }

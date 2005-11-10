@@ -106,7 +106,7 @@ int
 pkg_free(struct pkg *pkg)
 {
 	if (!pkg) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (pkg->pkg_name)
@@ -117,7 +117,7 @@ pkg_free(struct pkg *pkg)
 
 	free(pkg);
 
-	return PKG_OK;
+	return 0;
 }
 
 static int

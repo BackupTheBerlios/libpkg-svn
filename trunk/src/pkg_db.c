@@ -78,15 +78,15 @@ int
 pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
 {
 	if (!db) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (!pkg) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (!db->pkg_install) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	return db->pkg_install(db, pkg);
@@ -96,11 +96,11 @@ int
 pkg_db_is_installed(struct pkg_db *db, const char *package)
 {
 	if (!db) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (!db->pkg_is_installed) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	return db->pkg_is_installed(db, package);
@@ -110,7 +110,7 @@ int
 pkg_db_free(struct pkg_db *db)
 {
 	if (!db) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (db->db_base)
@@ -118,5 +118,5 @@ pkg_db_free(struct pkg_db *db)
 
 	free(db);
 
-	return PKG_OK;
+	return 0;
 }

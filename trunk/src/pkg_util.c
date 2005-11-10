@@ -55,10 +55,10 @@ pkg_dir_build(const char *path)
 
 	str = strdup(path);
 	if (!str) {
-		return PKG_FAIL;
+		return -1;
 	}
 	p = str;
-	retval = PKG_OK;
+	retval = 0;
 	if (p[0] == '/')		/* Skip leading '/'. */
 		++p;
 	for (last = 0; !last ; ++p) {
@@ -72,18 +72,18 @@ pkg_dir_build(const char *path)
 		if (mkdir(str, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
 			if (errno == EEXIST || errno == EISDIR) {
 				if (stat(str, &sb) < 0) {
-					retval = PKG_FAIL;
+					retval = -1;
 					break;
 				} else if (!S_ISDIR(sb.st_mode)) {
 					if (last)
 						errno = EEXIST;
 					else
 						errno = ENOTDIR;
-					retval = PKG_FAIL;
+					retval = -1;
 					break;
 				}
 			} else {
-				retval = PKG_FAIL;
+				retval = -1;
 				break;
 			}
 		}
@@ -101,17 +101,17 @@ pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
 	char sum[33];
 
 	if (!file) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (!sum) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	/* Perform a checksum on the file to install */
 	MD5Data(file->contents, file->len, sum);
 	if (strcmp(sum, chk_sum)) {
-		return PKG_FAIL;
+		return -1;
 	}
-	return PKG_OK;
+	return 0;
 }

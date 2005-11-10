@@ -35,9 +35,6 @@
 
 #include <stdio.h>	/* FILE */
 
-#define PKG_OK		0    /* Success */
-#define PKG_FAIL	(-1) /* Failed */
-
 /*
  * Generic object for all other objects.
  * It must be named pkg_object

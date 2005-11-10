@@ -82,7 +82,7 @@ int
 pkg_repo_free(struct pkg_repo *repo)
 {
 	if (!repo) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (repo->pkg_free)
@@ -90,5 +90,5 @@ pkg_repo_free(struct pkg_repo *repo)
 
 	free(repo);
 
-	return PKG_OK;
+	return 0;
 }

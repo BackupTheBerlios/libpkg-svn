@@ -100,27 +100,27 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 	control = pkg_get_control_files(pkg);
 	if (!control) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	/* Find the contents file in the control files */
 	contents_file = pkg_file_list_get_file(control, "+CONTENTS");
 	if (!contents_file) {
 		pkg_list_free(control);
-		return PKG_FAIL;
+		return -1;
 	}
 
 	contents = pkg_freebsd_contents_new(contents_file->contents);
 	if (!contents) {
 		pkg_list_free(control);
-		return PKG_FAIL;
+		return -1;
 	}
 
 	cwd = getcwd(NULL, 0);
 	if (!cwd) {
 		pkg_list_free(control);
 		pkg_freebsd_contents_free(contents);
-		return PKG_FAIL;
+		return -1;
 	}
 
 	i = freebsd_check_contents(db, contents);
@@ -129,7 +129,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 		pkg_freebsd_contents_free(contents);
 		chdir(cwd);
 		free(cwd);
-		return PKG_FAIL;
+		return -1;
 	}
 
 	directory = getcwd(NULL, 0);
@@ -147,12 +147,12 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 		case PKG_LINE_CWD:
 			/* Change to the correct directory */
 			if (freebsd_do_cwd(db, pkg, contents->lines[i].data)
-			    == PKG_FAIL) {
+			    != 0) {
 				chdir(cwd);
 				free(cwd);
 				pkg_list_free(control);
 				pkg_freebsd_contents_free(contents);
-				return PKG_FAIL;
+				return -1;
 			}
 
 			free(directory);
@@ -177,12 +177,12 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 				chdir(cwd);
 				free(cwd);
 				pkg_freebsd_contents_free(contents);
-				return PKG_FAIL;
+				return -1;
 			} else if (strncmp("MD5:", contents->lines[i+1].data, 4)) {
 				chdir(cwd);
 				free(cwd);
 				pkg_freebsd_contents_free(contents);
-				return PKG_FAIL;
+				return -1;
 			}
 
 			/* Read the file to install */
@@ -199,23 +199,23 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 				free(cwd);
 				pkg_file_free(file);
 				pkg_freebsd_contents_free(contents);
-				return PKG_FAIL;
+				return -1;
 			}
 
 			contents_sum = strchr(contents->lines[i+1].data, ':');
 			contents_sum++;
-			if (pkg_checksum_md5(file, contents_sum) == PKG_FAIL) {
+			if (pkg_checksum_md5(file, contents_sum) != 0) {
 				pkg_list_free(control);
-				return PKG_FAIL;
+				return -1;
 			}
 
 			/* Install the file */
 			ret = pkg_file_write(file);
-			if (ret == PKG_FAIL) {
+			if (ret != 0) {
 				pkg_list_free(control);
 				pkg_file_free(file);
 				pkg_freebsd_contents_free(contents);
-				return PKG_FAIL;
+				return -1;
 			}
 
 			/* Remember the name if there is an "@exec" line next */
@@ -251,13 +251,12 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 	pkg_freebsd_contents_free(contents);
 
-	return PKG_FAIL;
+	return -1;
 }
 
 /*
- * Returns PKG_YES if the package is installed
- *         PKG_NO on not installed
- *         PKG_FAIL on error
+ * Returns 0 if the package is installed
+ *        -1 otherwise
  */
 static int
 freebsd_is_installed(struct pkg_db *db, const char *package)
@@ -270,26 +269,26 @@ freebsd_is_installed(struct pkg_db *db, const char *package)
 
 	asprintf(&dir, "%s" DB_LOCATION "/%s", db->db_base, package);
 	if (!dir) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	/* Does the package repo directory exist */
 	errno = 0;
 	if (stat(dir, &sb)) {
 		free(dir);
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (!S_ISDIR(sb.st_mode)) {
 		free(dir);
-		return PKG_FAIL;
+		return -1;
 	}
 
 	free(dir);
 
 	/* XXX Check the correct files are there */
 
-	return PKG_OK;
+	return 0;
 }
 
 static int
@@ -308,24 +307,24 @@ freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir) {
 		assert(pkg != NULL); /* pkg is only needed to chdir to . */
 		asprintf(&dir, "%s/var/db/pkg/%s", db->db_base, pkg->pkg_name);
 		if (!dir) {
-			return PKG_FAIL;
+			return -1;
 		}
 		pkg_dir_build(dir);
 	} else {
 		/* Set dir to the correct location */
 		asprintf(&dir, "%s/%s", db->db_base, ndir);
 		if (!dir) {
-			return PKG_FAIL;
+			return -1;
 		}
 	}
 	if (chdir(dir) == -1) {
 		free(dir);
-		return PKG_FAIL;
+		return -1;
 	}
 
 	free(dir);
 
-	return PKG_OK;
+	return 0;
 }
 
 /*
@@ -436,8 +435,8 @@ freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
 		/* If the current line is @chdir... do it */
 		if (contents->lines[i].line_type == PKG_LINE_CWD) {
 			if (freebsd_do_cwd(db, NULL, contents->lines[i].data)
-			    == PKG_FAIL) {
-				return PKG_FAIL;
+			    != 0) {
+				return -1;
 			}
 		}
 		state = new_state;

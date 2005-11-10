@@ -82,7 +82,7 @@ int
 pkg_file_free(struct pkg_file *file)
 {
 	if (!file) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (file->filename)
@@ -96,7 +96,7 @@ pkg_file_free(struct pkg_file *file)
 
 	free(file);
 
-	return PKG_OK;
+	return 0;
 }
 
 /* A callback for pkg_object_free */
@@ -115,13 +115,13 @@ pkg_file_write(struct pkg_file *file)
 	struct stat sb;
 
 	if (!file) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (file->stat) {
 		/* Check the file to be written is regular */
 		if (!S_ISREG(file->stat->st_mode)) {
-			return PKG_FAIL;
+			return -1;
 		}
 	}
 
@@ -138,18 +138,18 @@ pkg_file_write(struct pkg_file *file)
 		pkg_dir_build(dir_name);
 		fd = fopen(file->filename, "a");
 		if (fd == NULL) {
-			return PKG_FAIL;
+			return -1;
 		}
 	}
 	/* Check the file we just created is a regular file */
 	fstat(fileno(fd), &sb);
 	if (!S_ISREG(sb.st_mode)) {
 		fclose(fd);
-		return PKG_FAIL;
+		return -1;
 	} else if (sb.st_size > 0) {
 		/* And the file is empty */
 		fclose(fd);
-		return PKG_FAIL;
+		return -1;
 	}
 
 	/* Write the file to disk */
@@ -162,7 +162,7 @@ pkg_file_write(struct pkg_file *file)
 
 	fclose(fd);
 
-	return PKG_OK;
+	return 0;
 }
 
 /*

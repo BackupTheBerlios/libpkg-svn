@@ -149,7 +149,7 @@ int
 pkg_freebsd_contents_free(struct pkg_freebsd_contents *contents)
 {
 	if (!contents) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	if (contents->file)
@@ -160,5 +160,5 @@ pkg_freebsd_contents_free(struct pkg_freebsd_contents *contents)
 
 	free(contents);
 
-	return PKG_OK;
+	return 0;
 }

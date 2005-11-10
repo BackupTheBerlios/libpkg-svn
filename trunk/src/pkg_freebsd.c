@@ -174,7 +174,7 @@ freebsd_free(struct pkg *pkg)
 
 	freebsd_free_package(pkg->pkg_object.data);
 
-	return PKG_OK;
+	return 0;
 }
 
 static struct pkg_file *
@@ -266,7 +266,7 @@ freebsd_free_package(struct freebsd_package *f_pkg)
 
 	free(f_pkg);
 
-	return PKG_OK;
+	return 0;
 }
 
 /*

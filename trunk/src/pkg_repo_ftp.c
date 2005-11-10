@@ -247,14 +247,14 @@ ftp_free(struct pkg_repo *repo)
 	struct ftp_repo *f_repo;
 
 	if (!repo) {
-		return PKG_FAIL;
+		return -1;
 	}
 
 	f_repo = repo->pkg_object.data;
 
 	/* If there is no repo we don't need to free it */
 	if (!f_repo)
-		return PKG_OK;
+		return 0;
 
 	if (f_repo->site)
 		free(f_repo->site);
@@ -264,7 +264,7 @@ ftp_free(struct pkg_repo *repo)
 
 	free(f_repo);
 
-	return PKG_OK;
+	return 0;
 }
 
 static int
