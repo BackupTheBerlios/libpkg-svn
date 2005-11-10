@@ -52,7 +52,7 @@ struct pkg_list {
 
 /* Package Object */
 typedef struct pkg_list *pkg_get_dependencies_callback(struct pkg *);
-typedef struct pkg_list	*pkg_get_control_files_callback(struct pkg *);
+typedef struct pkg_file	**pkg_get_control_files_callback(struct pkg *);
 typedef struct pkg_file	*pkg_get_next_file_callback(struct pkg *);
 typedef int		 pkg_free_callback(struct pkg *);
 

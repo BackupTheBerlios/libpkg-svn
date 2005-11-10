@@ -90,11 +90,12 @@ static int
 freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 {
 	struct pkg_file	*contents_file;
-	struct pkg_list *control;
+	struct pkg_file **control;
 	struct pkg_freebsd_contents *contents;
 	char *cwd;
 	char *directory, *last_file;
-	int i = 0; //, state = 0;
+	int i = 0;
+	unsigned int pos;
 
 	assert(pkg != NULL);
 
@@ -104,34 +105,34 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	}
 
 	/* Find the contents file in the control files */
-	contents_file = pkg_file_list_get_file(control, "+CONTENTS");
+	for (pos = 0; control[pos] != NULL; pos++)
+		if (!strcmp(control[pos]->filename, "+CONTENTS"))
+			break;
+	contents_file = control[pos];
 	if (!contents_file) {
-		pkg_list_free(control);
 		return -1;
 	}
 
 	contents = pkg_freebsd_contents_new(contents_file->contents);
 	if (!contents) {
-		pkg_list_free(control);
 		return -1;
 	}
 
 	cwd = getcwd(NULL, 0);
 	if (!cwd) {
-		pkg_list_free(control);
 		pkg_freebsd_contents_free(contents);
 		return -1;
 	}
 
 	i = freebsd_check_contents(db, contents);
 	if (i == -1) {
-		pkg_list_free(control);
 		pkg_freebsd_contents_free(contents);
 		chdir(cwd);
 		free(cwd);
 		return -1;
 	}
 
+	/* directory is used int the processing of +CONTENTS files */
 	directory = getcwd(NULL, 0);
 	last_file = NULL;
 
@@ -146,16 +147,14 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			break;
 		case PKG_LINE_CWD:
 			/* Change to the correct directory */
+			free(directory);
 			if (freebsd_do_cwd(db, pkg, contents->lines[i].data)
 			    != 0) {
 				chdir(cwd);
 				free(cwd);
-				pkg_list_free(control);
 				pkg_freebsd_contents_free(contents);
 				return -1;
 			}
-
-			free(directory);
 			directory = getcwd(NULL, 0);
 			break;
 		case PKG_LINE_EXEC: {
@@ -176,11 +175,13 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			if (contents->lines[i+1].line_type != PKG_LINE_COMMENT) {
 				chdir(cwd);
 				free(cwd);
+				free(directory);
 				pkg_freebsd_contents_free(contents);
 				return -1;
 			} else if (strncmp("MD5:", contents->lines[i+1].data, 4)) {
 				chdir(cwd);
 				free(cwd);
+				free(directory);
 				pkg_freebsd_contents_free(contents);
 				return -1;
 			}
@@ -188,31 +189,46 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			/* Read the file to install */
 			if (contents->lines[i].line[0] == '+') {
 				/* + Files are not fetched with pkg_get_next_file */
-				file = pkg_file_list_get_file(control, contents->lines[i].line);
+				        for (pos = 0; control[pos] != NULL;
+					    pos++) {
+						if (!strcmp(
+						    control[pos]->filename,
+						    contents->lines[i].line))
+							break;
+					}
+					file = control[pos];
 			} else {
 				file = pkg_get_next_file(pkg);
-			}
 
-			/* Check the file name is correct */
-			if (strcmp(file->filename, contents->lines[i].line)) {
-				chdir(cwd);
-				free(cwd);
-				pkg_file_free(file);
-				pkg_freebsd_contents_free(contents);
-				return -1;
+				/* Check the file name is correct */
+				if (strcmp(file->filename,
+				    contents->lines[i].line)) {
+					chdir(cwd);
+					free(cwd);
+					free(directory);
+					pkg_file_free(file);
+					pkg_freebsd_contents_free(contents);
+					return -1;
+				}
 			}
 
 			contents_sum = strchr(contents->lines[i+1].data, ':');
 			contents_sum++;
 			if (pkg_checksum_md5(file, contents_sum) != 0) {
-				pkg_list_free(control);
+				chdir(cwd);
+				free(cwd);
+				free(directory);
+				pkg_file_free(file);
+				pkg_freebsd_contents_free(contents);
 				return -1;
 			}
 
 			/* Install the file */
 			ret = pkg_file_write(file);
 			if (ret != 0) {
-				pkg_list_free(control);
+				chdir(cwd);
+				free(cwd);
+				free(directory);
 				pkg_file_free(file);
 				pkg_freebsd_contents_free(contents);
 				return -1;
@@ -251,7 +267,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 	pkg_freebsd_contents_free(contents);
 
-	return -1;
+	return 0;
 }
 
 /*

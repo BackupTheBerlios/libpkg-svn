@@ -66,7 +66,7 @@ pkg_new(const char *name,
 	return pkg;
 }
 
-struct pkg_list *
+struct pkg_file **
 pkg_get_control_files(struct pkg *pkg)
 {
 	if (!pkg) {

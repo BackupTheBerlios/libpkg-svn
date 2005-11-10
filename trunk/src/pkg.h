@@ -86,7 +86,7 @@ struct pkg_list		*pkg_get_dependencies(struct pkg *);
  * Returns all control files from the package
  * Eg. +CONTENTS from FreeBSD Packages
  */
-struct pkg_list		*pkg_get_control_files(struct pkg *);
+struct pkg_file		**pkg_get_control_files(struct pkg *);
 /* Returns the next non-control file */
 struct pkg_file		*pkg_get_next_file(struct pkg *);
 int			 pkg_free(struct pkg *);
