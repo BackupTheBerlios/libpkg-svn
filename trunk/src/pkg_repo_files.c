@@ -36,7 +36,6 @@
 #include "pkg.h"
 #include "pkg_private.h"
 
-static int files_free(struct pkg_repo *);
 static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
 
 /*
@@ -45,7 +44,7 @@ static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
 struct pkg_repo *
 pkg_repo_new_files()
 {
-	return pkg_repo_new(file_get_pkg, files_free);
+	return pkg_repo_new(file_get_pkg, NULL);
 }
 
 static struct pkg *
@@ -76,13 +75,4 @@ file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	}
 
 	return pkg;
-}
-
-/*
- * Frees the repo's data
- */
-static int
-files_free(struct pkg_repo *repo __unused)
-{
-	return PKG_OK;
 }

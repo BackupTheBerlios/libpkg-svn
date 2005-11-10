@@ -56,8 +56,6 @@ struct pkg {
 	char	*pkg_name;
 	pkg_get_control_files_callback	*pkg_get_control_files;
 	pkg_get_next_file_callback	*pkg_get_next_file;
-	pkg_free_callback		*pkg_free;
-
 };
 
 struct pkg_db {
@@ -73,7 +71,6 @@ struct pkg_repo {
 	struct pkg_object	 pkg_object;
 
 	pkg_repo_get_pkg_callback	*pkg_get;
-	pkg_repo_free_callback		*pkg_free;
 };
 
 int pkg_dir_build(const char *);

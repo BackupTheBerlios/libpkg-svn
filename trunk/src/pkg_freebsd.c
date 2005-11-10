@@ -51,7 +51,7 @@ struct freebsd_package {
 /* Callbacks */
 static struct pkg_file_list	*freebsd_get_control_files(struct pkg *);
 static struct pkg_file		*freebsd_get_next_file(struct pkg *);
-static int			 freebsd_free(struct pkg *);
+static int			 freebsd_free(struct pkg_object *);
 
 /* Internal functions */
 static struct pkg_file		*freebsd_get_next_entry(struct archive *);
@@ -164,9 +164,9 @@ freebsd_get_next_file(struct pkg *pkg)
 }
 
 static int
-freebsd_free(struct pkg *pkg)
+freebsd_free(struct pkg_object *obj)
 {
-
+	struct pkg *pkg = (struct pkg *)obj;
 	assert(pkg != NULL);
 
 	freebsd_free_package(pkg->pkg_object.data);

@@ -37,7 +37,7 @@
  */
 struct pkg_repo *
 pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
-             pkg_repo_free_callback *pfree)
+             pkg_free_callback *pfree)
 {
 	struct pkg_repo *repo;
 
@@ -48,8 +48,8 @@ pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
 	}
 
 	repo->pkg_get = pkg_get;
-	repo->pkg_free = pfree;
-
+	
+	repo->pkg_object.free = pfree;
 	repo->pkg_object.data = NULL;
 	repo->pkg_object.error_str = NULL;
 
@@ -88,8 +88,8 @@ pkg_repo_free(struct pkg_repo *repo)
 		return PKG_FAIL;
 	}
 
-	if (repo->pkg_free)
-		repo->pkg_free(repo);
+	if (repo->pkg_object.free)
+		repo->pkg_object.free((struct pkg_object *)repo);
 
 	if (repo->pkg_object.error_str) {
 		free(repo->pkg_object.error_str);

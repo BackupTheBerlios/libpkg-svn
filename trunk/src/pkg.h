@@ -43,14 +43,20 @@
 #define PKG_FAIL	5 /* Failed */
 
 /*
- * This must be the first item in child structs so we know where it is.
+ * Generic object for all other objects.
+ * It must be named pkg_object
  */
+struct pkg_object;
+
+typedef int	pkg_free_callback(struct pkg_object *);
+
+/* This must be the first item in child structs so we know where it is. */
 struct pkg_object {
 	/* The Error string for the user */
-	char	*error_str;
+	char			*error_str;
 	/* Object internal data */
-	void	*data;
-	char	 pack[2];
+	void			*data;
+	pkg_free_callback	*free;
 };
 
 /* This is the struct to read the error from when NULL is returned */
@@ -84,13 +90,21 @@ struct pkg;
 
 typedef struct pkg_file_list	*pkg_get_control_files_callback(struct pkg *);
 typedef struct pkg_file		*pkg_get_next_file_callback(struct pkg *);
-typedef int			 pkg_free_callback(struct pkg *);
 
 struct pkg		*pkg_new(const char *,
 				pkg_get_control_files_callback *,
 				pkg_get_next_file_callback *,
 				pkg_free_callback *);
 struct pkg		*pkg_new_freebsd(FILE *);
+
+/*
+ * Object to hold a collection of packages in
+ */
+struct pkg_list;
+
+struct pkg_list	*pkg_list_add(struct pkg_list *, struct pkg_object *);
+int		 pkg_list_free(struct pkg_list *);
+
 /*
  * Returns all control files from the package
  * Eg. +CONTENTS from FreeBSD Packages
@@ -125,10 +139,9 @@ typedef int	 pkg_repo_mark_callback(struct pkg_repo *, const char *);
 typedef int	 pkg_repo_unmark_callback(struct pkg_repo *, const char *);
 typedef int	 pkg_repo_install_callback(struct pkg_repo *, struct pkg_db *);
 typedef struct pkg *pkg_repo_get_pkg_callback(struct pkg_repo *, const char *);
-typedef int	 pkg_repo_free_callback(struct pkg_repo *);
 
 struct pkg_repo	*pkg_repo_new(pkg_repo_get_pkg_callback *,
-			pkg_repo_free_callback *);
+			pkg_free_callback *);
 struct pkg_repo	*pkg_repo_new_files(void);
 struct pkg_repo	*pkg_repo_new_ftp(const char *, const char *);
 struct pkg	*pkg_repo_get_pkg(struct pkg_repo *, const char *);
