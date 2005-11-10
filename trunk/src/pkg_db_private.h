@@ -27,96 +27,21 @@
  *
  */
 
-#include <stdlib.h>
-#include <string.h>
+#ifndef __LIBPKG_PKG_DB_PRIVATE_H__
+#define __LIBPKG_PKG_DB_PRIVATE_H__
 
-#include "pkg.h"
-#include "pkg_db.h"
-#include "pkg_private.h"
-#include "pkg_db_private.h"
+typedef int	 pkg_db_install_pkg_callback(struct pkg_db *, struct pkg *);
+typedef int 	 pkg_db_is_installed_callback(struct pkg_db *, const char *);
 
-/*
- * Opens the FreeBSD Package Database
- */
-struct pkg_db*
-pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
-		pkg_db_is_installed_callback *is_installed)
-{
-	struct pkg_db *db;
+struct pkg_db	*pkg_db_open(const char *, pkg_db_install_pkg_callback *,
+			pkg_db_is_installed_callback *);
+struct pkg_db {
+	struct pkg_object	 pkg_object;
 
-	db = malloc(sizeof(struct pkg_db));
-	if (!db) {
-		return NULL;
-	}
+	char	*db_base;
 
-	/* Make a relative path into an absolute path */
-	if (base[0] != '/') {
-		char *cwd;
+	pkg_db_install_pkg_callback	*pkg_install;
+	pkg_db_is_installed_callback	*pkg_is_installed;
+};
 
-		cwd = getcwd(NULL, 0);
-		asprintf(&db->db_base, "%s/%s", cwd, base);
-		free(cwd);
-	} else {
-		db->db_base = strdup(base);
-	}
-
-	if (!db->db_base) {
-		free(db);
-		return NULL;
-	}
-
-	db->pkg_install = install_pkg;
-	db->pkg_is_installed = is_installed;
-
-	db->pkg_object.data = NULL;
-	db->pkg_object.free = NULL;
-
-	return db;
-}
-
-int
-pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
-{
-	if (!db) {
-		return PKG_FAIL;
-	}
-
-	if (!pkg) {
-		return PKG_FAIL;
-	}
-
-	if (!db->pkg_install) {
-		return PKG_FAIL;
-	}
-
-	return db->pkg_install(db, pkg);
-}
-
-int
-pkg_db_is_installed(struct pkg_db *db, const char *package)
-{
-	if (!db) {
-		return PKG_FAIL;
-	}
-
-	if (!db->pkg_is_installed) {
-		return PKG_FAIL;
-	}
-
-	return db->pkg_is_installed(db, package);
-}
-
-int
-pkg_db_free(struct pkg_db *db)
-{
-	if (!db) {
-		return PKG_FAIL;
-	}
-
-	if (db->db_base)
-		free(db->db_base);
-
-	free(db);
-
-	return PKG_OK;
-}
+#endif /* __LIBPKG_PKG_DB_PRIVATE_H__ */

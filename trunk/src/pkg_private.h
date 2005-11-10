@@ -72,20 +72,6 @@ struct pkg {
 	pkg_get_dependencies_callback	*pkg_get_deps;
 };
 
-typedef int	 pkg_db_install_pkg_callback(struct pkg_db *, struct pkg *);
-typedef int 	 pkg_db_is_installed_callback(struct pkg_db *, const char *);
-
-struct pkg_db	*pkg_db_open(const char *, pkg_db_install_pkg_callback *,
-			pkg_db_is_installed_callback *);
-struct pkg_db {
-	struct pkg_object	 pkg_object;
-
-	char	*db_base;
-
-	pkg_db_install_pkg_callback	*pkg_install;
-	pkg_db_is_installed_callback	*pkg_is_installed;
-};
-
 int pkg_dir_build(const char *);
 int pkg_checksum_md5(struct pkg_file *, char *);
 

@@ -94,14 +94,4 @@ struct pkg_list		*pkg_get_control_files(struct pkg *);
 struct pkg_file		*pkg_get_next_file(struct pkg *);
 int			 pkg_free(struct pkg *);
 
-/*
- * A place to install packages to and uninstall packages from
- */
-struct pkg_db;
-
-struct pkg_db	*pkg_db_open_freebsd(const char *);
-int		 pkg_db_install_pkg(struct pkg_db *, struct pkg *);
-int		 pkg_db_is_installed(struct pkg_db *, const char *);
-int		 pkg_db_free(struct pkg_db *);
-
 #endif /* __LIBPKG_PKG_H__ */

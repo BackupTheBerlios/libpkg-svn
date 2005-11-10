@@ -38,8 +38,10 @@
 #include <string.h>
 
 #include "pkg.h"
+#include "pkg_db.h"
 #include "pkg_freebsd.h"
 #include "pkg_private.h"
+#include "pkg_db_private.h"
 #include "pkg_freebsd_private.h"
 
 #define DB_LOCATION	"/var/db/pkg"
