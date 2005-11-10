@@ -98,28 +98,19 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 	control = pkg_get_control_files(pkg);
 	if (!control) {
-		char *str;
-		str = pkg_error_string(&pkg_null);
-		pkg_error_set((struct pkg_object *)db, str);
 		return PKG_FAIL;
 	}
 
 	/* Find the contents file in the control files */
 	contents_file = pkg_file_list_get_file(control, "+CONTENTS");
 	if (!contents_file) {
-		char *str;
 		pkg_list_free(control);
-		str = pkg_error_string(&pkg_null);
-		pkg_error_set((struct pkg_object *)db, str);
 		return PKG_FAIL;
 	}
 
 	contents = pkg_freebsd_contents_new(contents_file->contents);
 	if (!contents) {
-		char *str;
 		pkg_list_free(control);
-		str = pkg_error_string(&pkg_null);
-		pkg_error_set((struct pkg_object *)db, str);
 		return PKG_FAIL;
 	}
 
@@ -127,7 +118,6 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	if (!cwd) {
 		pkg_list_free(control);
 		pkg_freebsd_contents_free(contents);
-		pkg_error_set((struct pkg_object *)db, "Get the current working directory");
 		return PKG_FAIL;
 	}
 
@@ -184,16 +174,11 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			if (contents->lines[i+1].line_type != PKG_LINE_COMMENT) {
 				chdir(cwd);
 				free(cwd);
-				pkg_error_set((struct pkg_object *)db,
-				    "Incorrect line in +CONTENTS file");
 				pkg_freebsd_contents_free(contents);
 				return PKG_FAIL;
 			} else if (strncmp("MD5:", contents->lines[i+1].data, 4)) {
 				chdir(cwd);
 				free(cwd);
-				pkg_error_set((struct pkg_object *)db,
-				    "Incorrect line in +CONTENTS file: "
-				    "Checksum is incorrect");
 				pkg_freebsd_contents_free(contents);
 				return PKG_FAIL;
 			}
@@ -212,31 +197,19 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 				free(cwd);
 				pkg_file_free(file);
 				pkg_freebsd_contents_free(contents);
-				pkg_error_set((struct pkg_object *)file,
-				    "File name incorrect");
 				return PKG_FAIL;
 			}
 
 			contents_sum = strchr(contents->lines[i+1].data, ':');
 			contents_sum++;
 			if (pkg_checksum_md5(file, contents_sum) == PKG_FAIL) {
-				char *str;
 				pkg_list_free(control);
-
-				str = pkg_error_string(
-				    (struct pkg_object *)file);
-				pkg_error_set((struct pkg_object *)db, str);
 				return PKG_FAIL;
 			}
 
 			/* Install the file */
 			ret = pkg_file_write(file);
 			if (ret == PKG_FAIL) {
-				char *str;
-
-				str = pkg_error_string(
-				    (struct pkg_object *)file);
-				pkg_error_set((struct pkg_object *)db, str);
 				pkg_list_free(control);
 				pkg_file_free(file);
 				pkg_freebsd_contents_free(contents);
@@ -276,7 +249,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 	pkg_freebsd_contents_free(contents);
 
-	return PKG_NOTSUP;
+	return PKG_FAIL;
 }
 
 /*
@@ -295,26 +268,17 @@ freebsd_is_installed(struct pkg_db *db, const char *package)
 
 	asprintf(&dir, "%s" DB_LOCATION "/%s", db->db_base, package);
 	if (!dir) {
-		pkg_error_set((struct pkg_object *)db, "Out of Memory");
 		return PKG_FAIL;
 	}
 
+	/* Does the package repo directory exist */
 	errno = 0;
 	if (stat(dir, &sb)) {
-		if (errno == ENOENT || errno == ENOTDIR) {
-			free(dir);
-			return PKG_NO;
-		} else {
-			pkg_error_set((struct pkg_object *)db,
-			    "Error with directory %s", dir);
-			free(dir);
-			return PKG_FAIL;
-		}
+		free(dir);
+		return PKG_FAIL;
 	}
 
 	if (!S_ISDIR(sb.st_mode)) {
-		pkg_error_set((struct pkg_object *)db,
-		    "The file %s exists but it is not a directory", dir);
 		free(dir);
 		return PKG_FAIL;
 	}
@@ -323,7 +287,7 @@ freebsd_is_installed(struct pkg_db *db, const char *package)
 
 	/* XXX Check the correct files are there */
 
-	return PKG_NO;
+	return PKG_OK;
 }
 
 static int
@@ -342,8 +306,6 @@ freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir) {
 		assert(pkg != NULL); /* pkg is only needed to chdir to . */
 		asprintf(&dir, "%s/var/db/pkg/%s", db->db_base, pkg->pkg_name);
 		if (!dir) {
-			pkg_error_set((struct pkg_object *)db,
-			    "Out of Memory");
 			return PKG_FAIL;
 		}
 		pkg_dir_build(dir);
@@ -351,14 +313,10 @@ freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir) {
 		/* Set dir to the correct location */
 		asprintf(&dir, "%s/%s", db->db_base, ndir);
 		if (!dir) {
-			pkg_error_set((struct pkg_object *)db,
-			    "Out of Memory");
 			return PKG_FAIL;
 		}
 	}
 	if (chdir(dir) == -1) {
-		pkg_error_set((struct pkg_object *)db,
-		    "Could not chdir to %s", dir);
 		free(dir);
 		return PKG_FAIL;
 	}
@@ -461,10 +419,8 @@ freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
 	state = 0;
 
 	if (contents->lines[0].line_type != PKG_LINE_COMMENT) {
-		pkg_error_set((struct pkg_object *)db, "Contents file is malformed");
 		return -1;
 	} else if (strcmp(contents->lines[0].data, "PKG_FORMAT_REVISION:1.1")) {
-		pkg_error_set((struct pkg_object *)db, "Contents file is malformed");
 		return -1;
 	}
 
@@ -485,7 +441,6 @@ freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
 		state = new_state;
 	}
 	if (state != 4 && state != 6) {
-		pkg_error_set((struct pkg_object *)db, "Contents file is malformed");
 		return -1;
 	}
 	return i;

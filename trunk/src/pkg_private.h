@@ -50,6 +50,18 @@ struct pkg_list {
 	struct pkg_object	*obj;
 };
 
+/* Package Object */
+typedef struct pkg_list *pkg_get_dependencies_callback(struct pkg *);
+typedef struct pkg_list	*pkg_get_control_files_callback(struct pkg *);
+typedef struct pkg_file	*pkg_get_next_file_callback(struct pkg *);
+typedef int		 pkg_free_callback(struct pkg *);
+
+struct pkg		*pkg_new(const char *,
+				pkg_get_control_files_callback *,
+				pkg_get_next_file_callback *,
+				pkg_get_dependencies_callback *,
+				pkg_free_callback *);
+
 struct pkg {
 	struct pkg_object	 pkg_object;
 
@@ -57,8 +69,14 @@ struct pkg {
 	pkg_get_control_files_callback	*pkg_get_control_files;
 	pkg_get_next_file_callback	*pkg_get_next_file;
 	pkg_free_callback		*pkg_free;
+	pkg_get_dependencies_callback	*pkg_get_deps;
 };
 
+typedef int	 pkg_db_install_pkg_callback(struct pkg_db *, struct pkg *);
+typedef int 	 pkg_db_is_installed_callback(struct pkg_db *, const char *);
+
+struct pkg_db	*pkg_db_open(const char *, pkg_db_install_pkg_callback *,
+			pkg_db_is_installed_callback *);
 struct pkg_db {
 	struct pkg_object	 pkg_object;
 
@@ -67,6 +85,15 @@ struct pkg_db {
 	pkg_db_install_pkg_callback	*pkg_install;
 	pkg_db_is_installed_callback	*pkg_is_installed;
 };
+
+typedef int	 pkg_repo_mark_callback(struct pkg_repo *, const char *);
+typedef int	 pkg_repo_unmark_callback(struct pkg_repo *, const char *);
+typedef int	 pkg_repo_install_callback(struct pkg_repo *, struct pkg_db *);
+typedef struct pkg *pkg_repo_get_pkg_callback(struct pkg_repo *, const char *);
+typedef int	 pkg_repo_free_callback(struct pkg_repo *);
+
+struct pkg_repo	*pkg_repo_new(pkg_repo_get_pkg_callback *,
+			pkg_repo_free_callback *);
 
 struct pkg_repo {
 	struct pkg_object	 pkg_object;

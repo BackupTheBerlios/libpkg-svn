@@ -49,8 +49,9 @@ struct freebsd_package {
 };
 
 /* Callbacks */
-static struct pkg_list	*freebsd_get_control_files(struct pkg *);
+static struct pkg_list		*freebsd_get_control_files(struct pkg *);
 static struct pkg_file		*freebsd_get_next_file(struct pkg *);
+static struct pkg_list		*freebsd_get_deps(struct pkg *pkg);
 static int			 freebsd_free(struct pkg *);
 
 /* Internal functions */
@@ -68,7 +69,6 @@ pkg_new_freebsd(FILE *fd)
 
 	f_pkg = malloc(sizeof(struct freebsd_package));
 	if (!f_pkg) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -84,7 +84,6 @@ pkg_new_freebsd(FILE *fd)
 	if (archive_read_open_stream(f_pkg->archive, fd, 10240)
 	    != ARCHIVE_OK) {
 		freebsd_free_package(f_pkg);
-		pkg_error_set(&pkg_null, "Could not open archive");
 		return NULL;
 	}
 
@@ -98,7 +97,6 @@ pkg_new_freebsd(FILE *fd)
 		/* Package error */
 		pkg_file_free(file);
 		freebsd_free_package(f_pkg);
-		pkg_error_set(&pkg_null, "Package does not start with a +CONTENTS file");
 		return NULL;
 	}
 	f_pkg->control = pkg_file_list_add(f_pkg->control, file);
@@ -120,7 +118,7 @@ pkg_new_freebsd(FILE *fd)
 	}
 
 	pkg = pkg_new(pkg_name, freebsd_get_control_files,
-		freebsd_get_next_file, freebsd_free);
+		freebsd_get_next_file, freebsd_get_deps, freebsd_free);
 
 	free(pkg_name);
 
@@ -163,6 +161,12 @@ freebsd_get_next_file(struct pkg *pkg)
 	return freebsd_get_next_entry(f_pkg->archive);
 }
 
+static struct pkg_list *
+freebsd_get_deps(struct pkg *pkg __unused)
+{
+	return NULL;
+}
+
 static int
 freebsd_free(struct pkg *pkg)
 {
@@ -185,14 +189,12 @@ freebsd_get_next_entry(struct archive *a)
 
 	/* Read the next entry to a buffer. */
 	if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
-		pkg_error_set(&pkg_null, "Could not read next header");
 		return NULL;
 	}
 
 	length = archive_entry_size(entry);
 	str = malloc(length+1);
 	if (!str) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 	archive_read_data_into_buffer(a, str, length);
@@ -215,31 +217,26 @@ freebsd_get_pkg_name(const char *buffer)
 	/* Find the character after the first space on the second line */
 	str = strchr(buffer, '\n');
 	if (!str) {
-		pkg_error_set(&pkg_null, "Malformed +CONTROL file");
 		return NULL;
 	}
 	str = strchr((const char *)str, ' ');
 	if (!str) {
-		pkg_error_set(&pkg_null, "Malformed +CONTROL file");
 		return NULL;
 	}
 	str++;
 	if (str[0] == '\0') {
-		pkg_error_set(&pkg_null, "Malformed +CONTROL file");
 		return NULL;
 	}
 
 	/* Copy the rest of the line to pkg_name */
 	ptr = strchr((const char *)str, '\n');
 	if (!ptr) {
-		pkg_error_set(&pkg_null, "Malformed +CONTROL file");
 		return NULL;
 	}
 
 	len = ptr-str;
 	pkg_name = malloc(len+1);
 	if (!pkg_name) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 

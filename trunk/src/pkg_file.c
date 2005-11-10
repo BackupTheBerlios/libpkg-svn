@@ -47,14 +47,12 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 
 	file = malloc(sizeof(struct pkg_file));
 	if (!file) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
 	file->filename = strdup(filename);
 	if (!file->filename) {
 		free(file);
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 	if (sb == NULL) {
@@ -64,7 +62,6 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 		if (!file->stat) {
 			free(file->filename);
 			free(file);
-			pkg_error_set(&pkg_null, "Out of Memory");
 			return NULL;
 		}
 		memcpy(file->stat, sb, sizeof(struct stat));
@@ -73,7 +70,6 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 	file->contents = buffer;
 
 	file->pkg_object.data = NULL;
-	file->pkg_object.error_str = NULL;
 	file->pkg_object.free = file_free;
 
 	return file;
@@ -86,7 +82,6 @@ int
 pkg_file_free(struct pkg_file *file)
 {
 	if (!file) {
-		pkg_error_set(&pkg_null, "No file specified");
 		return PKG_FAIL;
 	}
 
@@ -120,15 +115,12 @@ pkg_file_write(struct pkg_file *file)
 	struct stat sb;
 
 	if (!file) {
-		pkg_error_set(&pkg_null, "No file specified");
 		return PKG_FAIL;
 	}
 
 	if (file->stat) {
 		/* Check the file to be written is regular */
 		if (!S_ISREG(file->stat->st_mode)) {
-			pkg_error_set((struct pkg_object *)file,
-				    "Can't write a non-regular file");
 			return PKG_FAIL;
 		}
 	}
@@ -146,8 +138,6 @@ pkg_file_write(struct pkg_file *file)
 		pkg_dir_build(dir_name);
 		fd = fopen(file->filename, "a");
 		if (fd == NULL) {
-			pkg_error_set((struct pkg_object *)file,
-			    "Could not create file %s", file->filename);
 			return PKG_FAIL;
 		}
 	}
@@ -155,12 +145,10 @@ pkg_file_write(struct pkg_file *file)
 	fstat(fileno(fd), &sb);
 	if (!S_ISREG(sb.st_mode)) {
 		fclose(fd);
-		pkg_error_set((struct pkg_object *)file, "Not a regular file");
 		return PKG_FAIL;
 	} else if (sb.st_size > 0) {
 		/* And the file is empty */
 		fclose(fd);
-		pkg_error_set((struct pkg_object *)file, "File already exists");
 		return PKG_FAIL;
 	}
 
@@ -184,22 +172,6 @@ struct pkg_list *
 pkg_file_list_add(struct pkg_list *list, struct pkg_file *file)
 {
 	return pkg_list_add(list, (struct pkg_object *)file);
-	/*
-	struct pkg_file_list *new;
-
-	new = malloc(sizeof(struct pkg_file_list));
-	if (!new) {
-		pkg_error_set(&pkg_null, "Out of Memory");
-		return NULL;
-	}
-
-	new->next = list;
-	new->file = file;
-
-	new->pkg_object.error_str = NULL;
-
-	return new;
-	*/
 }
 
 /*
@@ -211,12 +183,10 @@ pkg_file_list_get_file(struct pkg_list *list, const char *name)
 	struct pkg_list *cur;
 
 	if (!list) {
-		pkg_error_set(&pkg_null, "No file list specified");
 		return NULL;
 	}
 
 	if (!name) {
-		pkg_error_set((struct pkg_object *)list, "No name specified");
 		return NULL;
 	}
 

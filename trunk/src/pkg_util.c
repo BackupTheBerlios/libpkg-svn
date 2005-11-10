@@ -55,7 +55,6 @@ pkg_dir_build(const char *path)
 
 	str = strdup(path);
 	if (!str) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return PKG_FAIL;
 	}
 	p = str;
@@ -74,8 +73,6 @@ pkg_dir_build(const char *path)
 			if (errno == EEXIST || errno == EISDIR) {
 				if (stat(str, &sb) < 0) {
 					retval = PKG_FAIL;
-					pkg_error_set(&pkg_null,
-					    "Could not stat %s", str);
 					break;
 				} else if (!S_ISDIR(sb.st_mode)) {
 					if (last)
@@ -83,14 +80,10 @@ pkg_dir_build(const char *path)
 					else
 						errno = ENOTDIR;
 					retval = PKG_FAIL;
-					pkg_error_set(&pkg_null,
-					    "%s is not a directory", str);
 					break;
 				}
 			} else {
 				retval = PKG_FAIL;
-				pkg_error_set(&pkg_null, "Could not create %s",
-				    str);
 				break;
 			}
 		}
@@ -108,20 +101,16 @@ pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
 	char sum[33];
 
 	if (!file) {
-		pkg_error_set(&pkg_null, "No file specified");
 		return PKG_FAIL;
 	}
 
 	if (!sum) {
-		pkg_error_set((struct pkg_object *)file, "No checksum specified");
 		return PKG_FAIL;
 	}
 
 	/* Perform a checksum on the file to install */
 	MD5Data(file->contents, file->len, sum);
 	if (strcmp(sum, chk_sum)) {
-		pkg_error_set((struct pkg_object *)file,
-		    "File checksum incorrect");
 		return PKG_FAIL;
 	}
 	return PKG_OK;

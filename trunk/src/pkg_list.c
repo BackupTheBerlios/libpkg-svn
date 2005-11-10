@@ -46,7 +46,6 @@ pkg_list_add(struct pkg_list *list, struct pkg_object *obj)
 	assert(obj->free != NULL);
 	new = malloc(sizeof(struct pkg_list));
 	if (!new) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -54,7 +53,6 @@ pkg_list_add(struct pkg_list *list, struct pkg_object *obj)
 	new->obj = obj;
 
 	new->pkg_object.data = NULL;
-	new->pkg_object.error_str = NULL;
 	new->pkg_object.free = NULL;
 
 	return new;

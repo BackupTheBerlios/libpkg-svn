@@ -59,7 +59,6 @@ file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	/* Open the package file */
 	fd = fopen(pkg_name, "r");
 	if (!fd) {
-		pkg_error_set(&pkg_null, "Could not open %s", pkg_name);
 		return NULL;
 	}
 
@@ -67,10 +66,7 @@ file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	/* XXX auto detect package type */
 	pkg = pkg_new_freebsd(fd);
 	if (!pkg) {
-		char *str;
 		fclose(fd);
-		str = pkg_error_string(&pkg_null);
-		pkg_error_set((struct pkg_object *)repo, str);
 		return NULL;
 	}
 

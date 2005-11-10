@@ -110,7 +110,6 @@ pkg_repo_new_ftp(const char *site, const char *path)
 	f_repo = malloc(sizeof(struct ftp_repo));
 	if (!f_repo) {
 		pkg_repo_free(pkg);
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -124,7 +123,6 @@ pkg_repo_new_ftp(const char *site, const char *path)
 
 	if (!f_repo->site) {
 		pkg_repo_free(pkg);
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -136,12 +134,6 @@ pkg_repo_new_ftp(const char *site, const char *path)
 
 		reldate = getosreldate();
 		if(reldate > MAX_VERSION) {  /* bogus osreldate?? */
-			pkg_error_set(&pkg_null,
-			    "Warning: getosreldate() value (%d) too large.\n"
-			    "This is either a bug in libpkg or you are using\n"
-			    "a very old version of the package tools with a\n"
-			    "new OS.\n",
-			    reldate);
 			pkg_repo_free(pkg);
 			return NULL;
 		}
@@ -163,7 +155,6 @@ pkg_repo_new_ftp(const char *site, const char *path)
 
 	if (!f_repo->path) {
 		pkg_repo_free(pkg);
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -182,18 +173,15 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	const char	*fallback_subdir;
 
 	if (!repo) {
-		pkg_error_set(&pkg_null, "No package repo specified");
 		return NULL;
 	}
 
 	if (!pkg_name) {
-		pkg_error_set((struct pkg_object *)repo, "No package anme specified");
 		return NULL;
 	}
 
 	f_repo = repo->pkg_object.data;
 	if (!f_repo) {
-		pkg_error_set((struct pkg_object *)repo, "Bad package sata");
 		return NULL;
 	}
 
@@ -217,7 +205,6 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	asprintf(&ftpname, "ftp://%s/%s/%s/%s%s", f_repo->site, f_repo->path,
 	    subdir, pkg_name, ext);
 	if (!ftpname) {
-		pkg_error_set((struct pkg_object *)repo, "Out of memory");
 		return NULL;
 	}
 
@@ -229,14 +216,10 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 		asprintf(&ftpname, "ftp://%s/%s/%s/%s%s", f_repo->site,
 		    f_repo->path, fallback_subdir, pkg_name, ext);
 		if (!ftpname) {
-			pkg_error_set((struct pkg_object *)repo,
-			    "Out of Memory");
 			return NULL;
 		}
 		fd = fetchGetURL(ftpname, "p");
 		if (fd == NULL) {
-			pkg_error_set((struct pkg_object *)repo,
-			    "Could not connect to %s", ftpname);
 			free(ftpname);
 			return NULL;
 		}
@@ -246,10 +229,7 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 
 	pkg = pkg_new_freebsd(fd);
 	if (!pkg) {
-		char *str;
 		fclose(fd);
-		str = pkg_error_string(&pkg_null);
-		pkg_error_set((struct pkg_object *)repo, str);
 		return NULL;
 	}
 
@@ -265,7 +245,6 @@ ftp_free(struct pkg_repo *repo)
 	struct ftp_repo *f_repo;
 
 	if (!repo) {
-		pkg_error_set(&pkg_null, "No package repo specified");
 		return PKG_FAIL;
 	}
 

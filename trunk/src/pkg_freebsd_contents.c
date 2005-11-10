@@ -46,14 +46,12 @@ pkg_freebsd_contents_new(const char *contents)
 
 	cont = malloc(sizeof(struct pkg_freebsd_contents));
 	if (!cont) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
 	cont->file = strdup(contents);
 	if (!cont->file) {
 		free(cont);
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 	cont->lines = NULL;
@@ -73,7 +71,6 @@ pkg_freebsd_contents_new(const char *contents)
 	    cont->line_count);
 	if (!cont->lines) {
 		pkg_freebsd_contents_free(cont);
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -152,7 +149,6 @@ int
 pkg_freebsd_contents_free(struct pkg_freebsd_contents *contents)
 {
 	if (!contents) {
-		pkg_error_set(&pkg_null, "No contents file specified");
 		return PKG_FAIL;
 	}
 

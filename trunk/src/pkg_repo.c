@@ -43,7 +43,6 @@ pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
 
 	repo = malloc(sizeof(struct pkg_repo));
 	if (!repo) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -51,7 +50,6 @@ pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
 	repo->pkg_free = pfree;
 
 	repo->pkg_object.data = NULL;
-	repo->pkg_object.error_str = NULL;
 	repo->pkg_object.free = NULL;
 
 	return repo;
@@ -61,17 +59,14 @@ struct pkg *
 pkg_repo_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 {
 	if (!repo) {
-		pkg_error_set(&pkg_null, "No package repo specified");
 		return NULL;
 	}
 
 	if (!pkg_name) {
-		pkg_error_set((struct pkg_object *)repo, "No package name specified");
 		return NULL;
 	}
 
 	if (!repo->pkg_get) {
-		pkg_error_set(&pkg_null, "No get package callback");
 		return NULL;
 	}
 
@@ -85,17 +80,11 @@ int
 pkg_repo_free(struct pkg_repo *repo)
 {
 	if (!repo) {
-		pkg_error_set(&pkg_null, "No package repo specified");
 		return PKG_FAIL;
 	}
 
 	if (repo->pkg_free)
 		repo->pkg_free(repo);
-
-	if (repo->pkg_object.error_str) {
-		free(repo->pkg_object.error_str);
-		repo->pkg_object.error_str = NULL;
-	}
 
 	free(repo);
 

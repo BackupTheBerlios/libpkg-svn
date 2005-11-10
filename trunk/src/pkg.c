@@ -33,34 +33,35 @@
 #include "pkg.h"
 #include "pkg_private.h"
 
+static int package_free(struct pkg_object *);
+
 struct pkg *
 pkg_new(const char *name, 
 		pkg_get_control_files_callback *control_files,
 		pkg_get_next_file_callback *next_file,
+		pkg_get_dependencies_callback *get_deps,
 		pkg_free_callback *free_pkg)
 {
 	struct pkg *pkg;
 
 	pkg = malloc(sizeof(struct pkg));
 	if (!pkg) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
 	pkg->pkg_name = strdup(name);
 	if (!pkg->pkg_name) {
 		free(pkg);
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
 	pkg->pkg_get_control_files = control_files;
 	pkg->pkg_get_next_file = next_file;
+	pkg->pkg_get_deps = get_deps;
 	pkg->pkg_free = free_pkg;
 
 	pkg->pkg_object.data = NULL;
-	pkg->pkg_object.error_str = NULL;
-	pkg->pkg_object.free = NULL;
+	pkg->pkg_object.free = package_free;
 
 	return pkg;
 }
@@ -69,17 +70,11 @@ struct pkg_list *
 pkg_get_control_files(struct pkg *pkg)
 {
 	if (!pkg) {
-		pkg_error_set(&pkg_null, "No package specified");
 		return NULL;
 	}
 
 	if (!pkg->pkg_get_control_files) {
-		pkg_error_set((struct pkg_object*)pkg, "Package contains no control files");
 		return NULL;
-	}
-	if (pkg->pkg_object.error_str) {
-		free(pkg->pkg_object.error_str);
-		pkg->pkg_object.error_str = NULL;
 	}
 
 	return pkg->pkg_get_control_files(pkg);
@@ -89,23 +84,28 @@ struct pkg_file *
 pkg_get_next_file(struct pkg *pkg)
 {
 	if (!pkg) {
-		pkg_error_set(&pkg_null, "No package specified");
 		return NULL;
 	}
 
 	if (!pkg->pkg_get_next_file) {
-		pkg_error_set((struct pkg_object*)pkg, "No more files in list");
 		return NULL;
 	}
 
 	return pkg->pkg_get_next_file(pkg);
 }
 
+struct pkg_list *
+pkg_get_dependencies(struct pkg *pkg)
+{
+	if (pkg->pkg_get_deps)
+		pkg->pkg_get_deps(pkg);
+	return NULL;
+}
+
 int
 pkg_free(struct pkg *pkg)
 {
 	if (!pkg) {
-		pkg_error_set(&pkg_null, "No package specified");
 		return PKG_FAIL;
 	}
 
@@ -118,4 +118,10 @@ pkg_free(struct pkg *pkg)
 	free(pkg);
 
 	return PKG_OK;
+}
+
+static int
+package_free(struct pkg_object *obj)
+{
+	return pkg_free((struct pkg *)obj);
 }

@@ -44,7 +44,6 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 
 	db = malloc(sizeof(struct pkg_db));
 	if (!db) {
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -61,7 +60,6 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 
 	if (!db->db_base) {
 		free(db);
-		pkg_error_set(&pkg_null, "Out of Memory");
 		return NULL;
 	}
 
@@ -69,7 +67,6 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	db->pkg_is_installed = is_installed;
 
 	db->pkg_object.data = NULL;
-	db->pkg_object.error_str = NULL;
 	db->pkg_object.free = NULL;
 
 	return db;
@@ -79,22 +76,15 @@ int
 pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
 {
 	if (!db) {
-		pkg_error_set(&pkg_null, "No package database specified");
 		return PKG_FAIL;
 	}
 
 	if (!pkg) {
-		pkg_error_set((struct pkg_object *)db, "No package specified");
 		return PKG_FAIL;
 	}
 
 	if (!db->pkg_install) {
-		pkg_error_set((struct pkg_object *)db, "No package install callback");
-		return PKG_NOTSUP;
-	}
-	if (db->pkg_object.error_str) {
-		free(db->pkg_object.error_str);
-		db->pkg_object.error_str = NULL;
+		return PKG_FAIL;
 	}
 
 	return db->pkg_install(db, pkg);
@@ -104,13 +94,11 @@ int
 pkg_db_is_installed(struct pkg_db *db, const char *package)
 {
 	if (!db) {
-		pkg_error_set(&pkg_null, "No package database specified");
 		return PKG_FAIL;
 	}
 
 	if (!db->pkg_is_installed) {
-		pkg_error_set((struct pkg_object *)db, "No is installed callback");
-		return PKG_NOTSUP;
+		return PKG_FAIL;
 	}
 
 	return db->pkg_is_installed(db, package);
@@ -120,7 +108,6 @@ int
 pkg_db_free(struct pkg_db *db)
 {
 	if (!db) {
-		pkg_error_set(&pkg_null, "No package database specified");
 		return PKG_FAIL;
 	}
 
