@@ -51,7 +51,7 @@ struct freebsd_package {
 /* Callbacks */
 static struct pkg_file		**freebsd_get_control_files(struct pkg *);
 static struct pkg_file		*freebsd_get_next_file(struct pkg *);
-static struct pkg_list		*freebsd_get_deps(struct pkg *pkg);
+static struct pkg_file		**freebsd_get_deps(struct pkg *pkg);
 static int			 freebsd_free(struct pkg *);
 
 /* Internal functions */
@@ -132,7 +132,7 @@ pkg_new_freebsd(FILE *fd)
 	free(pkg_name);
 
 	if (pkg)
-		pkg->pkg_object.data = f_pkg;
+		pkg->data = f_pkg;
 
 	return pkg;
 }
@@ -144,7 +144,7 @@ freebsd_get_control_files(struct pkg *pkg)
 
 	assert(pkg != NULL);
 
-	f_pkg = pkg->pkg_object.data;
+	f_pkg = pkg->data;
 
 	return f_pkg->control;
 }
@@ -156,7 +156,7 @@ freebsd_get_next_file(struct pkg *pkg)
 
 	assert(pkg != NULL);
 
-	f_pkg = pkg->pkg_object.data;
+	f_pkg = pkg->data;
 
 	if (f_pkg->next) {
 		struct pkg_file *ret;
@@ -170,7 +170,7 @@ freebsd_get_next_file(struct pkg *pkg)
 	return freebsd_get_next_entry(f_pkg->archive);
 }
 
-static struct pkg_list *
+static struct pkg_file **
 freebsd_get_deps(struct pkg *pkg __unused)
 {
 	return NULL;
@@ -181,7 +181,7 @@ freebsd_free(struct pkg *pkg)
 {
 	assert(pkg != NULL);
 
-	freebsd_free_package(pkg->pkg_object.data);
+	freebsd_free_package(pkg->data);
 
 	return 0;
 }

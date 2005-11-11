@@ -35,23 +35,16 @@
 int archive_read_open_stream(struct archive *, FILE *, size_t);
 
 struct pkg_file {
-	struct pkg_object	 pkg_object;
-
+	void	*data;
+	
 	char		*filename;
 	uint64_t	 len;
 	char		*contents;
 	struct stat	*stat;
 };
 
-struct pkg_list {
-	struct pkg_object	 pkg_object;
-
-	struct pkg_list		*next;
-	struct pkg_object	*obj;
-};
-
 /* Package Object */
-typedef struct pkg_list *pkg_get_dependencies_callback(struct pkg *);
+typedef struct pkg_file	**pkg_get_dependencies_callback(struct pkg *);
 typedef struct pkg_file	**pkg_get_control_files_callback(struct pkg *);
 typedef struct pkg_file	*pkg_get_next_file_callback(struct pkg *);
 typedef int		 pkg_free_callback(struct pkg *);
@@ -63,7 +56,7 @@ struct pkg		*pkg_new(const char *,
 				pkg_free_callback *);
 
 struct pkg {
-	struct pkg_object	 pkg_object;
+	void	*data;
 
 	char	*pkg_name;
 	pkg_get_control_files_callback	*pkg_get_control_files;

@@ -33,8 +33,6 @@
 #include "pkg.h"
 #include "pkg_private.h"
 
-static int package_free(struct pkg_object *);
-
 struct pkg *
 pkg_new(const char *name, 
 		pkg_get_control_files_callback *control_files,
@@ -60,8 +58,7 @@ pkg_new(const char *name,
 	pkg->pkg_get_deps = get_deps;
 	pkg->pkg_free = free_pkg;
 
-	pkg->pkg_object.data = NULL;
-	pkg->pkg_object.free = package_free;
+	pkg->data = NULL;
 
 	return pkg;
 }
@@ -94,11 +91,11 @@ pkg_get_next_file(struct pkg *pkg)
 	return pkg->pkg_get_next_file(pkg);
 }
 
-struct pkg_list *
+struct pkg_file **
 pkg_get_dependencies(struct pkg *pkg)
 {
 	if (pkg->pkg_get_deps)
-		pkg->pkg_get_deps(pkg);
+		return pkg->pkg_get_deps(pkg);
 	return NULL;
 }
 
@@ -118,10 +115,4 @@ pkg_free(struct pkg *pkg)
 	free(pkg);
 
 	return 0;
-}
-
-static int
-package_free(struct pkg_object *obj)
-{
-	return pkg_free((struct pkg *)obj);
 }

@@ -115,7 +115,7 @@ pkg_repo_new_ftp(const char *site, const char *path)
 		return NULL;
 	}
 
-	pkg->pkg_object.data = f_repo;
+	pkg->data = f_repo;
 
 	/* Figure out the site */
 	if (!site)
@@ -182,7 +182,7 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 		return NULL;
 	}
 
-	f_repo = repo->pkg_object.data;
+	f_repo = repo->data;
 	if (!f_repo) {
 		return NULL;
 	}
@@ -250,7 +250,7 @@ ftp_free(struct pkg_repo *repo)
 		return -1;
 	}
 
-	f_repo = repo->pkg_object.data;
+	f_repo = repo->data;
 
 	/* If there is no repo we don't need to free it */
 	if (!f_repo)

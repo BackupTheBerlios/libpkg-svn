@@ -51,8 +51,7 @@ pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
 	repo->pkg_get = pkg_get;
 	repo->pkg_free = pfree;
 
-	repo->pkg_object.data = NULL;
-	repo->pkg_object.free = NULL;
+	repo->data = NULL;
 
 	return repo;
 }

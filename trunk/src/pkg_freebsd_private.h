@@ -31,16 +31,12 @@
 #define __LIBPKG_PKG_FREEBSD_PRIVATE_H__
 
 struct pkg_freebsd_contents_line {
-	struct pkg_object	 pkg_object;
-
 	int	 line_type;
 	char	*line;
 	char	*data;
 };
 
 struct pkg_freebsd_contents {
-	struct pkg_object	 pkg_object;
-
 	char	*file;
 	int	 line_count;
 	struct pkg_freebsd_contents_line *lines;

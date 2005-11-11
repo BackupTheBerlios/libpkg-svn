@@ -36,24 +36,6 @@
 #include <stdio.h>	/* FILE */
 
 /*
- * Generic object for all other objects.
- * It must be named pkg_object
- */
-struct pkg_object;
-
-/* This is used to call the individual callback */
-typedef int	pkg_object_free_callback(struct pkg_object *);
-
-/* This must be the first item in child structs so we know where it is. */
-struct pkg_object {
-	/* Object internal data */
-	void				*data;
-	pkg_object_free_callback	*free;
-};
-
-int	pkg_object_free(struct pkg_object *);
-
-/*
  * Object to hold files in
  */
 struct pkg_file;
@@ -63,25 +45,13 @@ struct pkg_file	*pkg_file_new_from_buffer(const char *, uint64_t, char *,
 int		 pkg_file_free(struct pkg_file *);
 int		 pkg_file_write(struct pkg_file *);
 
-struct pkg_list	*pkg_file_list_add(struct pkg_list *, struct pkg_file *);
-struct pkg_file	*pkg_file_list_get_file(struct pkg_list *,
-				const char *);
-
-/*
- * Object to hold a collection of packages in
- */
-struct pkg_list;
-
-struct pkg_list	*pkg_list_add(struct pkg_list *, struct pkg_object *);
-int		 pkg_list_free(struct pkg_list *);
-
 /*
  * The package handling functions
  */
 struct pkg;
 
 struct pkg		*pkg_new_freebsd(FILE *);
-struct pkg_list		*pkg_get_dependencies(struct pkg *);
+struct pkg_file		**pkg_get_dependencies(struct pkg *);
 /*
  * Returns all control files from the package
  * Eg. +CONTENTS from FreeBSD Packages

@@ -34,8 +34,6 @@
 #include "pkg.h"
 #include "pkg_private.h"
 
-static int file_free(struct pkg_object *obj);
-
 /*
  * Creates a new pkg_file from a buffer
  */
@@ -69,8 +67,7 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 	file->len = length;
 	file->contents = buffer;
 
-	file->pkg_object.data = NULL;
-	file->pkg_object.free = file_free;
+	file->data = NULL;
 
 	return file;
 }
@@ -97,13 +94,6 @@ pkg_file_free(struct pkg_file *file)
 	free(file);
 
 	return 0;
-}
-
-/* A callback for pkg_object_free */
-static int
-file_free(struct pkg_object *obj)
-{
-	return pkg_file_free((struct pkg_file *)obj);
 }
 
 /* Writes a file to the filesystem */
@@ -163,40 +153,4 @@ pkg_file_write(struct pkg_file *file)
 	fclose(fd);
 
 	return 0;
-}
-
-/*
- * Adds a file to the head of a list
- */
-struct pkg_list *
-pkg_file_list_add(struct pkg_list *list, struct pkg_file *file)
-{
-	return pkg_list_add(list, (struct pkg_object *)file);
-}
-
-/*
- * Finds a file in a list
- */
-struct pkg_file *
-pkg_file_list_get_file(struct pkg_list *list, const char *name)
-{
-	struct pkg_list *cur;
-
-	if (!list) {
-		return NULL;
-	}
-
-	if (!name) {
-		return NULL;
-	}
-
-	cur = list;
-
-	while (cur) {
-		if (!strcmp(((struct pkg_file *)cur->obj)->filename, name))
-			return (struct pkg_file *)cur->obj;
-
-		cur = cur->next;
-	}
-	return NULL;
 }
