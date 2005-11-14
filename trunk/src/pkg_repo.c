@@ -39,7 +39,8 @@
  */
 struct pkg_repo *
 pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
-             pkg_repo_free_callback *pfree)
+	     pkg_repo_find_pkg_callback *pkg_find,
+	     pkg_repo_free_callback *pfree)
 {
 	struct pkg_repo *repo;
 
@@ -49,6 +50,7 @@ pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
 	}
 
 	repo->pkg_get = pkg_get;
+	repo->pkg_find = pkg_find;
 	repo->pkg_free = pfree;
 
 	repo->data = NULL;
@@ -72,6 +74,21 @@ pkg_repo_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	}
 
 	return repo->pkg_get(repo, pkg_name);
+}
+
+/*
+ * Finds a package in a repo and sets the appropriate callbacks and data
+ */
+struct pkg *
+pkg_repo_find_pkg(struct pkg_repo *repo, struct pkg *pkg)
+{
+	if (!repo || !pkg)
+		return NULL;
+
+	if (!repo->pkg_find)
+		return NULL;
+
+	return repo->pkg_find(repo, pkg);
 }
 
 /*

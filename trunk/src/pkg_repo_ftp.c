@@ -86,8 +86,11 @@ struct ftp_repo {
 int getosreldate(void);
 
 static struct pkg *ftp_get_pkg(struct pkg_repo *, const char *);
+static struct pkg *ftp_find_pkg(struct pkg_repo *, struct pkg *);
 static int ftp_free(struct pkg_repo *);
 
+static FILE *ftp_get_fd(const char *, struct ftp_repo *);
+static struct ftp_repo *ftp_create_repo(const char *, const char *);
 //static int pkg_in_All(const char *);
 static int pkg_name_has_extension(const char *);
 
@@ -97,70 +100,21 @@ static int pkg_name_has_extension(const char *);
 struct pkg_repo *
 pkg_repo_new_ftp(const char *site, const char *path)
 {
-	struct pkg_repo *pkg;
-	struct ftp_repo *f_repo;
+	struct pkg_repo *repo;
 
-	assert(site != NULL);
-	assert(path != NULL);
-
-	pkg = pkg_repo_new(ftp_get_pkg, ftp_free);
-	if (!pkg) {
+	repo = pkg_repo_new(ftp_get_pkg, ftp_find_pkg, ftp_free);
+	if (!repo) {
 		/* pkg_null will contain the error string */
 		return NULL;
 	}
-
-	f_repo = malloc(sizeof(struct ftp_repo));
-	if (!f_repo) {
-		pkg_repo_free(pkg);
+	
+	repo->data = ftp_create_repo(site, path);
+	if (!repo->data) {
+		ftp_free(repo);
 		return NULL;
 	}
 
-	pkg->data = f_repo;
-
-	/* Figure out the site */
-	if (!site)
-		f_repo->site = strdup("ftp.freebsd.org");
-	else
-		f_repo->site = strdup(site);
-
-	if (!f_repo->site) {
-		pkg_repo_free(pkg);
-		return NULL;
-	}
-
-	/* Figure out the path */
-	f_repo->path = NULL;
-	if (!path) {
-		struct utsname	u;
-		int		i, reldate;
-
-		reldate = getosreldate();
-		if(reldate > MAX_VERSION) {  /* bogus osreldate?? */
-			pkg_repo_free(pkg);
-			return NULL;
-		}
-
-		uname(&u);
-
-		/* Find the correct path from reldate */
-		for(i = 0; releases[i].directory != NULL; i++) {
-			if (reldate >= releases[i].lowver &&
-			    reldate <= releases[i].hiver) {
-				asprintf(&f_repo->path, "pub/FreeBSD/ports/%s/%s", u.machine,
-				    releases[i].directory);
-				break;
-			}
-		}
-
-	} else
-		f_repo->path = strdup(path);
-
-	if (!f_repo->path) {
-		pkg_repo_free(pkg);
-		return NULL;
-	}
-
-	return pkg;
+	return repo;
 }
 
 static struct pkg *
@@ -169,23 +123,69 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	FILE *fd;
 	struct pkg *pkg;
 	struct ftp_repo *f_repo;
-	char *ftpname;
-	const char	*subdir;
-	const char	*ext;
-	const char	*fallback_subdir;
 
-	if (!repo) {
-		return NULL;
-	}
-
-	if (!pkg_name) {
-		return NULL;
-	}
+	assert(repo != NULL);
+	assert(pkg_name != NULL);
 
 	f_repo = repo->data;
-	if (!f_repo) {
+	assert(f_repo != NULL);
+
+	fd = ftp_get_fd(pkg_name, f_repo);
+	
+	pkg = pkg_new_freebsd(fd);
+	if (!pkg) {
+		fclose(fd);
 		return NULL;
 	}
+
+	return pkg;
+}
+
+static struct pkg *
+ftp_find_pkg(struct pkg_repo *repo, struct pkg *pkg)
+{
+	FILE *fd;
+	fd = ftp_get_fd(pkg->pkg_name, repo->data);
+	pkg_make_freebsd(pkg, fd);
+
+	return pkg;
+}
+
+/*
+ * Free the struct ftp_repo
+ */
+static int
+ftp_free(struct pkg_repo *repo)
+{
+	struct ftp_repo *f_repo;
+
+	assert(repo != NULL);
+
+	f_repo = repo->data;
+
+	/* If there is no repo we don't need to free it */
+	if (!f_repo)
+		return 0;
+
+	if (f_repo->site)
+		free(f_repo->site);
+
+	if (f_repo->path)
+		free(f_repo->path);
+
+	free(f_repo);
+
+	return 0;
+}
+
+static FILE *
+ftp_get_fd(const char *pkg_name, struct ftp_repo *f_repo)
+{
+	const char *subdir;
+	const char *fallback_subdir;
+	const char *ext;
+	char *ftpname;
+	FILE *fd;
 
 	/*
 	 * Figure out what order to look for the package
@@ -229,42 +229,61 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 
 	free(ftpname);
 
-	pkg = pkg_new_freebsd(fd);
-	if (!pkg) {
-		fclose(fd);
-		return NULL;
-	}
-
-	return pkg;
+	return fd;
 }
 
-/*
- * Free the struct ftp_repo
- */
-static int
-ftp_free(struct pkg_repo *repo)
+static struct ftp_repo *
+ftp_create_repo(const char *site, const char *path)
 {
 	struct ftp_repo *f_repo;
 
-	if (!repo) {
-		return -1;
+	f_repo = malloc(sizeof(struct ftp_repo));
+	if (!f_repo) {
+		return NULL;
 	}
 
-	f_repo = repo->data;
+	/* Figure out the site */
+	if (!site)
+		f_repo->site = strdup("ftp.freebsd.org");
+	else
+		f_repo->site = strdup(site);
 
-	/* If there is no repo we don't need to free it */
-	if (!f_repo)
-		return 0;
+	if (!f_repo->site) {
+		return NULL;
+	}
 
-	if (f_repo->site)
-		free(f_repo->site);
+	/* Figure out the path */
+	f_repo->path = NULL;
+	if (!path) {
+		struct utsname	u;
+		int		i, reldate;
 
-	if (f_repo->path)
-		free(f_repo->path);
+		reldate = getosreldate();
+		if(reldate > MAX_VERSION) {  /* bogus osreldate?? */
+			/* XXX create a static ftp_repo_free */
+			return NULL;
+		}
 
-	free(f_repo);
+		uname(&u);
 
-	return 0;
+		/* Find the correct path from reldate */
+		for(i = 0; releases[i].directory != NULL; i++) {
+			if (reldate >= releases[i].lowver &&
+			    reldate <= releases[i].hiver) {
+				asprintf(&f_repo->path, "pub/FreeBSD/ports/%s/%s", u.machine,
+				    releases[i].directory);
+				break;
+			}
+		}
+
+	} else
+		f_repo->path = strdup(path);
+
+	if (!f_repo->path) {
+		return NULL;
+	}
+
+	return f_repo;
 }
 
 static int

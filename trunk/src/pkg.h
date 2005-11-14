@@ -62,4 +62,6 @@ struct pkg_file		**pkg_get_control_files(struct pkg *);
 struct pkg_file		*pkg_get_next_file(struct pkg *);
 int			 pkg_free(struct pkg *);
 
+char			*pkg_get_name(struct pkg *);
+
 #endif /* __LIBPKG_PKG_H__ */

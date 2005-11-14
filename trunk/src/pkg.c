@@ -128,3 +128,11 @@ pkg_free(struct pkg *pkg)
 
 	return 0;
 }
+
+char *
+pkg_get_name(struct pkg *pkg)
+{
+	if (!pkg)
+		return NULL;
+	return pkg->pkg_name;
+}
