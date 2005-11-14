@@ -44,12 +44,17 @@ struct pkg_file {
 };
 
 /* Package Object */
-typedef struct pkg_file	**pkg_get_dependencies_callback(struct pkg *);
+typedef struct pkg	**pkg_get_dependencies_callback(struct pkg *);
 typedef struct pkg_file	**pkg_get_control_files_callback(struct pkg *);
 typedef struct pkg_file	*pkg_get_next_file_callback(struct pkg *);
 typedef int		 pkg_free_callback(struct pkg *);
 
 struct pkg		*pkg_new(const char *,
+				pkg_get_control_files_callback *,
+				pkg_get_next_file_callback *,
+				pkg_get_dependencies_callback *,
+				pkg_free_callback *);
+struct pkg		*pkg_set_callbacks(struct pkg *pkg, 
 				pkg_get_control_files_callback *,
 				pkg_get_next_file_callback *,
 				pkg_get_dependencies_callback *,

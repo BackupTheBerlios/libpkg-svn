@@ -43,18 +43,21 @@ struct freebsd_package {
 	FILE		*fd;
 
 	struct pkg_file **control;
+	struct pkg_freebsd_contents	*contents;
 
-	/* If not null contains the next file in the archive */
+	/* If not null contains the next file in
+	 * the archive after the control files */
 	struct pkg_file	*next;
 };
 
 /* Callbacks */
 static struct pkg_file		**freebsd_get_control_files(struct pkg *);
 static struct pkg_file		*freebsd_get_next_file(struct pkg *);
-static struct pkg_file		**freebsd_get_deps(struct pkg *pkg);
+static struct pkg		**freebsd_get_deps(struct pkg *);
 static int			 freebsd_free(struct pkg *);
 
 /* Internal functions */
+static struct freebsd_package	*freebsd_get_package(FILE *);
 static struct pkg_file		*freebsd_get_next_entry(struct archive *);
 static char 			*freebsd_get_pkg_name(const char *);
 static int			 freebsd_free_package(struct freebsd_package *);
@@ -62,9 +65,43 @@ static int			 freebsd_free_package(struct freebsd_package *);
 struct pkg *
 pkg_new_freebsd(FILE *fd)
 {
-	struct pkg * pkg;
+	struct pkg *pkg;
 	struct freebsd_package *f_pkg;
 	char *pkg_name;
+
+	f_pkg = freebsd_get_package(fd);
+
+	/* Find the package name */
+	pkg_name = freebsd_get_pkg_name(f_pkg->control[0]->contents);
+
+	pkg = pkg_new(pkg_name, freebsd_get_control_files,
+		freebsd_get_next_file, freebsd_get_deps, freebsd_free);
+	free(pkg_name);
+
+	if (pkg == NULL)
+		return NULL;
+
+	pkg->data = f_pkg;
+
+	return pkg;
+}
+
+struct pkg *
+pkg_make_freebsd(struct pkg *pkg, FILE *fd)
+{
+	struct freebsd_package *f_pkg;
+
+	pkg_set_callbacks(pkg, freebsd_get_control_files,
+	    freebsd_get_next_file, freebsd_get_deps, freebsd_free);
+	f_pkg = freebsd_get_package(fd);
+	pkg->data = f_pkg;
+	return pkg;
+}
+
+static struct freebsd_package *
+freebsd_get_package(FILE *fd)
+{
+	struct freebsd_package *f_pkg;
 	struct pkg_file *file;
 	size_t control_size;
 	unsigned int control_pos;
@@ -76,6 +113,7 @@ pkg_new_freebsd(FILE *fd)
 
 	f_pkg->next = NULL;
 	f_pkg->control = NULL;
+	f_pkg->contents = NULL;
 	f_pkg->fd = fd;
 
 	f_pkg->archive = archive_read_new();
@@ -100,14 +138,12 @@ pkg_new_freebsd(FILE *fd)
 		freebsd_free_package(f_pkg);
 		return NULL;
 	}
+	f_pkg->contents = pkg_freebsd_contents_new(file->contents);
 	control_size = sizeof(struct pkg_file *) * 2;
 	f_pkg->control = malloc(control_size);
 	f_pkg->control[0] = file;
 	f_pkg->control[1] = NULL;
 	control_pos = 1;
-
-	/* Find the package name */
-	pkg_name = freebsd_get_pkg_name(file->contents);
 
 	/* Add all the control files to the control pkg_files_list */
 	while (1) {
@@ -126,15 +162,7 @@ pkg_new_freebsd(FILE *fd)
 		}
 	}
 
-	pkg = pkg_new(pkg_name, freebsd_get_control_files,
-		freebsd_get_next_file, freebsd_get_deps, freebsd_free);
-
-	free(pkg_name);
-
-	if (pkg)
-		pkg->data = f_pkg;
-
-	return pkg;
+	return f_pkg;
 }
 
 static struct pkg_file **
@@ -170,10 +198,36 @@ freebsd_get_next_file(struct pkg *pkg)
 	return freebsd_get_next_entry(f_pkg->archive);
 }
 
-static struct pkg_file **
-freebsd_get_deps(struct pkg *pkg __unused)
+static struct pkg **
+freebsd_get_deps(struct pkg *pkg)
 {
-	return NULL;
+	int line;
+	struct pkg_freebsd_contents *contents;
+	struct pkg **pkgs;
+	unsigned int pkg_count;
+	size_t pkg_size;
+
+	assert(pkg != NULL);
+
+	/* If this is null there was an error that should have been checked */
+	contents = ((struct freebsd_package *)pkg->data)->contents;
+	assert(contents != NULL);
+
+	pkg_count = 0;
+	pkg_size = sizeof(struct pkg *);
+	pkgs = malloc(pkg_size);
+	pkgs[0] = NULL;
+	for (line = 0; line < contents->line_count; line++) {
+		if (contents->lines[line].line_type == PKG_LINE_PKGDEP) {
+			pkg_size += sizeof(struct pkg *);
+			pkgs = realloc(pkgs, pkg_size);
+			pkgs[pkg_count] = pkg_new(contents->lines[line].data,
+			    NULL, NULL, NULL, NULL);
+			pkg_count++;
+			pkgs[pkg_count] = NULL;
+		}
+	}
+	return pkgs;
 }
 
 static int
@@ -276,6 +330,8 @@ freebsd_free_package(struct freebsd_package *f_pkg)
 		pkg_file_free(f_pkg->control[pos]);
 	free(f_pkg->control);
 	f_pkg->control = NULL;
+
+	pkg_freebsd_contents_free(f_pkg->contents);
 
 	free(f_pkg);
 
