@@ -11,6 +11,8 @@ int pkg_dir_build(const char *);
 
 void usage(const char *);
 
+struct pkg_repo *repo_ftp = NULL;
+
 void
 usage(const char *arg)
 {
@@ -18,9 +20,48 @@ usage(const char *arg)
 }
 
 int
+install_package(struct pkg_db *db, struct pkg *pkg)
+{
+	struct pkg **pkgs;
+	int is_installed;
+
+	if (repo_ftp == NULL)
+		repo_ftp = pkg_repo_new_ftp(NULL, NULL);
+
+	pkg_repo_find_pkg(repo_ftp, pkg);
+	
+	is_installed = pkg_db_is_installed(db, pkg_get_name(pkg));
+	if (is_installed != 0)
+		return 0;
+	
+	pkgs = pkg_get_dependencies(pkg);
+	if (pkgs != NULL) {
+		unsigned int pos;
+
+		for (pos = 0; pkgs[pos] != NULL; pos++) {
+			if (install_package(db, pkgs[pos]) != 0) {
+				return 1;
+			}
+			pkg_free(pkgs[pos]);
+			pkgs[pos]=NULL;
+		}
+		free(pkgs);
+	}
+	if (pkg_db_install_pkg(db, pkg) != 0) {
+		fprintf(stderr,
+		    "ERROR: Couldn't install package %s\n", pkg_get_name(pkg));
+		pkg_free(pkg);
+		return 1;
+	}
+	pkg_free(pkg);
+
+	return 0;
+}
+
+int
 main (int argc, char *argv[])
 {
-	struct pkg_repo *repo;
+	struct pkg_repo *repo_file;
 	struct pkg_db *pkg_db;
 
 	if(!argv[1]) {
@@ -44,8 +85,8 @@ main (int argc, char *argv[])
 		fprintf(stderr, "ERROR: Couldn't open the package database\n");
 		return EXIT_FAILURE;
 	}
-	repo = pkg_repo_new_files();
-	if (!repo) {
+	repo_file = pkg_repo_new_files();
+	if (!repo_file) {
 		fprintf(stderr, "ERROR: Couldn't open the package repo\n");
 		return EXIT_FAILURE;
 	}
@@ -55,18 +96,33 @@ main (int argc, char *argv[])
 		struct pkg *pkg;
 		int is_installed;
 
+		pkg = pkg_repo_get_pkg(repo_file, *argv);
+		if (pkg == NULL) {
+			fprintf(stderr, "Package %s could not be found\n",
+			    *argv);
+			continue;
+		}
 		/* Check if the package is installed */
-		is_installed = pkg_db_is_installed(pkg_db, *argv);
+		is_installed = pkg_db_is_installed(pkg_db, pkg_get_name(pkg));
 		if (is_installed == 0) {
 			fprintf(stderr, "Package %s is already installed\n",
 			    *argv);
 			continue;
-		/* Get the package from the repo */
-		} else if ((pkg = pkg_repo_get_pkg(repo, *argv)) == NULL) {
-			fprintf(stderr, "Package %s could not be found\n",
-			    *argv);
 		} else {
 			/* Install the package */
+			struct pkg **pkgs;
+			
+			pkgs = pkg_get_dependencies(pkg);
+			if (pkgs != NULL) {
+				unsigned int pos;
+
+				for (pos = 0; pkgs[pos] != NULL; pos++) {
+					install_package(pkg_db, pkgs[pos]);
+					pkg_free(pkgs[pos]);
+					pkgs[pos]=NULL;
+				}
+				free(pkgs);
+			}
 			if (pkg_db_install_pkg(pkg_db, pkg) != 0) {
 				fprintf(stderr,
 				    "ERROR: Couldn't install package %s\n",
@@ -77,6 +133,8 @@ main (int argc, char *argv[])
 		argv++;
 	}
 
-	pkg_repo_free(repo);
+	pkg_repo_free(repo_file);
+	if (repo_ftp != NULL)
+		pkg_repo_free(repo_ftp);
 	pkg_db_free(pkg_db);
 }
