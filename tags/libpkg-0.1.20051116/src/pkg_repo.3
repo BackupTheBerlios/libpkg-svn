@@ -1,0 +1,96 @@
+.\" Copyright (c) 2003 Tim Kientzle
+.\" Copyright (c) 2005 Andrew Turner
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $FreeBSD$
+.\"
+.Dd September 25, 2005
+.Dt libpkg 3
+.Os
+.Sh NAME
+.Nm pkg_repo_new_files ,
+.Nm pkg_repo_new_ftp ,
+.Nm pkg_repo_get_pkg ,
+.Nm pkg_repo_find_pkg ,
+.Nm pkg_repo_free ,
+.Nd functions for communicating with a package repository
+.Sh LIBRARY
+.Lb libpkg
+.Sh SYNOPSIS
+.In pkg_repo.h
+.Ft struct pkg_repo *
+.Fn pkg_repo_new_files
+.Ft struct pkg_repo *
+.Fn pkg_repo_new_ftp "const char *site" "const char *path"
+.Ft struct pkg *
+.Fn pkg_repo_get_pkg "struct pkg_repo *repo" "const char *pkg_name"
+.Ft struct pkg *
+.Fn pkg_repo_find_pkg "struct pkg_repo *repo" "struct pkg *pkg"
+.Ft int
+.Fn pkg_repo_free "struct pkg_repo *repo"
+.Sh DESCRIPTION
+A Package Repository is a place where packages are stored
+to be retrieved and installed.
+The
+.Tn struct pkg_repo
+is the basic object to communicate with a package repository.
+.Bl -tag -compact -width indent
+.It Fn pkg_repo_new_files
+Creates a new
+.Tn struct pkg_repo
+where the get_pkg callback will create a package from a file.
+.It Fn pkg_repo_new_ftp
+Created a new
+.Tn struct pkg_repo
+where the get_pkg callback will use
+.Xr fetch 3
+to download the package from a FreeBSD package respority on
+an FTP site.
+If the
+.Vt site
+argument is NULL it will use the ftp.freebsd.org site.
+If the
+.Vt path
+argument is NULL it will attempt to determine the correct
+path to use.
+.It Fn pkg_repo_get_pkg
+Retrieves the
+.Tn struct pkg
+with the name
+.Vt pkg_name
+from the repo.
+.It Fn pkg_repo_find_pkg
+Finds an empty package
+.Vt pkg
+in a respority
+.Vt repo
+and sets the appropriate data to make it installable.
+.It Fn pkg_repo_free
+Frees all allocated memory from the given
+.Tn pkg_repo .
+.El
+.Sh SEE ALSO
+.Xr libpkg 3 ,
+.Xr pkg 3 ,
+.Xr pkg_db 3

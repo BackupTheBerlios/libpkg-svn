@@ -1,0 +1,71 @@
+.\" Copyright (c) 2003 Tim Kientzle
+.\" Copyright (c) 2005 Andrew Turner
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $FreeBSD$
+.\"
+.Dd September 25, 2005
+.Dt libpkg 3
+.Os
+.Sh NAME
+.Nm pkg_db_open_freebsd ,
+.Nm pkg_db_install_pkg ,
+.Nm pkg_db_is_installed ,
+.Nm pkg_db_free ,
+.Nd functions for installing packages
+.Sh LIBRARY
+.Lb libpkg
+.Sh SYNOPSIS
+.In pkg_db.h
+.Ft struct pkg_db *
+.Fn pkg_db_open_freebsd "const char *base"
+.Ft int
+.Fn pkg_db_install_pkg "struct pkg_db *db" "struct pkg *pkg"
+.Ft int
+.Fn pkg_db_is_installed "struct pkg_db *db" "const char *package"
+.Ft int
+.Fn pkg_db_free "struct pkg_db *db"
+.Ft struct pkg_list *
+.Sh DESCRIPTION
+The Package Database is a location where packages can be
+installed to and retrieved from.
+.Bl -tag -compact -width indent
+.It Fn pkg_db_open_freebsd
+Creates a
+.Tn struct pkg_db
+with callbacks to install a FreeBSD package to the
+filesystem tree with it's root at
+.Vt base .
+.It Fn pkg_db_install_pkg
+Runs the package install callback to install a package.
+.It Fn pkg_db_is_installed
+Checks if the named package is installed. Returns PKG_YES if it is installed, PKG_NO if it is uninstalled or PKG_FAIL if there was an error.
+.It Fn pkg_db_free
+Frees the
+.Tn struct pkg_db .
+.El
+.Sh SEE ALSO
+.Xr libpkg 3 ,
+.Xr pkg 3 ,
+.Xr pkg_repo 3

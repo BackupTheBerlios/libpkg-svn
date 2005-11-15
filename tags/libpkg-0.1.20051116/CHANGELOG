@@ -1,0 +1,36 @@
+2005-11-15
+ * Split up and update the manual pages
+
+2005-11-14
+ * Update to demo to install package dependencies and make pkg_is_installed work properly
+ * Remove unused callbacks
+ * Add pkg_repo_find_pkg. This finds a given package in the current repo and adds the assiciated data to the package object to install this package.
+ * Move the getting of a ftp package FILE pointer and the struct ftp_repo to a seperate function
+ * Add pkg_get_name to return the packages name
+ * Add an internal function to set the callback a package will use
+ * Add pkg_make_freebsd to turn a package with only a name and a FILE pointer to a FreeBSD package
+ * Split the parts of pkg_new_freebsd that create the freebsd_package object to a static function
+ * Decode the +CONTENTS file to the freebsd_package object
+ * Make pkg_get_dependencies return an array of pointers to pkg objects and make the FreeBSD package object actually return it rather than NULL
+
+2005-11-11
+ * Remove pkg_list completly
+ * Replace pkg_object with void *data
+ * Update the demo to work with the current API
+ * Change pkg_get_control_files to return an array of pkg_file's
+
+2005-11-10
+ * Change the return type from PKG_OK and PKG_FAIL to 0 and -1 respectivly
+ * Move pkg_db parts to pkg_db.h and pkg_db_private.h
+ * Move pkg_repo out to pkg_repo.h and pkg_repo_private.h
+ * Remove pkg_error_*
+ * Move most callbacks to pkg_private.h
+ * Add skeleton code that will soon retrieve dependencies
+ * Remove all return codes except PKG_OK and PKG_FAIL
+ * Remove commented out code in pkg_file
+ * Update libpkg(3) to reflect rev 8
+ * Generalize pkg_file_list to pkg_list
+ * Move the free callbacks to pkg_object
+
+2005-11-09
+ * Change note in READEME about multiple package formats

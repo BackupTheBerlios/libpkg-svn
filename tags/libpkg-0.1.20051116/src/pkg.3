@@ -1,0 +1,130 @@
+.\" Copyright (c) 2003 Tim Kientzle
+.\" Copyright (c) 2005 Andrew Turner
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $FreeBSD$
+.\"
+.Dd September 25, 2005
+.Dt libpkg 3
+.Os
+.Sh NAME
+.Nm pkg_new_freebsd ,
+.Nm pkg_make_freebsd ,
+.Nm pkg_get_name ,
+.Nm pkg_get_dependencies ,
+.Nm pkg_get_control_files ,
+.Nm pkg_get_next_file ,
+.Nm pkg_free ,
+.Nm pkg_file_new_from_buffer ,
+.Nm pkg_file_free ,
+.Nd functions for managing binary packages and their files
+.Sh LIBRARY
+.Lb libpkg
+.Sh SYNOPSIS
+.In pkg.h
+.Ft struct pkg *
+.Fn pkg_new_freebsd "FILE *fd"
+.Ft struct pkg *
+.Fn pkg_make_freebsd "struct pkg *pkg" "FILE *fd"
+.Ft char *
+.Fn pkg_get_name "struct pkg *pkg"
+.Ft struct pkg_file **
+.Fn pkg_get_dependencies "struct pkg *pkg"
+.Ft struct pkg_file **
+.Fn pkg_get_control_files "struct pkg *pkg"
+.Ft struct pkg_file *
+.Fn pkg_get_next_file "struct pkg *pkg"
+.Ft int
+.Fn pkg_free "struct pkg *pkg"
+.Ft struct pkg_file *
+.Fn pkg_file_new_from_buffer "const char *filename" "uint64_t length" "char *buffer" "const struct stat *sb"
+.Ft int
+.Fn pkg_file_write "strict pkg_file *file"
+.Ft int
+.Fn pkg_file_free "struct pkg_file *file"
+.Sh DESCRIPTION
+.Ss Package
+A package is represented by a
+.Tn struct pkg
+which is normaly created by a Package Repository or
+Package Database.
+.Bl -tag -compact -width indent
+.It Fn pkg_new
+Allocates and initializes an empty
+.Tn struct pkg
+object. It takes in the packages name, and three callbacks
+to read the control files, read the next content file and
+free all data respectively.
+These callbacks can be NULL if they are unneeded.
+.It Fn pkg_new_freebsd
+Creates a new package with callbacks to handle FreeBSD
+packages version 1.1
+.It Fn pkg_make_freebsd
+Converts an empty package to a FreeBSD package.
+The
+.Vt fd
+must point to a file that is a correct FreeBSD package.
+.It Fn pkg_get_name
+Returns the name of a package
+.Vt pkg .
+.It Fn pkg_get_dependencies
+Returns an array of pointers to
+.Vt pkg
+objects of packages that the current package depends on.
+The package objects are almost empty with just the name set so need to be retrieced from a repository with
+.Xr pkg_repo_find_pkg 3 .
+.It Fn pkg_get_control_files
+Returns all control files from the package.
+Eg. The `+' files in /var/db/pkg/package/ from FreeBSD Packages.
+.It Fn pkg_get_next_file
+Gets the next non-control file from the package.
+.It Fn pkg_free
+Frees all allocated space from a package and calls the
+package free callback.
+.El
+.Ss Package File
+The
+.Tn struct pkg_file
+containes one file.
+It can be installed or processed further.
+.Bl -tag -compact -width indent
+.It Fn pkg_file_new_from_buffer
+Creates a
+.Tn struct pkg_file
+from a NULL-terminated buffer. If
+.Vt sb
+is non-NULL it will use it to set the correct permisions on
+the file.
+.It Fn pkg_file_write
+writes the file pointed to by
+.Vt file
+to the correct place relative to the current directory.
+.It Fn pkg_file_free
+Frees a
+.Tn struct pkg_file .
+.El
+.Sh SEE ALSO
+.Xr libpkg 3 ,
+.Xr pkg_repo 3 ,
+.Xr pkg_db 3
