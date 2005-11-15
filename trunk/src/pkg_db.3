@@ -29,43 +29,43 @@
 .Dt libpkg 3
 .Os
 .Sh NAME
-.Nm libpkg
-.Nd library for managing binary packages
+.Nm pkg_db_open_freebsd ,
+.Nm pkg_db_install_pkg ,
+.Nm pkg_db_is_installed ,
+.Nm pkg_db_free ,
+.Nd functions for installing packages
 .Sh LIBRARY
 .Lb libpkg
-.Sh OVERVIEW
-The library provides a set of APIs for locating package
-files and managing installed packages.
-There are three fundamental concepts:
+.Sh SYNOPSIS
+.In pkg_db.h
+.Ft struct pkg_db *
+.Fn pkg_db_open_freebsd "const char *base"
+.Ft int
+.Fn pkg_db_install_pkg "struct pkg_db *db" "struct pkg *pkg"
+.Ft int
+.Fn pkg_db_is_installed "struct pkg_db *db" "const char *package"
+.Ft int
+.Fn pkg_db_free "struct pkg_db *db"
+.Ft struct pkg_list *
+.Sh DESCRIPTION
+The Package Database is a location where packages can be
+installed to and retrieved from.
 .Bl -tag -compact -width indent
-.It package object
-A package object is a handle for an installable package.
-You obtain a package object from either the package
-repository or package database.
-Changes made to an installed package object affect the
-package on disk. For example, if you remove a file from the
-package object, that causes the corresponding file to be
-deleted from disk.
-Packages from a repository can be installed to a given
-database.
-.It package database
-A collection of information about installed packages.
-In particular, you can ask the package database
-for a list of all installed packages or the name of a package
-containing a particular file.
-.It package repository
-A place where package files are stored.
-This could be a directory, a CD-ROM, or a remote FTP site.
-Some package repositories can provide information
-about package dependencies.
+.It Fn pkg_db_open_freebsd
+Creates a
+.Tn struct pkg_db
+with callbacks to install a FreeBSD package to the
+filesystem tree with it's root at
+.Vt base .
+.It Fn pkg_db_install_pkg
+Runs the package install callback to install a package.
+.It Fn pkg_db_is_installed
+Checks if the named package is installed. Returns PKG_YES if it is installed, PKG_NO if it is uninstalled or PKG_FAIL if there was an error.
+.It Fn pkg_db_free
+Frees the
+.Tn struct pkg_db .
 .El
-Part of the goal is to remove the need for applications to
-know anything about the internal details of these systems.
-For example, the package database may be implemented as
-a collection of files stored in directories, as a Berkeley
-DB database file, or as a collection of tables in a relational
-database.
 .Sh SEE ALSO
+.Xr libpkg 3 ,
 .Xr pkg 3 ,
-.Xr pkg_repo 3 ,
-.Xr pkg_db 3
+.Xr pkg_repo 3

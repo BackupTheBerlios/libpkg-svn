@@ -29,43 +29,68 @@
 .Dt libpkg 3
 .Os
 .Sh NAME
-.Nm libpkg
-.Nd library for managing binary packages
+.Nm pkg_repo_new_files ,
+.Nm pkg_repo_new_ftp ,
+.Nm pkg_repo_get_pkg ,
+.Nm pkg_repo_find_pkg ,
+.Nm pkg_repo_free ,
+.Nd functions for communicating with a package repository
 .Sh LIBRARY
 .Lb libpkg
-.Sh OVERVIEW
-The library provides a set of APIs for locating package
-files and managing installed packages.
-There are three fundamental concepts:
+.Sh SYNOPSIS
+.In pkg_repo.h
+.Ft struct pkg_repo *
+.Fn pkg_repo_new_files
+.Ft struct pkg_repo *
+.Fn pkg_repo_new_ftp "const char *site" "const char *path"
+.Ft struct pkg *
+.Fn pkg_repo_get_pkg "struct pkg_repo *repo" "const char *pkg_name"
+.Ft struct pkg *
+.Fn pkg_repo_find_pkg "struct pkg_repo *repo" "struct pkg *pkg"
+.Ft int
+.Fn pkg_repo_free "struct pkg_repo *repo"
+.Sh DESCRIPTION
+A Package Repository is a place where packages are stored
+to be retrieved and installed.
+The
+.Tn struct pkg_repo
+is the basic object to communicate with a package repository.
 .Bl -tag -compact -width indent
-.It package object
-A package object is a handle for an installable package.
-You obtain a package object from either the package
-repository or package database.
-Changes made to an installed package object affect the
-package on disk. For example, if you remove a file from the
-package object, that causes the corresponding file to be
-deleted from disk.
-Packages from a repository can be installed to a given
-database.
-.It package database
-A collection of information about installed packages.
-In particular, you can ask the package database
-for a list of all installed packages or the name of a package
-containing a particular file.
-.It package repository
-A place where package files are stored.
-This could be a directory, a CD-ROM, or a remote FTP site.
-Some package repositories can provide information
-about package dependencies.
+.It Fn pkg_repo_new_files
+Creates a new
+.Tn struct pkg_repo
+where the get_pkg callback will create a package from a file.
+.It Fn pkg_repo_new_ftp
+Created a new
+.Tn struct pkg_repo
+where the get_pkg callback will use
+.Xr fetch 3
+to download the package from a FreeBSD package respority on
+an FTP site.
+If the
+.Vt site
+argument is NULL it will use the ftp.freebsd.org site.
+If the
+.Vt path
+argument is NULL it will attempt to determine the correct
+path to use.
+.It Fn pkg_repo_get_pkg
+Retrieves the
+.Tn struct pkg
+with the name
+.Vt pkg_name
+from the repo.
+.It Fn pkg_repo_find_pkg
+Finds an empty package
+.Vt pkg
+in a respority
+.Vt repo
+and sets the appropriate data to make it installable.
+.It Fn pkg_repo_free
+Frees all allocated memory from the given
+.Tn pkg_repo .
 .El
-Part of the goal is to remove the need for applications to
-know anything about the internal details of these systems.
-For example, the package database may be implemented as
-a collection of files stored in directories, as a Berkeley
-DB database file, or as a collection of tables in a relational
-database.
 .Sh SEE ALSO
+.Xr libpkg 3 ,
 .Xr pkg 3 ,
-.Xr pkg_repo 3 ,
 .Xr pkg_db 3
