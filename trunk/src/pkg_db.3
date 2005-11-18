@@ -32,6 +32,7 @@
 .Nm pkg_db_open_freebsd ,
 .Nm pkg_db_install_pkg ,
 .Nm pkg_db_is_installed ,
+.Nm pkg_db_get_packages ,
 .Nm pkg_db_free ,
 .Nd functions for installing packages
 .Sh LIBRARY
@@ -42,7 +43,9 @@
 .Fn pkg_db_open_freebsd "const char *base"
 .Ft int
 .Fn pkg_db_install_pkg "struct pkg_db *db" "struct pkg *pkg"
-.Ft int
+.Ft struct pkg **
+.Fn pkg_db_get_packages "struct pkg_db *db"
+.Ft in
 .Fn pkg_db_is_installed "struct pkg_db *db" "const char *package"
 .Ft int
 .Fn pkg_db_free "struct pkg_db *db"
@@ -61,6 +64,10 @@ filesystem tree with it's root at
 Runs the package install callback to install a package.
 .It Fn pkg_db_is_installed
 Checks if the named package is installed. Returns PKG_YES if it is installed, PKG_NO if it is uninstalled or PKG_FAIL if there was an error.
+.It Fn pkg_db_get_packages
+Returns a NULL terminated array of packages installed in
+the database
+.Vt db . 
 .It Fn pkg_db_free
 Frees the
 .Tn struct pkg_db .

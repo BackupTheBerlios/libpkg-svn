@@ -29,6 +29,7 @@
 .Dt libpkg 3
 .Os
 .Sh NAME
+.Nm pkg_new_empty ,
 .Nm pkg_new_freebsd ,
 .Nm pkg_make_freebsd ,
 .Nm pkg_get_name ,
@@ -43,6 +44,8 @@
 .Lb libpkg
 .Sh SYNOPSIS
 .In pkg.h
+.Ft struct pkg *
+.Fn pkg_new_empty "const char *name"
 .Ft struct pkg *
 .Fn pkg_new_freebsd "FILE *fd"
 .Ft struct pkg *
@@ -70,13 +73,8 @@ A package is represented by a
 which is normaly created by a Package Repository or
 Package Database.
 .Bl -tag -compact -width indent
-.It Fn pkg_new
-Allocates and initializes an empty
-.Tn struct pkg
-object. It takes in the packages name, and three callbacks
-to read the control files, read the next content file and
-free all data respectively.
-These callbacks can be NULL if they are unneeded.
+.It Fn pkg_new_empty
+Creates a new package with only the package name.
 .It Fn pkg_new_freebsd
 Creates a new package with callbacks to handle FreeBSD
 packages version 1.1
