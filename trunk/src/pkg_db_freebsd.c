@@ -31,6 +31,7 @@
 #include <sys/types.h>
 
 #include <assert.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -62,6 +63,10 @@ static int pkg_states[7][12] = {
 
 static int freebsd_install_pkg(struct pkg_db *, struct pkg *);
 static int freebsd_is_installed(struct pkg_db *, const char *);
+static struct pkg **freebsd_get_installed(struct pkg_db *);
+	
+
+/* Calbacks */
 static struct pkg_file *freebsd_build_contents(struct pkg_freebsd_contents *);
 static int freebsd_do_cwd(struct pkg_db *, struct pkg *, char *ndir);
 static int freebsd_check_contents(struct pkg_db *, struct pkg_freebsd_contents *);
@@ -74,7 +79,8 @@ pkg_db_open_freebsd(const char *base)
 {
 	struct pkg_db *db;
 
-	db = pkg_db_open(base, freebsd_install_pkg, freebsd_is_installed);
+	db = pkg_db_open(base, freebsd_install_pkg, freebsd_is_installed,
+	    freebsd_get_installed);
 	if (!db) {
 		/* pkg_null will have the error message */
 		return NULL;
@@ -305,6 +311,48 @@ freebsd_is_installed(struct pkg_db *db, const char *package)
 	/* XXX Check the correct files are there */
 
 	return 0;
+}
+
+static struct pkg **
+freebsd_get_installed(struct pkg_db *db)
+{
+	DIR *d;
+	struct dirent *de;
+	char *dir;
+	struct pkg **packages;
+	unsigned int packages_size;
+	unsigned int packages_pos;
+	
+	assert(db != NULL);
+	assert(db->db_base != NULL);
+
+	asprintf(&dir, "%s" DB_LOCATION, db->db_base);
+	if (!dir)
+		return NULL;
+	d = opendir(dir);
+	free(dir);
+	if (!d)
+		return NULL;
+
+	packages_size = sizeof(char *);
+	packages = malloc(packages_size);
+	if (!packages) {
+		closedir(d);
+		return NULL;
+	}
+	packages[0] = NULL;
+	packages_pos = 0;
+	while((de = readdir(d)) != NULL) {
+		if (de->d_name[0] == '.' || de->d_type != DT_DIR)
+			continue;
+		packages_size += sizeof(char *);
+		packages = realloc(packages, packages_size);
+		packages[packages_pos] = pkg_new_empty(de->d_name);
+		packages_pos++;
+		packages[packages_pos] = NULL;
+	}
+	closedir(d);
+	return packages;
 }
 
 static int

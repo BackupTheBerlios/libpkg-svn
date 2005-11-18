@@ -38,6 +38,7 @@ struct pkg_db;
 struct pkg_db	*pkg_db_open_freebsd(const char *);
 int		 pkg_db_install_pkg(struct pkg_db *, struct pkg *);
 int		 pkg_db_is_installed(struct pkg_db *, const char *);
+struct pkg	**pkg_db_get_installed(struct pkg_db *);
 int		 pkg_db_free(struct pkg_db *);
 
 #endif /* __LIBPKG_PKG_DB_H__ */

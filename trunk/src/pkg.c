@@ -60,6 +60,12 @@ pkg_new(const char *name,
 	return pkg;
 }
 
+struct pkg*
+pkg_new_empty(const char *name)
+{
+	return pkg_new(name, NULL, NULL, NULL, NULL);
+}
+
 struct pkg *
 pkg_set_callbacks(struct pkg *pkg, 
 		pkg_get_control_files_callback *control_files,

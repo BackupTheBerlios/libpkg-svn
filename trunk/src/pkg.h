@@ -50,6 +50,7 @@ int		 pkg_file_write(struct pkg_file *);
  */
 struct pkg;
 
+struct pkg		*pkg_new_empty(const char *);
 struct pkg		*pkg_new_freebsd(FILE *);
 struct pkg		*pkg_make_freebsd(struct pkg *, FILE *);
 struct pkg		**pkg_get_dependencies(struct pkg *);
