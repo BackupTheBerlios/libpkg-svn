@@ -1,0 +1,17 @@
+<?xml version='1.0'?>
+<?xml-stylesheet href="page.xsl" type="text/xsl"?>
+<page name="index">
+ <title>libpkg</title>
+ <body>
+  <h2>About</h2>
+  <p>libpkg is a library to fetch, install, remove and modify packages in a
+    package management system.</p>
+  <p>It is initialy designed for FreeBSD but could be extennded for any
+    system.</p>
+
+  <h2>Todo</h2>
+  <ul>
+   <li>Create a better website</li>
+  </ul>
+ </body>
+</page>

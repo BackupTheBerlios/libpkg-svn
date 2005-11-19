@@ -1,0 +1,5 @@
+<?xml version='1.0'?>
+<nav>
+ <page><title>Home</title><file>index</file></page>
+ <page><title>Downloads</title><file>downloads</file></page>
+</nav>

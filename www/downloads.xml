@@ -1,0 +1,21 @@
+<?xml version='1.0'?>
+<?xml-stylesheet href="page.xsl" type="text/xsl"?>
+<page name="downloads">
+ <title>Download libpkg</title>
+ <body>
+  <div>
+   <h2>Download Releases</h2>
+   <p>The latest release is availiable from
+    <a href="http://developer.berlios.de/project/showfiles.php?group_id=5252">
+    the BerliOS files page</a></p>
+  </div>
+  <div>
+   <h2>Developement</h2>
+   <p>The development branche can be retrieved from subversion by running
+    <pre>svn checkout svn://svn.berlios.de/libpkg/trunk</pre>
+    or
+    <pre>svn checkout http://svn.berlios.de/svnroot/repos/libpkg/trunk</pre>
+   </p>
+  </div>
+ </body>
+</page>

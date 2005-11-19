@@ -1,0 +1,25 @@
+#title {
+	border-bottom:1px solid #B39B6B;
+	width: 30%;
+	text-align:center;
+	margin:0 auto;
+}
+
+#nav {
+	float:left;
+	padding:10px;
+	width:15%;
+}
+
+#main {
+	float:left;
+	line-height:1.01em;
+	padding-left:3.5%;
+	padding-right:3.5%;
+
+}
+
+#footer {
+	padding-top:5px;
+	clear:both;
+}
