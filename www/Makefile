@@ -10,10 +10,10 @@ install: ${FILES}
 clean:
 	rm -fr *.html
 
-index.html: index.xml index.xsl
+index.html: index.xml page.xsl
 	xsltproc index.xml > index.html
 
-downloads.html: downloads.xml index.xsl
+downloads.html: downloads.xml page.xsl
 	xsltproc downloads.xml > downloads.html
 
 index.xsl: nav.xml
