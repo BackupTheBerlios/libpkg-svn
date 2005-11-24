@@ -345,9 +345,13 @@ freebsd_get_installed(struct pkg_db *db)
 	while((de = readdir(d)) != NULL) {
 		if (de->d_name[0] == '.' || de->d_type != DT_DIR)
 			continue;
+		asprintf(&dir, "%s" DB_LOCATION "/%s",
+		    db->db_base, de->d_name);
 		packages_size += sizeof(char *);
 		packages = realloc(packages, packages_size);
-		packages[packages_pos] = pkg_new_empty(de->d_name);
+		packages[packages_pos] = pkg_new_freebsd_installed(de->d_name,
+		    dir);
+		free(dir);
 		packages_pos++;
 		packages[packages_pos] = NULL;
 	}

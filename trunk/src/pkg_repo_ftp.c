@@ -132,7 +132,7 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 
 	fd = ftp_get_fd(pkg_name, f_repo);
 	
-	pkg = pkg_new_freebsd(fd);
+	pkg = pkg_new_freebsd_from_file(fd);
 	if (!pkg) {
 		fclose(fd);
 		return NULL;

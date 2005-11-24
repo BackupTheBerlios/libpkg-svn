@@ -27,12 +27,65 @@
  *
  */
 
+#include <assert.h>
 #include <libgen.h>
+#include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "pkg.h"
 #include "pkg_private.h"
+
+/*
+ * Creates a new pkg_file from a file on the file system
+ */
+struct pkg_file *
+pkg_file_new(const char *filename)
+{
+	struct pkg_file *file;
+	FILE *fd;
+	struct stat sb;
+	char *buffer;
+	uint64_t length;
+
+	if (!filename)
+		return NULL;
+
+	fd = fopen(filename, "r");
+	if (fd == NULL) {
+		return NULL;
+	}
+	fstat(fileno(fd), &sb);
+
+	/* Get the file length */
+	fseek(fd, 0, SEEK_END);
+	length = ftell(fd);
+	fseek(fd, 0, SEEK_SET);
+
+	buffer = malloc(length + 1);
+	if (buffer == NULL) {
+		fclose(fd);
+		return NULL;
+	}
+
+	/* 
+	 * XXX fread can only handle up to SIZE_T_MAX so fail
+	 * if the file is bigger until a better file reader
+	 */
+	assert(length <= SIZE_T_MAX);
+	fread(buffer, 1, length, fd);
+	buffer[length] = '\0';
+	
+	fclose(fd);
+
+	file = pkg_file_new_from_buffer(filename, length, buffer, &sb);
+	if (!file) {
+		free(buffer);
+		return NULL;
+	}
+	return file;
+}
 
 /*
  * Creates a new pkg_file from a buffer
@@ -66,8 +119,6 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 	}
 	file->len = length;
 	file->contents = buffer;
-
-	file->data = NULL;
 
 	return file;
 }

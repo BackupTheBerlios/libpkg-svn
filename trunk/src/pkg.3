@@ -30,13 +30,15 @@
 .Os
 .Sh NAME
 .Nm pkg_new_empty ,
-.Nm pkg_new_freebsd ,
+.Nm pkg_new_freebsd_from_fd ,
+.Nm pkg_new_freebsd_installed ,
 .Nm pkg_make_freebsd ,
 .Nm pkg_get_name ,
 .Nm pkg_get_dependencies ,
 .Nm pkg_get_control_files ,
 .Nm pkg_get_next_file ,
 .Nm pkg_free ,
+.Nm pkg_file_new ,
 .Nm pkg_file_new_from_buffer ,
 .Nm pkg_file_free ,
 .Nd functions for managing binary packages and their files
@@ -47,7 +49,9 @@
 .Ft struct pkg *
 .Fn pkg_new_empty "const char *name"
 .Ft struct pkg *
-.Fn pkg_new_freebsd "FILE *fd"
+.Fn pkg_new_freebsd_from_fd "FILE *fd"
+.Ft struct pkg *
+.Fn pkg_new_freebsd_installed "const char *pkg_name" "const char *pkg_db_dir"
 .Ft struct pkg *
 .Fn pkg_make_freebsd "struct pkg *pkg" "FILE *fd"
 .Ft char *
@@ -60,6 +64,8 @@
 .Fn pkg_get_next_file "struct pkg *pkg"
 .Ft int
 .Fn pkg_free "struct pkg *pkg"
+.Ft struct pkg_file *
+.Fn pkg_file_new "const char *filename"
 .Ft struct pkg_file *
 .Fn pkg_file_new_from_buffer "const char *filename" "uint64_t length" "char *buffer" "const struct stat *sb"
 .Ft int
@@ -75,9 +81,15 @@ Package Database.
 .Bl -tag -compact -width indent
 .It Fn pkg_new_empty
 Creates a new package with only the package name.
-.It Fn pkg_new_freebsd
+.It Fn pkg_new_freebsd_from_fd
 Creates a new package with callbacks to handle FreeBSD
 packages version 1.1
+.It Fn pkg_new_freebsd_installed
+Creates a
+.Tn struct pkg
+from a given directory
+.Vt pkg_db_dir
+containing the package control files.
 .It Fn pkg_make_freebsd
 Converts an empty package to a FreeBSD package.
 The
@@ -107,6 +119,11 @@ The
 containes one file.
 It can be installed or processed further.
 .Bl -tag -compact -width indent
+.It Fn pkg_file_new
+Creates a 
+.Tn struct pkg_file
+from the file located at
+.Vt filename .
 .It Fn pkg_file_new_from_buffer
 Creates a
 .Tn struct pkg_file

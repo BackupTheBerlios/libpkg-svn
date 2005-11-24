@@ -66,7 +66,7 @@ file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 
 	/* Create the package */
 	/* XXX auto detect package type */
-	pkg = pkg_new_freebsd(fd);
+	pkg = pkg_new_freebsd_from_file(fd);
 	if (!pkg) {
 		fclose(fd);
 		return NULL;

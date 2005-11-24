@@ -35,8 +35,6 @@
 int archive_read_open_stream(struct archive *, FILE *, size_t);
 
 struct pkg_file {
-	void	*data;
-	
 	char		*filename;
 	uint64_t	 len;
 	char		*contents;

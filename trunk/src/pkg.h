@@ -40,6 +40,7 @@
  */
 struct pkg_file;
 
+struct pkg_file	*pkg_file_new(const char *);
 struct pkg_file	*pkg_file_new_from_buffer(const char *, uint64_t, char *,
 			const struct stat *);
 int		 pkg_file_free(struct pkg_file *);
@@ -51,7 +52,8 @@ int		 pkg_file_write(struct pkg_file *);
 struct pkg;
 
 struct pkg		*pkg_new_empty(const char *);
-struct pkg		*pkg_new_freebsd(FILE *);
+struct pkg		*pkg_new_freebsd_from_file(FILE *);
+struct pkg		*pkg_new_freebsd_installed(const char *, const char *);
 struct pkg		*pkg_make_freebsd(struct pkg *, FILE *);
 struct pkg		**pkg_get_dependencies(struct pkg *);
 /*
