@@ -44,6 +44,7 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 		pkg_db_get_installed_callback *get_installed)
 {
 	struct pkg_db *db;
+	struct stat sb;
 
 	db = malloc(sizeof(struct pkg_db));
 	if (!db) {
@@ -51,7 +52,9 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	}
 
 	/* Make a relative path into an absolute path */
-	if (base[0] != '/') {
+	if (base == NULL) {
+		db->db_base = strdup("/");
+	} else if (base[0] != '/') {
 		char *cwd;
 
 		cwd = getcwd(NULL, 0);
@@ -64,8 +67,16 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	if (!db->db_base) {
 		free(db);
 		return NULL;
+	} else if (stat(db->db_base, &sb) == -1) {
+		free(db->db_base);
+		free(db);
+		return NULL;
+	} else if (!S_ISDIR(sb.st_mode)) {
+		free(db->db_base);
+		free(db);
+		return NULL;
 	}
-
+	
 	db->pkg_install = install_pkg;
 	db->pkg_is_installed = is_installed;
 	db->pkg_get_installed = get_installed;

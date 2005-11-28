@@ -77,16 +77,8 @@ static int freebsd_check_contents(struct pkg_db *, struct pkg_freebsd_contents *
 struct pkg_db*
 pkg_db_open_freebsd(const char *base)
 {
-	struct pkg_db *db;
-
-	db = pkg_db_open(base, freebsd_install_pkg, freebsd_is_installed,
+	return pkg_db_open(base, freebsd_install_pkg, freebsd_is_installed,
 	    freebsd_get_installed);
-	if (!db) {
-		/* pkg_null will have the error message */
-		return NULL;
-	}
-
-	return db;
 }
 
 /*

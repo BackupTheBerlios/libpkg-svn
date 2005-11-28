@@ -96,6 +96,9 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 {
 	struct pkg_file *file;
 
+	if (!filename || !buffer)
+		return NULL;
+	
 	file = malloc(sizeof(struct pkg_file));
 	if (!file) {
 		return NULL;

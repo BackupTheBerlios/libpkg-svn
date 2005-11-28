@@ -74,6 +74,9 @@ pkg_new_freebsd_from_file(FILE *fd)
 	struct freebsd_package *f_pkg;
 	char *pkg_name;
 
+	if (fd == NULL)
+		return NULL;
+	
 	f_pkg = freebsd_get_package(fd, NULL);
 
 	/* Find the package name */
@@ -109,7 +112,10 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 		} \
 		free(c); \
 	}
-	
+
+	if (!pkg_name || ! pkg_db_dir)
+		return NULL;
+
 	d = opendir(pkg_db_dir);
 
 	/* Load all the + files into control */

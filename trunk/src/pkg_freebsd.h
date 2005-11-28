@@ -48,7 +48,6 @@ enum {
 };
 
 struct pkg_freebsd_contents *pkg_freebsd_contents_new(const char *);
-char *pkg_freebsd_contents_get_dir(struct pkg_freebsd_contents *, const char *);
 int pkg_freebsd_contents_free(struct pkg_freebsd_contents *);
 
 #endif /* __LIBPKG_PKG_FREEBSD_H__ */

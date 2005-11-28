@@ -42,6 +42,9 @@ pkg_new(const char *name,
 {
 	struct pkg *pkg;
 
+	if (name == NULL)
+		return NULL;
+	
 	pkg = malloc(sizeof(struct pkg));
 	if (!pkg) {
 		return NULL;
@@ -112,6 +115,9 @@ pkg_get_next_file(struct pkg *pkg)
 struct pkg **
 pkg_get_dependencies(struct pkg *pkg)
 {
+	if (!pkg)
+		return NULL;
+
 	if (pkg->pkg_get_deps)
 		return pkg->pkg_get_deps(pkg);
 	return NULL;

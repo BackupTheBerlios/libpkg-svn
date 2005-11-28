@@ -44,6 +44,9 @@ pkg_freebsd_contents_new(const char *contents)
 	struct pkg_freebsd_contents *cont;
 	int pos;
 
+	if (contents == NULL)
+		return NULL;
+
 	cont = malloc(sizeof(struct pkg_freebsd_contents));
 	if (!cont) {
 		return NULL;
@@ -67,6 +70,10 @@ pkg_freebsd_contents_new(const char *contents)
 	if (pos > 0 && cont->file[pos-1] != '\n')
 		cont->line_count++;
 
+	if (cont->line_count == 0) {
+		pkg_freebsd_contents_free(cont);
+		return NULL;
+	}
 	cont->lines = malloc(sizeof(struct pkg_freebsd_contents_line) *
 	    cont->line_count);
 	if (!cont->lines) {
