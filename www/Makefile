@@ -1,6 +1,6 @@
 FILES=index.html downloads.html index.css
 
-FILESDIR?=/home/groups/libpkg/htdocs/test/
+FILESDIR?=/home/groups/libpkg/htdocs/
 
 all: ${FILES}
 
