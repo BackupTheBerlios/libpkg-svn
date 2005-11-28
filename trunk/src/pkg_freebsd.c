@@ -82,7 +82,7 @@ pkg_new_freebsd_from_file(FILE *fd)
 	/* Find the package name */
 	pkg_name = freebsd_get_pkg_name(f_pkg->control[0]->contents);
 
-	pkg = pkg_new(pkg_name, freebsd_get_control_files,
+	pkg = pkg_new(pkg_name, NULL, freebsd_get_control_files,
 		freebsd_get_next_file, freebsd_get_deps, freebsd_free);
 	free(pkg_name);
 
@@ -155,7 +155,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	closedir(d);
 	
 	/* Only the get_deps and free callbacks will work */
-	pkg = pkg_new(pkg_name, NULL, NULL,
+	pkg = pkg_new(pkg_name, NULL, NULL, NULL,
 	    freebsd_get_deps, freebsd_free);
 	if (pkg == NULL) {
 		FREE_CONTENTS(control);
@@ -179,7 +179,7 @@ pkg_make_freebsd(struct pkg *pkg, FILE *fd)
 {
 	struct freebsd_package *f_pkg;
 
-	pkg_set_callbacks(pkg, freebsd_get_control_files,
+	pkg_set_callbacks(pkg, NULL, freebsd_get_control_files,
 	    freebsd_get_next_file, freebsd_get_deps, freebsd_free);
 	f_pkg = freebsd_get_package(fd, NULL);
 	pkg->data = f_pkg;
@@ -369,8 +369,8 @@ freebsd_get_deps(struct pkg *pkg)
 		if (contents->lines[line].line_type == PKG_LINE_PKGDEP) {
 			pkg_size += sizeof(struct pkg *);
 			pkgs = realloc(pkgs, pkg_size);
-			pkgs[pkg_count] = pkg_new(contents->lines[line].data,
-			    NULL, NULL, NULL, NULL);
+			pkgs[pkg_count] = pkg_new_empty
+			    (contents->lines[line].data);
 			pkg_count++;
 			pkgs[pkg_count] = NULL;
 		}

@@ -55,6 +55,7 @@ struct pkg		*pkg_new_empty(const char *);
 struct pkg		*pkg_new_freebsd_from_file(FILE *);
 struct pkg		*pkg_new_freebsd_installed(const char *, const char *);
 struct pkg		*pkg_make_freebsd(struct pkg *, FILE *);
+int			 pkg_add_file(struct pkg *, struct pkg_file *);
 struct pkg		**pkg_get_dependencies(struct pkg *);
 /*
  * Returns all control files from the package
