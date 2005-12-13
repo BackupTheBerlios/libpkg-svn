@@ -39,6 +39,7 @@ struct pkg_freebsd_contents_line {
 struct pkg_freebsd_contents {
 	char	*file;
 	int	 line_count;
+	int	 line_size;
 	struct pkg_freebsd_contents_line *lines;
 };
 
