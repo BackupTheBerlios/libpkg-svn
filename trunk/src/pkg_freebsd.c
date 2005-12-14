@@ -59,7 +59,10 @@ struct freebsd_package {
 };
 
 /* Callbacks */
-static int			  freebsd_add_file(struct pkg *, struct pkg_file *);
+static int			  freebsd_add_depend(struct pkg *,
+					struct pkg *);
+static int			  freebsd_add_file(struct pkg *,
+					struct pkg_file *);
 static struct pkg_file		**freebsd_get_control_files(struct pkg *);
 static struct pkg_file		 *freebsd_get_next_file(struct pkg *);
 static struct pkg		**freebsd_get_deps(struct pkg *);
@@ -87,7 +90,7 @@ pkg_new_freebsd_from_file(FILE *fd)
 	/* Find the package name */
 	pkg_name = freebsd_get_pkg_name(f_pkg->control[0]->contents);
 
-	pkg = pkg_new(pkg_name, NULL, freebsd_get_control_files,
+	pkg = pkg_new(pkg_name, NULL, NULL, freebsd_get_control_files,
 		freebsd_get_next_file, freebsd_get_deps, freebsd_free);
 	free(pkg_name);
 
@@ -160,7 +163,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	closedir(d);
 	
 	/* Only the get_deps and free callbacks will work */
-	pkg = pkg_new(pkg_name, NULL, NULL, NULL,
+	pkg = pkg_new(pkg_name, NULL, NULL, NULL, NULL,
 	    freebsd_get_deps, freebsd_free);
 	if (pkg == NULL) {
 		FREE_CONTENTS(control);
@@ -187,7 +190,8 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	if (pkg_name == NULL)
 		return NULL;
 
-	pkg = pkg_new(pkg_name, freebsd_add_file, NULL, NULL, NULL, freebsd_free);
+	pkg = pkg_new(pkg_name, freebsd_add_depend, freebsd_add_file, NULL,
+	    NULL, NULL, freebsd_free);
 	if (pkg == NULL)
 		return NULL;
 
@@ -219,7 +223,7 @@ pkg_make_freebsd(struct pkg *pkg, FILE *fd)
 {
 	struct freebsd_package *f_pkg;
 
-	pkg_set_callbacks(pkg, NULL, freebsd_get_control_files,
+	pkg_set_callbacks(pkg, NULL, NULL, freebsd_get_control_files,
 	    freebsd_get_next_file, freebsd_get_deps, freebsd_free);
 	f_pkg = freebsd_get_package(fd, NULL);
 	pkg->data = f_pkg;
@@ -339,6 +343,12 @@ freebsd_get_package(FILE *fd, struct pkg_file **control)
 }
 
 static int
+freebsd_add_depend(struct pkg *pkg __unused, struct pkg *depend __unused)
+{
+	return -1;
+}
+
+static int
 freebsd_add_file(struct pkg *pkg, struct pkg_file *file)
 {
 	struct freebsd_package *f_pkg;
@@ -357,7 +367,6 @@ freebsd_add_file(struct pkg *pkg, struct pkg_file *file)
 	f_pkg->all_files_pos++;
 	f_pkg->all_files[f_pkg->all_files_pos] = NULL;
 
-	/* XXX Add the file to the +CONTENTS file */
 	assert(f_pkg->contents != NULL);
 	pkg_freebsd_contents_add_file(f_pkg->contents, file);
 	

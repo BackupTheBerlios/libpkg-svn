@@ -51,12 +51,13 @@ int		 pkg_file_write(struct pkg_file *);
  */
 struct pkg;
 
-struct pkg		*pkg_new_empty(const char *);
-struct pkg		*pkg_new_freebsd_from_file(FILE *);
-struct pkg		*pkg_new_freebsd_installed(const char *, const char *);
-struct pkg		*pkg_new_freebsd_empty(const char *);
-struct pkg		*pkg_make_freebsd(struct pkg *, FILE *);
-int			 pkg_add_file(struct pkg *, struct pkg_file *);
+struct pkg		 *pkg_new_empty(const char *);
+struct pkg		 *pkg_new_freebsd_from_file(FILE *);
+struct pkg		 *pkg_new_freebsd_installed(const char *, const char *);
+struct pkg		 *pkg_new_freebsd_empty(const char *);
+struct pkg		 *pkg_make_freebsd(struct pkg *, FILE *);
+int			  pkg_add_dependency(struct pkg *, struct pkg *);
+int			  pkg_add_file(struct pkg *, struct pkg_file *);
 struct pkg		**pkg_get_dependencies(struct pkg *);
 /*
  * Returns all control files from the package
@@ -64,9 +65,9 @@ struct pkg		**pkg_get_dependencies(struct pkg *);
  */
 struct pkg_file		**pkg_get_control_files(struct pkg *);
 /* Returns the next non-control file */
-struct pkg_file		*pkg_get_next_file(struct pkg *);
-int			 pkg_free(struct pkg *);
+struct pkg_file		 *pkg_get_next_file(struct pkg *);
+int			  pkg_free(struct pkg *);
 
-char			*pkg_get_name(struct pkg *);
+char			 *pkg_get_name(struct pkg *);
 
 #endif /* __LIBPKG_PKG_H__ */
