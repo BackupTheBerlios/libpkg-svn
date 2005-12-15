@@ -65,6 +65,7 @@ struct pkg		**pkg_get_dependencies(struct pkg *);
 struct pkg_file		**pkg_get_control_files(struct pkg *);
 /* Returns the next non-control file */
 struct pkg_file		 *pkg_get_next_file(struct pkg *);
+int			  pkg_list_free(struct pkg **);
 int			  pkg_free(struct pkg *);
 
 char			 *pkg_get_name(struct pkg *);

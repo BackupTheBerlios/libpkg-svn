@@ -155,6 +155,22 @@ pkg_get_dependencies(struct pkg *pkg)
 }
 
 int
+pkg_list_free(struct pkg **pkgs)
+{
+	unsigned int cur;
+
+	if (!pkgs)
+		return -1;
+
+	for (cur = 0; pkgs[cur] != NULL; cur++) {
+		pkg_free(pkgs[cur]);
+	}
+
+	free(pkgs);
+	return 0;
+}
+
+int
 pkg_free(struct pkg *pkg)
 {
 	if (!pkg) {

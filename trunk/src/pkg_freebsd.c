@@ -598,6 +598,9 @@ freebsd_free_package(struct freebsd_package *f_pkg)
 
 		free(f_pkg->all_files);
 	}
+
+	if (f_pkg->origin)
+		free(f_pkg->origin);
 	
 	free(f_pkg);
 
