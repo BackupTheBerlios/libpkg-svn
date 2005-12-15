@@ -47,7 +47,8 @@ struct freebsd_package {
 	FILE		*fd;
 
 	struct pkg_file **control;
-	struct pkg_freebsd_contents	*contents;
+	struct pkg_freebsd_contents *contents;
+	char		 *origin;
 
 	/* If not null contains the next file in
 	 * the archive after the control files */
@@ -219,7 +220,7 @@ pkg_new_freebsd_empty(const char *pkg_name)
 }
 
 struct pkg *
-pkg_make_freebsd(struct pkg *pkg, FILE *fd)
+pkg_freebsd_convert(struct pkg *pkg, FILE *fd)
 {
 	struct freebsd_package *f_pkg;
 
@@ -229,6 +230,18 @@ pkg_make_freebsd(struct pkg *pkg, FILE *fd)
 	pkg->data = f_pkg;
 
 	return pkg;
+}
+
+char *
+pkg_freebsd_get_origin(struct pkg *pkg)
+{
+	struct freebsd_package *f_pkg;
+
+	if (!pkg || !pkg->data)
+		return NULL;
+
+	f_pkg = pkg->data;
+	return f_pkg->origin;
 }
 
 /*
@@ -255,6 +268,7 @@ freebsd_get_package(FILE *fd, struct pkg_file **control)
 	f_pkg->all_files_pos = 0;
 	f_pkg->control = control;
 	f_pkg->contents = NULL;
+	f_pkg->origin = NULL;
 	f_pkg->fd = fd;
 
 	if (control != NULL) {

@@ -171,6 +171,9 @@ pkg_freebsd_contents_new(const char *contents)
 	return cont;
 }
 
+/*
+ * Adds a line of type with the value of data the fiven contents file
+ */
 int
 pkg_freebsd_contents_add_line(struct pkg_freebsd_contents *contents, int type,
 	const char *data)
@@ -210,6 +213,37 @@ pkg_freebsd_contents_add_line(struct pkg_freebsd_contents *contents, int type,
 	contents->line_count++;
 
 	return 0;
+}
+
+int
+pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *contents,
+		struct pkg *pkg)
+{
+	char *origin;
+
+	if (contents == NULL || contents->file != NULL || pkg == NULL)
+		return -1;
+
+	if (pkg_freebsd_contents_add_line(contents, PKG_LINE_PKGDEP,
+	    pkg_get_name(pkg)) != 0) {
+		return -1;
+	}
+
+	/* XXX Add the package origin */
+	origin = pkg_freebsd_get_origin(pkg);
+	if (origin != NULL) {
+		char *data;
+
+		asprintf(&data, "ORIGIN:%s", origin);
+		if (pkg_freebsd_contents_add_line(contents, PKG_LINE_COMMENT,
+		    data) != 0) {
+			free(data);
+			return -1;
+		}
+		free(data);
+	}	
+
+	return -1;
 }
 
 /*

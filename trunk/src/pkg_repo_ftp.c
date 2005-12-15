@@ -40,6 +40,7 @@
 
 #include "pkg.h"
 #include "pkg_repo.h"
+#include "pkg_freebsd.h"
 #include "pkg_private.h"
 #include "pkg_repo_private.h"
 
@@ -146,7 +147,7 @@ ftp_find_pkg(struct pkg_repo *repo, struct pkg *pkg)
 {
 	FILE *fd;
 	fd = ftp_get_fd(pkg->pkg_name, repo->data);
-	pkg_make_freebsd(pkg, fd);
+	pkg_freebsd_convert(pkg, fd);
 
 	return pkg;
 }
