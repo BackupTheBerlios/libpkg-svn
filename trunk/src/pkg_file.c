@@ -57,11 +57,7 @@ pkg_file_new(const char *filename)
 		return NULL;
 	}
 	fstat(fileno(fd), &sb);
-
-	/* Get the file length */
-	fseek(fd, 0, SEEK_END);
-	length = ftell(fd);
-	fseek(fd, 0, SEEK_SET);
+	length = sb.st_size;
 
 	buffer = malloc(length + 1);
 	if (buffer == NULL) {
