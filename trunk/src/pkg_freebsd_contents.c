@@ -255,6 +255,7 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 		struct pkg_file *file)
 {
 	char md5[33], tmp[37];
+	char *data;
 
 	if (contents == NULL || contents->file != NULL || file == NULL)
 		return -1;
@@ -264,7 +265,10 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 		return -1;
 	}
 
-	MD5Data(pkg_file_get(file), file->len, md5);
+	data = pkg_file_get(file);
+	if (!data)
+		return -1;
+	MD5Data(data, file->len, md5);
 	snprintf(tmp, 37, "MD5:%s", md5);
 	if (pkg_freebsd_contents_add_line(contents, PKG_LINE_COMMENT, tmp)
 	    != 0) {

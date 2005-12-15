@@ -196,7 +196,7 @@ pkg_file_write(struct pkg_file *file)
 char *
 pkg_file_get(struct pkg_file *file)
 {
-	if (!file || !file->fd)
+	if (file == NULL || (file->contents == NULL && file->fd == NULL))
 		return NULL;
 
 	if (file->contents == NULL) {
@@ -213,6 +213,6 @@ pkg_file_get(struct pkg_file *file)
 		fread(file->contents, 1, file->len, file->fd);
 		file->contents[file->len] = '\0';
 	}
-	
+
 	return file->contents;
 }
