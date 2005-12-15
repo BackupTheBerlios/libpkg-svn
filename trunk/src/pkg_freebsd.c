@@ -103,6 +103,7 @@ pkg_new_freebsd_from_file(FILE *fd)
 	return pkg;
 }
 
+/* XXX Make this work through a pkg_db callback */
 struct pkg *
 pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 {
@@ -111,7 +112,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	struct pkg *pkg;
 	struct freebsd_package *f_pkg;
 	struct pkg_file **control;
-	unsigned int control_size, control_count;
+	unsigned int control_size, control_count, line;
 
 #define FREE_CONTENTS(c) \
 	{ \
@@ -175,6 +176,18 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	if (f_pkg == NULL) {
 		pkg_free(pkg);
 		return NULL;
+	}
+
+	for (line = 0; line < f_pkg->contents->line_count; line++) {
+		if (f_pkg->contents->lines[line].line_type == PKG_LINE_COMMENT)
+		    {
+			if (strncmp("ORIGIN:",
+			    f_pkg->contents->lines[line].data, 7) == 0) {
+				origin = strdup(
+				    f_pkg->contents->lines[line].data + 7);
+				break;
+			}
+		}
 	}
 	
 	pkg->data = f_pkg;
@@ -433,7 +446,7 @@ freebsd_get_next_file(struct pkg *pkg)
 static struct pkg **
 freebsd_get_deps(struct pkg *pkg)
 {
-	int line;
+	unsigned int line;
 	struct pkg_freebsd_contents *contents;
 	struct pkg **pkgs;
 	unsigned int pkg_count;

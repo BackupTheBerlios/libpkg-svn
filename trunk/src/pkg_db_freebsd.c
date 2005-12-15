@@ -92,8 +92,8 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	struct pkg_freebsd_contents *contents;
 	char *cwd;
 	char *directory, *last_file;
-	int i = 0;
-	unsigned int pos;
+	int i;
+	unsigned int pos, line;
 
 	assert(pkg != NULL);
 
@@ -123,20 +123,21 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	}
 
 	i = freebsd_check_contents(db, contents);
-	if (i == -1) {
+	if (i < 0) {
 		pkg_freebsd_contents_free(contents);
 		chdir(cwd);
 		free(cwd);
 		return -1;
-	}
+	} else
+		line = i;
 
 	/* directory is used int the processing of +CONTENTS files */
 	directory = getcwd(NULL, 0);
 	last_file = NULL;
 
 	/* Read through the contents file and install the package */
-	for (; i < contents->line_count; i++) {
-		switch (contents->lines[i].line_type) {
+	for (; line < contents->line_count; line++) {
+		switch (contents->lines[line].line_type) {
 		case PKG_LINE_COMMENT:
 		case PKG_LINE_UNEXEC:
 		case PKG_LINE_DIRRM:
@@ -146,7 +147,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 		case PKG_LINE_CWD:
 			/* Change to the correct directory */
 			free(directory);
-			if (freebsd_do_cwd(db, pkg, contents->lines[i].data)
+			if (freebsd_do_cwd(db, pkg, contents->lines[line].data)
 			    != 0) {
 				chdir(cwd);
 				free(cwd);
@@ -158,7 +159,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 		case PKG_LINE_EXEC: {
 			char cmd[FILENAME_MAX];
 			freebsd_format_cmd(cmd, FILENAME_MAX,
-			    contents->lines[i].data, directory, last_file);
+			    contents->lines[line].data, directory, last_file);
 			printf("exec %s\n", cmd);
 			break;
 		}
@@ -170,13 +171,15 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			int ret;
 
 			/* Check the contents file is correctly formated */
-			if (contents->lines[i+1].line_type != PKG_LINE_COMMENT) {
+			if (contents->lines[line+1].line_type !=
+			    PKG_LINE_COMMENT) {
 				chdir(cwd);
 				free(cwd);
 				free(directory);
 				pkg_freebsd_contents_free(contents);
 				return -1;
-			} else if (strncmp("MD5:", contents->lines[i+1].data, 4)) {
+			} else if (strncmp("MD5:", contents->lines[line+1].data,
+			    4)) {
 				chdir(cwd);
 				free(cwd);
 				free(directory);
@@ -185,13 +188,13 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			}
 
 			/* Read the file to install */
-			if (contents->lines[i].line[0] == '+') {
+			if (contents->lines[line].line[0] == '+') {
 				/* + Files are not fetched with pkg_get_next_file */
 				        for (pos = 0; control[pos] != NULL;
 					    pos++) {
 						if (!strcmp(
 						    control[pos]->filename,
-						    contents->lines[i].line))
+						    contents->lines[line].line))
 							break;
 					}
 					file = control[pos];
@@ -200,7 +203,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 				/* Check the file name is correct */
 				if (strcmp(file->filename,
-				    contents->lines[i].line)) {
+				    contents->lines[line].line)) {
 					chdir(cwd);
 					free(cwd);
 					free(directory);
@@ -210,7 +213,8 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 				}
 			}
 
-			contents_sum = strchr(contents->lines[i+1].data, ':');
+			contents_sum = strchr(contents->lines[line+1].data,
+			    ':');
 			contents_sum++;
 			if (pkg_checksum_md5(file, contents_sum) != 0) {
 				chdir(cwd);
@@ -237,17 +241,17 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 				free(last_file);
 			last_file = strdup(file->filename);
 
-			if (contents->lines[i].line[0] != '+')
+			if (contents->lines[line].line[0] != '+')
 				pkg_file_free(file);
 
-			i++;
+			line++;
 			break;
 		}
 		default:
 			fprintf(stderr, "ERROR: Incorrect line in "
 			    "+CONTENTS file \"%s %s\"\n",
-			    contents->lines[i].line,
-			    contents->lines[i].data);
+			    contents->lines[line].line,
+			    contents->lines[line].data);
 			break;
 		}
 	}
@@ -395,7 +399,7 @@ freebsd_build_contents(struct pkg_freebsd_contents *contents)
 {
 	uint64_t size, used;
 	char *buffer, *ptr;
-	int i;
+	unsigned int i;
 
 	assert(contents != NULL);
 
@@ -472,7 +476,8 @@ freebsd_build_contents(struct pkg_freebsd_contents *contents)
 static int
 freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
 {
-	int i, state;
+	unsigned int i;
+	int state;
 
 	assert(db != NULL);
 	assert(contents != NULL);

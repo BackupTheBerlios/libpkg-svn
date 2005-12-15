@@ -59,7 +59,7 @@ struct pkg_freebsd_contents *
 pkg_freebsd_contents_new(const char *contents)
 {
 	struct pkg_freebsd_contents *cont;
-	int pos;
+	unsigned int pos;
 
 	cont = malloc(sizeof(struct pkg_freebsd_contents));
 	if (!cont)
@@ -149,7 +149,8 @@ pkg_freebsd_contents_new(const char *contents)
 				cont->lines[pos].line_type = PKG_LINE_CWD;
 			} else if (!strcmp(cont->lines[pos].line, "@pkgdep")) {
 				cont->lines[pos].line_type = PKG_LINE_PKGDEP;
-			} else if (!strcmp(cont->lines[pos].line, "@conflicts")) {
+			} else if (!strcmp(cont->lines[pos].line, "@conflicts"))
+			    {
 				cont->lines[pos].line_type = PKG_LINE_CONFLICTS;
 			} else if (!strcmp(cont->lines[pos].line, "@exec")) {
 				cont->lines[pos].line_type = PKG_LINE_EXEC;
@@ -163,7 +164,8 @@ pkg_freebsd_contents_new(const char *contents)
 				cont->lines[pos].line_type = PKG_LINE_MTREE;
 			} else {
 				cont->lines[pos].line_type = PKG_LINE_UNKNOWN;
-				fprintf(stderr, "Unknown line type %s\n", cont->lines[pos].line);
+				fprintf(stderr, "Unknown line type %s\n",
+				    cont->lines[pos].line);
 			}
 			pos++;
 		}
@@ -229,7 +231,6 @@ pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *contents,
 		return -1;
 	}
 
-	/* XXX Add the package origin */
 	origin = pkg_freebsd_get_origin(pkg);
 	if (origin != NULL) {
 		char *data;
