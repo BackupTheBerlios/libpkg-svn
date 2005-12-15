@@ -183,7 +183,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 		    {
 			if (strncmp("ORIGIN:",
 			    f_pkg->contents->lines[line].data, 7) == 0) {
-				origin = strdup(
+				f_pkg->origin = strdup(
 				    f_pkg->contents->lines[line].data + 7);
 				break;
 			}
