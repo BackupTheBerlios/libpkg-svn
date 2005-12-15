@@ -91,6 +91,17 @@ pkg_set_callbacks(struct pkg *pkg,
 	return pkg;
 }
 
+/*
+ * A function to pass to *sort[_r] to sort alphabeticly by package name
+ */
+int
+pkg_compare(const void *a, const void *b)
+{
+	/* XXX Makes WARNS <= 3 */
+	return strcmp((*(const struct pkg **)a)->pkg_name,
+	    (*(const struct pkg **)b)->pkg_name);
+}
+
 int
 pkg_add_dependency(struct pkg *pkg, struct pkg *depend)
 {
