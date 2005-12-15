@@ -46,7 +46,6 @@ pkg_file_new(const char *filename)
 	struct pkg_file *file;
 	FILE *fd;
 	struct stat sb;
-	char *buffer;
 	uint64_t length;
 
 	if (!filename)
@@ -59,27 +58,12 @@ pkg_file_new(const char *filename)
 	fstat(fileno(fd), &sb);
 	length = sb.st_size;
 
-	buffer = malloc(length + 1);
-	if (buffer == NULL) {
+	file = pkg_file_new_from_buffer(filename, length, NULL, &sb);
+	if (!file) {
 		fclose(fd);
 		return NULL;
 	}
-
-	/* 
-	 * XXX fread can only handle up to SIZE_T_MAX so fail
-	 * if the file is bigger until a better file reader
-	 */
-	assert(length <= SIZE_T_MAX);
-	fread(buffer, 1, length, fd);
-	buffer[length] = '\0';
-	
-	fclose(fd);
-
-	file = pkg_file_new_from_buffer(filename, length, buffer, &sb);
-	if (!file) {
-		free(buffer);
-		return NULL;
-	}
+	file->fd = fd;
 	return file;
 }
 
@@ -92,7 +76,7 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 {
 	struct pkg_file *file;
 
-	if (!filename || !buffer)
+	if (!filename)
 		return NULL;
 	
 	file = malloc(sizeof(struct pkg_file));
@@ -118,6 +102,7 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 	}
 	file->len = length;
 	file->contents = buffer;
+	file->fd = NULL;
 
 	return file;
 }
@@ -140,6 +125,9 @@ pkg_file_free(struct pkg_file *file)
 
 	if (file->stat)
 		free(file->stat);
+
+	if (file->fd)
+		fclose(file->fd);
 
 	free(file);
 
@@ -203,4 +191,28 @@ pkg_file_write(struct pkg_file *file)
 	fclose(fd);
 
 	return 0;
+}
+
+char *
+pkg_file_get(struct pkg_file *file)
+{
+	if (!file || !file->fd)
+		return NULL;
+
+	if (file->contents == NULL) {
+		file->contents = malloc(file->len + 1);
+		if (file->contents == NULL) {
+			return NULL;
+		}
+
+		/* 
+		 * XXX fread can only handle up to SIZE_T_MAX so fail
+		 * if the file is bigger until a better file reader
+		 */
+		assert(file->len <= SIZE_T_MAX);
+		fread(file->contents, 1, file->len, file->fd);
+		file->contents[file->len] = '\0';
+	}
+	
+	return file->contents;
 }

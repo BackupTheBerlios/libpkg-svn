@@ -264,7 +264,7 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 		return -1;
 	}
 
-	MD5Data(file->contents, file->len, md5);
+	MD5Data(pkg_file_get(file), file->len, md5);
 	snprintf(tmp, 37, "MD5:%s", md5);
 	if (pkg_freebsd_contents_add_line(contents, PKG_LINE_COMMENT, tmp)
 	    != 0) {

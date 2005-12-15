@@ -89,7 +89,7 @@ pkg_new_freebsd_from_file(FILE *fd)
 	f_pkg = freebsd_get_package(fd, NULL);
 
 	/* Find the package name */
-	pkg_name = freebsd_get_pkg_name(f_pkg->control[0]->contents);
+	pkg_name = freebsd_get_pkg_name(pkg_file_get(f_pkg->control[0]));
 
 	pkg = pkg_new(pkg_name, NULL, NULL, freebsd_get_control_files,
 		freebsd_get_next_file, freebsd_get_deps, freebsd_free);
@@ -126,6 +126,12 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	if (!pkg_name || ! pkg_db_dir)
 		return NULL;
 
+	control = NULL;
+
+	/*
+	 * This section until the closedir takes too long in pkg_info.
+	 * It needs to be optimised to just read the required data
+	 */
 	d = opendir(pkg_db_dir);
 
 	/* Load all the + files into control */
@@ -163,7 +169,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	}
 
 	closedir(d);
-	
+
 	/* Only the get_deps and free callbacks will work */
 	pkg = pkg_new(pkg_name, NULL, NULL, NULL, NULL,
 	    freebsd_get_deps, freebsd_free);
@@ -301,7 +307,7 @@ freebsd_get_package(FILE *fd, struct pkg_file **control)
 		}
 
 		f_pkg->contents = pkg_freebsd_contents_new(
-		    control[pos]->contents);
+		    pkg_file_get(control[pos]));
 	} else if (fd != NULL) {
 		/*
 		 * We only need to read from gzip and bzip2 as they
@@ -338,7 +344,7 @@ freebsd_get_package(FILE *fd, struct pkg_file **control)
 		 * Set the control files array to be big enough for
 		 * the +CONTENTS file and a null terminator
 		 */
-		f_pkg->contents = pkg_freebsd_contents_new(file->contents);
+		f_pkg->contents = pkg_freebsd_contents_new(pkg_file_get(file));
 
 		control_size = sizeof(struct pkg_file *) * 2;
 		f_pkg->control = malloc(control_size);

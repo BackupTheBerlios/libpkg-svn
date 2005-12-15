@@ -109,7 +109,7 @@ pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
 	}
 
 	/* Perform a checksum on the file to install */
-	MD5Data(file->contents, file->len, sum);
+	MD5Data(pkg_file_get(file), file->len, sum);
 	if (strcmp(sum, chk_sum)) {
 		return -1;
 	}

@@ -45,6 +45,7 @@ struct pkg_file	*pkg_file_new_from_buffer(const char *, uint64_t, char *,
 			const struct stat *);
 int		 pkg_file_free(struct pkg_file *);
 int		 pkg_file_write(struct pkg_file *);
+char		*pkg_file_get(struct pkg_file *);
 
 /*
  * The package handling functions
@@ -55,6 +56,7 @@ struct pkg		 *pkg_new_empty(const char *);
 struct pkg		 *pkg_new_freebsd_from_file(FILE *);
 struct pkg		 *pkg_new_freebsd_installed(const char *, const char *);
 struct pkg		 *pkg_new_freebsd_empty(const char *);
+int			  pkg_compare(const void *, const void *);
 int			  pkg_add_dependency(struct pkg *, struct pkg *);
 int			  pkg_add_file(struct pkg *, struct pkg_file *);
 struct pkg		**pkg_get_dependencies(struct pkg *);

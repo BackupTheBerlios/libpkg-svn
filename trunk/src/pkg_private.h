@@ -39,6 +39,7 @@ struct pkg_file {
 	uint64_t	 len;
 	char		*contents;
 	struct stat	*stat;
+	FILE		*fd;
 };
 
 /* Package Object */

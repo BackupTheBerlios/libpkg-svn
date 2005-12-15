@@ -111,7 +111,7 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 		return -1;
 	}
 
-	contents = pkg_freebsd_contents_new(contents_file->contents);
+	contents = pkg_freebsd_contents_new(pkg_file_get(contents_file));
 	if (!contents) {
 		return -1;
 	}
