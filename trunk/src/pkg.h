@@ -65,6 +65,7 @@ struct pkg		**pkg_get_dependencies(struct pkg *);
  * Eg. +CONTENTS from FreeBSD Packages
  */
 struct pkg_file		**pkg_get_control_files(struct pkg *);
+struct pkg_file		 *pkg_get_control_file(struct pkg *, const char *);
 /* Returns the next non-control file */
 struct pkg_file		 *pkg_get_next_file(struct pkg *);
 int			  pkg_list_free(struct pkg **);

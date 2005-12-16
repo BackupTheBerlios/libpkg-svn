@@ -38,6 +38,7 @@ pkg_new(const char *name,
 		pkg_add_dependency_callback *add_depend,
 		pkg_add_file_callback *add_file,
 		pkg_get_control_files_callback *control_files,
+		pkg_get_control_file_callback *control_file,
 		pkg_get_next_file_callback *next_file,
 		pkg_get_dependencies_callback *get_deps,
 		pkg_free_callback *free_pkg)
@@ -58,8 +59,8 @@ pkg_new(const char *name,
 		return NULL;
 	}
 
-	pkg_set_callbacks(pkg, add_depend, add_file, control_files, next_file,
-	    get_deps, free_pkg);
+	pkg_set_callbacks(pkg, add_depend, add_file, control_files,
+	    control_file, next_file, get_deps, free_pkg);
 
 	pkg->data = NULL;
 
@@ -69,7 +70,7 @@ pkg_new(const char *name,
 struct pkg*
 pkg_new_empty(const char *name)
 {
-	return pkg_new(name, NULL, NULL, NULL, NULL, NULL, NULL);
+	return pkg_new(name, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 }
 
 struct pkg *
@@ -77,6 +78,7 @@ pkg_set_callbacks(struct pkg *pkg,
 		pkg_add_dependency_callback *add_depend,
 		pkg_add_file_callback *add_file,
 		pkg_get_control_files_callback *control_files,
+		pkg_get_control_file_callback *control_file,
 		pkg_get_next_file_callback *next_file,
 		pkg_get_dependencies_callback *get_deps,
 		pkg_free_callback *free_pkg)
@@ -84,6 +86,7 @@ pkg_set_callbacks(struct pkg *pkg,
 	pkg->pkg_add_depend = add_depend;
 	pkg->pkg_add_file = add_file;
 	pkg->pkg_get_control_files = control_files;
+	pkg->pkg_get_control_file = control_file;
 	pkg->pkg_get_next_file = next_file;
 	pkg->pkg_get_deps = get_deps;
 	pkg->pkg_free = free_pkg;
@@ -138,6 +141,18 @@ pkg_get_control_files(struct pkg *pkg)
 	}
 
 	return pkg->pkg_get_control_files(pkg);
+}
+
+struct pkg_file *
+pkg_get_control_file(struct pkg *pkg, const char *name)
+{
+	if (!pkg || !name)
+		return NULL;
+
+	if (pkg->pkg_get_control_file)
+		return pkg->pkg_get_control_file(pkg, name);
+
+	return NULL;
 }
 
 struct pkg_file *

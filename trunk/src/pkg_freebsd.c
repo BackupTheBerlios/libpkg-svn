@@ -65,6 +65,8 @@ static int			  freebsd_add_depend(struct pkg *,
 static int			  freebsd_add_file(struct pkg *,
 					struct pkg_file *);
 static struct pkg_file		**freebsd_get_control_files(struct pkg *);
+static struct pkg_file		 *freebsd_get_control_file(struct pkg *,
+					const char *);
 static struct pkg_file		 *freebsd_get_next_file(struct pkg *);
 static struct pkg		**freebsd_get_deps(struct pkg *);
 static int			  freebsd_free(struct pkg *);
@@ -92,7 +94,8 @@ pkg_new_freebsd_from_file(FILE *fd)
 	pkg_name = freebsd_get_pkg_name(pkg_file_get(f_pkg->control[0]));
 
 	pkg = pkg_new(pkg_name, NULL, NULL, freebsd_get_control_files,
-		freebsd_get_next_file, freebsd_get_deps, freebsd_free);
+	    freebsd_get_control_file, freebsd_get_next_file,
+	    freebsd_get_deps, freebsd_free);
 	free(pkg_name);
 
 	if (pkg == NULL)
@@ -171,8 +174,8 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	closedir(d);
 
 	/* Only the get_deps and free callbacks will work */
-	pkg = pkg_new(pkg_name, NULL, NULL, NULL, NULL,
-	    freebsd_get_deps, freebsd_free);
+	pkg = pkg_new(pkg_name, NULL, NULL, freebsd_get_control_files,
+	    freebsd_get_control_file, NULL, freebsd_get_deps, freebsd_free);
 	if (pkg == NULL) {
 		FREE_CONTENTS(control);
 		return NULL;
@@ -211,7 +214,7 @@ pkg_new_freebsd_empty(const char *pkg_name)
 		return NULL;
 
 	pkg = pkg_new(pkg_name, freebsd_add_depend, freebsd_add_file, NULL,
-	    NULL, NULL, freebsd_free);
+	    NULL, NULL, NULL, freebsd_free);
 	if (pkg == NULL)
 		return NULL;
 
@@ -244,7 +247,8 @@ pkg_freebsd_convert(struct pkg *pkg, FILE *fd)
 	struct freebsd_package *f_pkg;
 
 	pkg_set_callbacks(pkg, NULL, NULL, freebsd_get_control_files,
-	    freebsd_get_next_file, freebsd_get_deps, freebsd_free);
+	    freebsd_get_control_file, freebsd_get_next_file,
+	    freebsd_get_deps, freebsd_free);
 	f_pkg = freebsd_get_package(fd, NULL);
 	pkg->data = f_pkg;
 
@@ -419,6 +423,25 @@ freebsd_get_control_files(struct pkg *pkg)
 	assert(f_pkg != NULL);
 
 	return f_pkg->control;
+}
+
+static struct pkg_file *
+freebsd_get_control_file(struct pkg *pkg, const char *file)
+{
+	struct freebsd_package *f_pkg;
+	unsigned int pos;
+
+	assert(pkg != NULL);
+	assert(file != NULL);
+
+	f_pkg = pkg->data;
+	assert(f_pkg != NULL);
+
+	for (pos = 0; f_pkg->control[pos] != NULL; pos++)
+		if (strcmp(basename(f_pkg->control[pos]->filename), file) == 0)
+			return f_pkg->control[pos];
+
+	return NULL;
 }
 
 /* Get the next file in the package */

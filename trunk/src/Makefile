@@ -27,6 +27,5 @@ MAN=	libpkg.3 pkg.3 pkg_repo.3 pkg_db.3
 CFLAGS+=-O0
 DEBUG_FLAGS=-ggdb
 WARNS?=3
-NOPROFILE=1
 
 .include <bsd.lib.mk>
