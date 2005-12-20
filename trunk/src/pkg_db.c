@@ -41,7 +41,8 @@
 struct pkg_db*
 pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 		pkg_db_is_installed_callback *is_installed,
-		pkg_db_get_installed_callback *get_installed)
+		pkg_db_get_installed_callback *get_installed,
+		pkg_db_get_package_callback *get_package)
 {
 	struct pkg_db *db;
 	struct stat sb;
@@ -80,6 +81,7 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	db->pkg_install = install_pkg;
 	db->pkg_is_installed = is_installed;
 	db->pkg_get_installed = get_installed;
+	db->pkg_get_package = get_package;
 
 	db->data = NULL;
 
@@ -128,6 +130,18 @@ pkg_db_get_installed(struct pkg_db *db)
 		return NULL;
 
 	return db->pkg_get_installed(db);
+}
+
+struct pkg *
+pkg_db_get_package(struct pkg_db *db, const char *name)
+{
+	if (!db || !name)
+		return NULL;
+
+	if (db->pkg_get_package)
+		return db->pkg_get_package(db, name);
+
+	return NULL;
 }
 
 int

@@ -136,6 +136,8 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	 * It needs to be optimised to just read the required data
 	 */
 	d = opendir(pkg_db_dir);
+	if (d == NULL)
+		return NULL;
 
 	/* Load all the + files into control */
 	control_size = sizeof(struct pkg_file **);

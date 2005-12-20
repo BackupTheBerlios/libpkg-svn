@@ -27,6 +27,7 @@
  *
  */
 
+#include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -61,15 +62,17 @@ static int pkg_states[7][12] = {
 	{ -1, -1, -1, -1, -1,  6, -1, -1, -1, -1, -1, -1 }  /* p6 */
 };
 
-static int freebsd_install_pkg(struct pkg_db *, struct pkg *);
-static int freebsd_is_installed(struct pkg_db *, const char *);
-static struct pkg **freebsd_get_installed(struct pkg_db *);
-	
+static int		  freebsd_install_pkg(struct pkg_db *, struct pkg *);
+static int		  freebsd_is_installed(struct pkg_db *, const char *);
+static struct pkg	**freebsd_get_installed(struct pkg_db *);
+static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
 
-/* Calbacks */
-static struct pkg_file *freebsd_build_contents(struct pkg_freebsd_contents *);
-static int freebsd_do_cwd(struct pkg_db *, struct pkg *, char *ndir);
-static int freebsd_check_contents(struct pkg_db *, struct pkg_freebsd_contents *);
+/* Internal */
+static struct pkg_file	*freebsd_build_contents(struct pkg_freebsd_contents *);
+static int		 freebsd_do_cwd(struct pkg_db *, struct pkg *,
+				char *ndir);
+static int		 freebsd_check_contents(struct pkg_db *,
+				struct pkg_freebsd_contents *);
 
 /*
  * Opens the FreeBSD Package Database
@@ -78,7 +81,7 @@ struct pkg_db*
 pkg_db_open_freebsd(const char *base)
 {
 	return pkg_db_open(base, freebsd_install_pkg, freebsd_is_installed,
-	    freebsd_get_installed);
+	    freebsd_get_installed, freebsd_get_package);
 }
 
 /*
@@ -189,15 +192,17 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 
 			/* Read the file to install */
 			if (contents->lines[line].line[0] == '+') {
-				/* + Files are not fetched with pkg_get_next_file */
-				        for (pos = 0; control[pos] != NULL;
-					    pos++) {
-						if (!strcmp(
-						    control[pos]->filename,
-						    contents->lines[line].line))
-							break;
-					}
-					file = control[pos];
+				/*
+				 * + Files are not fetched with
+				 * pkg_get_next_file
+				 */
+				for (pos = 0; control[pos] != NULL;
+				    pos++) {
+					if (!strcmp(control[pos]->filename,
+					    contents->lines[line].line))
+						break;
+				}
+				file = control[pos];
 			} else {
 				file = pkg_get_next_file(pkg);
 
@@ -353,6 +358,15 @@ freebsd_get_installed(struct pkg_db *db)
 	}
 	closedir(d);
 	return packages;
+}
+
+static struct pkg *
+freebsd_get_package(struct pkg_db *db, const char *pkg_name)
+{
+	char dir[MAXPATHLEN + 1];
+
+	snprintf(dir, MAXPATHLEN, "%s/var/db/pkg/%s", db->db_base, pkg_name);
+	return pkg_new_freebsd_installed(pkg_name, dir);
 }
 
 static int
