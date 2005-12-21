@@ -71,6 +71,8 @@ static struct pkg_file		 *freebsd_get_next_file(struct pkg *);
 static struct pkg		**freebsd_get_deps(struct pkg *);
 static int			  freebsd_free(struct pkg *);
 
+static char			 *freebsd_get_origin(struct pkg *);
+
 /* Internal functions */
 static struct freebsd_package	*freebsd_get_package(FILE *,
 					struct pkg_file **);
@@ -95,11 +97,11 @@ pkg_new_freebsd_from_file(FILE *fd)
 
 	pkg = pkg_new(pkg_name, freebsd_get_control_files,
 	    freebsd_get_control_file, freebsd_get_deps, freebsd_free);
-	pkg_add_callbacks(pkg, NULL, NULL, freebsd_get_next_file);
 	free(pkg_name);
 
 	if (pkg == NULL)
 		return NULL;
+	pkg_add_callbacks_install(pkg, freebsd_get_next_file);
 
 	pkg->data = f_pkg;
 
@@ -182,6 +184,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 		FREE_CONTENTS(control);
 		return NULL;
 	}
+	pkg_add_callbacks_data(pkg, freebsd_get_origin);
 
 	f_pkg = freebsd_get_package(NULL, control);
 	if (f_pkg == NULL) {
@@ -216,9 +219,9 @@ pkg_new_freebsd_empty(const char *pkg_name)
 		return NULL;
 
 	pkg = pkg_new(pkg_name, NULL, NULL, NULL, freebsd_free);
-	pkg_add_callbacks(pkg, freebsd_add_depend, freebsd_add_file, NULL);
 	if (pkg == NULL)
 		return NULL;
+	pkg_add_callbacks_empty(pkg, freebsd_add_depend, freebsd_add_file);
 
 	f_pkg = freebsd_get_package(NULL, NULL);
 	pkg->data = f_pkg;
@@ -243,13 +246,13 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	return pkg;
 }
 
-char *
-pkg_freebsd_get_origin(struct pkg *pkg)
+static char *
+freebsd_get_origin(struct pkg *pkg)
 {
 	struct freebsd_package *f_pkg;
 
-	if (!pkg || !pkg->data)
-		return NULL;
+	assert(pkg != NULL);
+	assert(pkg->data != NULL);
 
 	f_pkg = pkg->data;
 	return f_pkg->origin;

@@ -231,7 +231,7 @@ pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *contents,
 		return -1;
 	}
 
-	origin = pkg_freebsd_get_origin(pkg);
+	origin = pkg_get_origin(pkg);
 	if (origin != NULL) {
 		char *data;
 

@@ -56,9 +56,16 @@ pkg_new(const char *name,
 		return NULL;
 	}
 
-	pkg_set_callbacks(pkg, control_files, control_file, get_deps, free_pkg);
+	pkg->pkg_get_control_files = control_files;
+	pkg->pkg_get_control_file = control_file;
+	pkg->pkg_get_deps = get_deps;
+	pkg->pkg_free = free_pkg;
+
+	pkg->pkg_get_origin = NULL;
+
 	pkg->pkg_add_depend = NULL;
 	pkg->pkg_add_file = NULL;
+	
 	pkg->pkg_get_next_file = NULL;
 	
 	pkg->data = NULL;
@@ -66,44 +73,48 @@ pkg_new(const char *name,
 	return pkg;
 }
 
+int
+pkg_add_callbacks_data(struct pkg *pkg, pkg_get_origin_callback *get_origin)
+{
+	if (pkg == NULL)
+		return -1;
+
+	pkg->pkg_get_origin = get_origin;
+	return 0;
+}
+
 /*
  * These are optional callbacks that are only applicable to some packages
  */
 int
-pkg_add_callbacks(struct pkg *pkg, 
+pkg_add_callbacks_empty(struct pkg *pkg, 
 		pkg_add_dependency_callback *add_depend,
-		pkg_add_file_callback *add_file,
-		pkg_get_next_file_callback *next_file)
+		pkg_add_file_callback *add_file)
 {
 	if (pkg == NULL)
 		return -1;
 
 	pkg->pkg_add_depend = add_depend;
 	pkg->pkg_add_file = add_file;
-	pkg->pkg_get_next_file = next_file;
 
-	return -1;
+	return 0;
+}
+
+int
+pkg_add_callbacks_install (struct pkg *pkg,
+		pkg_get_next_file_callback *next_file)
+{
+	if (pkg == NULL)
+		return -1;
+
+	pkg->pkg_get_next_file = next_file;
+	return 0;
 }
 
 struct pkg*
 pkg_new_empty(const char *name)
 {
 	return pkg_new(name, NULL, NULL, NULL, NULL);
-}
-
-struct pkg *
-pkg_set_callbacks(struct pkg *pkg,
-		pkg_get_control_files_callback *control_files,
-		pkg_get_control_file_callback *control_file,
-		pkg_get_dependencies_callback *get_deps,
-		pkg_free_callback *free_pkg)
-{
-	pkg->pkg_get_control_files = control_files;
-	pkg->pkg_get_control_file = control_file;
-	pkg->pkg_get_deps = get_deps;
-	pkg->pkg_free = free_pkg;
-
-	return pkg;
 }
 
 /*
@@ -115,6 +126,18 @@ pkg_compare(const void *a, const void *b)
 	/* XXX Makes WARNS <= 3 */
 	return strcmp((*(const struct pkg **)a)->pkg_name,
 	    (*(const struct pkg **)b)->pkg_name);
+}
+
+char *
+pkg_get_origin(struct pkg *pkg)
+{
+	if (pkg == NULL)
+		return NULL;
+
+	if (pkg->pkg_get_origin)
+		return pkg->pkg_get_origin(pkg);
+
+	return NULL;
 }
 
 int

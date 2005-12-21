@@ -42,43 +42,61 @@ struct pkg_file {
 	FILE		*fd;
 };
 
-/* Package Object */
+/*
+ * Package Object
+ */
+
+/* Main callbacks used in most packages */
 typedef struct pkg	**pkg_get_dependencies_callback(struct pkg *);
 typedef struct pkg_file	**pkg_get_control_files_callback(struct pkg *);
 typedef struct pkg_file  *pkg_get_control_file_callback(struct pkg *,
 				const char *);
-typedef struct pkg_file	 *pkg_get_next_file_callback(struct pkg *);
+typedef int		  pkg_free_callback(struct pkg *);
+
+struct pkg		 *pkg_new(const char *,
+				pkg_get_control_files_callback *,
+				pkg_get_control_file_callback *,
+				pkg_get_dependencies_callback *,
+				pkg_free_callback *);
+
+/* Callbacks to get data from a package, eg. the description */
+typedef char		 *pkg_get_origin_callback(struct pkg *);
+int			  pkg_add_callbacks_data(struct pkg *,
+				pkg_get_origin_callback *);
+
+/* Callbacks used with empty packages to add files to */
 typedef int		  pkg_add_dependency_callback(struct pkg *,
 				struct pkg *);
-typedef int		 pkg_add_file_callback(struct pkg *, struct pkg_file *);
-typedef int		 pkg_free_callback(struct pkg *);
+typedef int		  pkg_add_file_callback(struct pkg *,
+				struct pkg_file *);
+int			  pkg_add_callbacks_empty(struct pkg *,
+				pkg_add_dependency_callback *,
+				pkg_add_file_callback *);
 
-struct pkg		*pkg_new(const char *,
-				pkg_get_control_files_callback *,
-				pkg_get_control_file_callback *,
-				pkg_get_dependencies_callback *,
-				pkg_free_callback *);
-int			 pkg_add_callbacks(struct pkg *,
-				pkg_add_dependency_callback *add_depend,
-				pkg_add_file_callback *add_file,
-				pkg_get_next_file_callback *next_file);
-struct pkg		*pkg_set_callbacks(struct pkg *pkg,
-				pkg_get_control_files_callback *,
-				pkg_get_control_file_callback *,
-				pkg_get_dependencies_callback *,
-				pkg_free_callback *);
+/* Callbacks used with installable packages. Used by pkg_repo */
+typedef struct pkg_file	 *pkg_get_next_file_callback(struct pkg *);
+int			  pkg_add_callbacks_install(struct pkg *,
+				pkg_get_next_file_callback *);
 
 struct pkg {
 	void	*data;
 
 	char	*pkg_name;
-	pkg_add_dependency_callback	*pkg_add_depend;
-	pkg_add_file_callback		*pkg_add_file;
+
+	/* Main callbacks */
 	pkg_get_control_files_callback	*pkg_get_control_files;
 	pkg_get_control_file_callback	*pkg_get_control_file;
-	pkg_get_next_file_callback	*pkg_get_next_file;
-	pkg_free_callback		*pkg_free;
 	pkg_get_dependencies_callback	*pkg_get_deps;
+	pkg_free_callback		*pkg_free;
+
+	pkg_get_origin_callback		*pkg_get_origin;
+
+	/* Callbacks usally used with empty packages */
+	pkg_add_dependency_callback	*pkg_add_depend;
+	pkg_add_file_callback		*pkg_add_file;
+
+	/* Callbacks used with installing packages */
+	pkg_get_next_file_callback	*pkg_get_next_file;
 };
 
 int pkg_dir_build(const char *);
