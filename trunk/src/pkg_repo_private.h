@@ -31,7 +31,7 @@
 #define __LIBPKG_PKG_REPO_PRIVATE_H__
 
 typedef struct pkg *pkg_repo_get_pkg_callback(struct pkg_repo *, const char *);
-typedef struct pkg *pkg_repo_find_pkg_callback(struct pkg_repo *, struct pkg *);
+typedef struct pkg *pkg_repo_find_pkg_callback(struct pkg_repo *, const char *);
 typedef int	 pkg_repo_free_callback(struct pkg_repo *);
 
 struct pkg_repo	*pkg_repo_new(pkg_repo_get_pkg_callback *,

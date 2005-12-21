@@ -80,15 +80,15 @@ pkg_repo_get_pkg(struct pkg_repo *repo, const char *pkg_name)
  * Finds a package in a repo and sets the appropriate callbacks and data
  */
 struct pkg *
-pkg_repo_find_pkg(struct pkg_repo *repo, struct pkg *pkg)
+pkg_repo_find_pkg(struct pkg_repo *repo, const char *pkg_name)
 {
-	if (!repo || !pkg)
+	if (!repo || !pkg_name)
 		return NULL;
 
 	if (!repo->pkg_find)
 		return NULL;
 
-	return repo->pkg_find(repo, pkg);
+	return repo->pkg_find(repo, pkg_name);
 }
 
 /*

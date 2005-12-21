@@ -58,7 +58,6 @@ int	 pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *,
 	    struct pkg_file *);
 int	 pkg_freebsd_contents_free(struct pkg_freebsd_contents *);
 
-struct pkg		 *pkg_freebsd_convert(struct pkg *, FILE *);
-char			 *pkg_freebsd_get_origin(struct pkg *);
+char	*pkg_freebsd_get_origin(struct pkg *);
 
 #endif /* __LIBPKG_PKG_FREEBSD_H__ */

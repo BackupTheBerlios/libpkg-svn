@@ -1,5 +1,35 @@
+/*
+ * Copyright (C) 2005, Andrew Turner, All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer
+ *    in this position and unchanged.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. The name(s) of the author(s) may not be used to endorse or promote
+ *    products derived from this software without specific prior written
+ *    permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
 #include <sys/stat.h>
 
+#include <err.h>
 #include <errno.h>
 #include <pkg.h>
 #include <pkg_db.h>
@@ -9,7 +39,8 @@
 /* This is an internal function for the library not exported by pkg.h */
 int pkg_dir_build(const char *);
 
-void usage(const char *);
+int	install_package(struct pkg_db *, const char *);
+void	usage(const char *);
 
 struct pkg_repo *repo_ftp = NULL;
 
@@ -20,32 +51,34 @@ usage(const char *arg)
 }
 
 int
-install_package(struct pkg_db *db, struct pkg *pkg)
+install_package(struct pkg_db *db, const char *pkg_name)
 {
-	struct pkg **pkgs;
+	struct pkg **pkg_deps;
+	struct pkg *pkg;
 	int is_installed;
 
 	if (repo_ftp == NULL)
 		repo_ftp = pkg_repo_new_ftp(NULL, NULL);
 
-	pkg_repo_find_pkg(repo_ftp, pkg);
+	pkg = pkg_repo_find_pkg(repo_ftp, pkg_name);
 	
 	is_installed = pkg_db_is_installed(db, pkg_get_name(pkg));
 	if (is_installed != 0)
 		return 0;
 	
-	pkgs = pkg_get_dependencies(pkg);
-	if (pkgs != NULL) {
+	pkg_deps = pkg_get_dependencies(pkg);
+	if (pkg_deps != NULL) {
 		unsigned int pos;
 
-		for (pos = 0; pkgs[pos] != NULL; pos++) {
-			if (install_package(db, pkgs[pos]) != 0) {
+		for (pos = 0; pkg_deps[pos] != NULL; pos++) {
+			if (install_package(db,
+			    pkg_get_name(pkg_deps[pos])) != 0) {
 				return 1;
 			}
-			pkg_free(pkgs[pos]);
-			pkgs[pos]=NULL;
+			pkg_free(pkg_deps[pos]);
+			pkg_deps[pos]=NULL;
 		}
-		free(pkgs);
+		free(pkg_deps);
 	}
 	if (pkg_db_install_pkg(db, pkg) != 0) {
 		fprintf(stderr,
@@ -59,7 +92,7 @@ install_package(struct pkg_db *db, struct pkg *pkg)
 }
 
 int
-main (int argc, char *argv[])
+main (int argc __unused, char *argv[])
 {
 	struct pkg_repo *repo_file;
 	struct pkg_db *pkg_db;
@@ -117,7 +150,8 @@ main (int argc, char *argv[])
 				unsigned int pos;
 
 				for (pos = 0; pkgs[pos] != NULL; pos++) {
-					install_package(pkg_db, pkgs[pos]);
+					install_package(pkg_db,
+					    pkg_get_name(pkgs[pos]));
 					pkg_free(pkgs[pos]);
 					pkgs[pos]=NULL;
 				}
@@ -137,4 +171,6 @@ main (int argc, char *argv[])
 	if (repo_ftp != NULL)
 		pkg_repo_free(repo_ftp);
 	pkg_db_free(pkg_db);
+
+	return 0;
 }

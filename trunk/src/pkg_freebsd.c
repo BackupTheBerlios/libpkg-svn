@@ -93,9 +93,9 @@ pkg_new_freebsd_from_file(FILE *fd)
 	/* Find the package name */
 	pkg_name = freebsd_get_pkg_name(pkg_file_get(f_pkg->control[0]));
 
-	pkg = pkg_new(pkg_name, NULL, NULL, freebsd_get_control_files,
-	    freebsd_get_control_file, freebsd_get_next_file,
-	    freebsd_get_deps, freebsd_free);
+	pkg = pkg_new(pkg_name, freebsd_get_control_files,
+	    freebsd_get_control_file, freebsd_get_deps, freebsd_free);
+	pkg_add_callbacks(pkg, NULL, NULL, freebsd_get_next_file);
 	free(pkg_name);
 
 	if (pkg == NULL)
@@ -176,8 +176,8 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	closedir(d);
 
 	/* Only the get_deps and free callbacks will work */
-	pkg = pkg_new(pkg_name, NULL, NULL, freebsd_get_control_files,
-	    freebsd_get_control_file, NULL, freebsd_get_deps, freebsd_free);
+	pkg = pkg_new(pkg_name, freebsd_get_control_files,
+	    freebsd_get_control_file, freebsd_get_deps, freebsd_free);
 	if (pkg == NULL) {
 		FREE_CONTENTS(control);
 		return NULL;
@@ -215,8 +215,8 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	if (pkg_name == NULL)
 		return NULL;
 
-	pkg = pkg_new(pkg_name, freebsd_add_depend, freebsd_add_file, NULL,
-	    NULL, NULL, NULL, freebsd_free);
+	pkg = pkg_new(pkg_name, NULL, NULL, NULL, freebsd_free);
+	pkg_add_callbacks(pkg, freebsd_add_depend, freebsd_add_file, NULL);
 	if (pkg == NULL)
 		return NULL;
 
@@ -239,20 +239,6 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	pkg_freebsd_contents_add_line(f_pkg->contents, PKG_LINE_COMMENT,
 	    "PKG_FORMAT_REVISION:1.1");
 	pkg_freebsd_contents_add_line(f_pkg->contents, PKG_LINE_NAME, pkg_name);
-
-	return pkg;
-}
-
-struct pkg *
-pkg_freebsd_convert(struct pkg *pkg, FILE *fd)
-{
-	struct freebsd_package *f_pkg;
-
-	pkg_set_callbacks(pkg, NULL, NULL, freebsd_get_control_files,
-	    freebsd_get_control_file, freebsd_get_next_file,
-	    freebsd_get_deps, freebsd_free);
-	f_pkg = freebsd_get_package(fd, NULL);
-	pkg->data = f_pkg;
 
 	return pkg;
 }

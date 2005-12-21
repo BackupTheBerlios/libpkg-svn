@@ -86,14 +86,15 @@ struct ftp_repo {
 
 int getosreldate(void);
 
-static struct pkg *ftp_get_pkg(struct pkg_repo *, const char *);
-static struct pkg *ftp_find_pkg(struct pkg_repo *, struct pkg *);
-static int ftp_free(struct pkg_repo *);
-
-static FILE *ftp_get_fd(const char *, struct ftp_repo *);
-static struct ftp_repo *ftp_create_repo(const char *, const char *);
-//static int pkg_in_All(const char *);
-static int pkg_name_has_extension(const char *);
+/* Callbacks */
+static struct pkg	*ftp_get_pkg(struct pkg_repo *, const char *);
+static struct pkg	*ftp_find_pkg(struct pkg_repo *, const char *);
+static int		 ftp_free(struct pkg_repo *);
+/* Internal */
+static FILE		*ftp_get_fd(const char *, struct ftp_repo *);
+static struct ftp_repo	*ftp_create_repo(const char *, const char *);
+/*static int		 pkg_in_All(const char *); */
+static int		 pkg_name_has_extension(const char *);
 
 /*
  * A repo with files on a remote ftp server
@@ -143,13 +144,18 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 }
 
 static struct pkg *
-ftp_find_pkg(struct pkg_repo *repo, struct pkg *pkg)
+ftp_find_pkg(struct pkg_repo *repo, const char *pkg_name)
 {
 	FILE *fd;
-	fd = ftp_get_fd(pkg->pkg_name, repo->data);
-	pkg_freebsd_convert(pkg, fd);
 
-	return pkg;
+	if (repo == NULL || pkg_name == NULL)
+		return NULL;
+
+	fd = ftp_get_fd(pkg_name, repo->data);
+	if (fd == NULL)
+		return NULL;
+
+	return pkg_new_freebsd_from_file(fd);
 }
 
 /*
