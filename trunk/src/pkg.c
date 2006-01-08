@@ -33,6 +33,10 @@
 #include "pkg.h"
 #include "pkg_private.h"
 
+/*
+ * Creates a new package and associates callbacks that are
+ * used by most types of packages
+ */
 struct pkg *
 pkg_new(const char *name,
 		pkg_get_control_files_callback *control_files,
@@ -42,9 +46,10 @@ pkg_new(const char *name,
 {
 	struct pkg *pkg;
 
+	/* A package must have a name */
 	if (name == NULL)
 		return NULL;
-	
+
 	pkg = malloc(sizeof(struct pkg));
 	if (!pkg) {
 		return NULL;
@@ -56,23 +61,28 @@ pkg_new(const char *name,
 		return NULL;
 	}
 
+	/* Add the given callbacks to the struct */
 	pkg->pkg_get_control_files = control_files;
 	pkg->pkg_get_control_file = control_file;
 	pkg->pkg_get_deps = get_deps;
 	pkg->pkg_free = free_pkg;
 
+	/* Set the other callbacks to NULL */
 	pkg->pkg_get_origin = NULL;
-
 	pkg->pkg_add_depend = NULL;
 	pkg->pkg_add_file = NULL;
-	
 	pkg->pkg_get_next_file = NULL;
-	
+
+	/* The data is unknown so set to NULL */	
 	pkg->data = NULL;
 
 	return pkg;
 }
 
+/*
+ * Internal function to add callbacks to retrieve data
+ * eg. the packages origin on FreeBSD
+ */
 int
 pkg_add_callbacks_data(struct pkg *pkg, pkg_get_origin_callback *get_origin)
 {
@@ -84,7 +94,7 @@ pkg_add_callbacks_data(struct pkg *pkg, pkg_get_origin_callback *get_origin)
 }
 
 /*
- * These are optional callbacks that are only applicable to some packages
+ * Internal function to add callbacks that add data to the package
  */
 int
 pkg_add_callbacks_empty(struct pkg *pkg, 
@@ -100,6 +110,9 @@ pkg_add_callbacks_empty(struct pkg *pkg,
 	return 0;
 }
 
+/*
+ * Internal function to add callbacks that are used when a package is installed
+ */
 int
 pkg_add_callbacks_install (struct pkg *pkg,
 		pkg_get_next_file_callback *next_file)
@@ -111,6 +124,9 @@ pkg_add_callbacks_install (struct pkg *pkg,
 	return 0;
 }
 
+/*
+ * Creates an empty package with no callbacks
+ */
 struct pkg*
 pkg_new_empty(const char *name)
 {
@@ -128,6 +144,9 @@ pkg_compare(const void *a, const void *b)
 	    (*(const struct pkg **)b)->pkg_name);
 }
 
+/*
+ * Gets a packages origin if it has one
+ */
 char *
 pkg_get_origin(struct pkg *pkg)
 {
@@ -140,6 +159,9 @@ pkg_get_origin(struct pkg *pkg)
 	return NULL;
 }
 
+/*
+ * Adds a dependency to a given package
+ */
 int
 pkg_add_dependency(struct pkg *pkg, struct pkg *depend)
 {
@@ -152,6 +174,9 @@ pkg_add_dependency(struct pkg *pkg, struct pkg *depend)
 	return -1;
 }
 
+/*
+ * Adds a file to a given package
+ */
 int
 pkg_add_file(struct pkg *pkg, struct pkg_file *file)
 {
@@ -164,6 +189,9 @@ pkg_add_file(struct pkg *pkg, struct pkg_file *file)
 	return -1;
 }
 
+/*
+ * Gets the control files from a given package
+ */
 struct pkg_file **
 pkg_get_control_files(struct pkg *pkg)
 {
@@ -178,6 +206,9 @@ pkg_get_control_files(struct pkg *pkg)
 	return pkg->pkg_get_control_files(pkg);
 }
 
+/*
+ * Gets a given control file from a package
+ */
 struct pkg_file *
 pkg_get_control_file(struct pkg *pkg, const char *name)
 {
@@ -190,6 +221,10 @@ pkg_get_control_file(struct pkg *pkg, const char *name)
 	return NULL;
 }
 
+/*
+ * Gets the next file in a package, used for installation
+ * to iterate over all files to be installed in a package
+ */
 struct pkg_file *
 pkg_get_next_file(struct pkg *pkg)
 {
@@ -204,6 +239,9 @@ pkg_get_next_file(struct pkg *pkg)
 	return pkg->pkg_get_next_file(pkg);
 }
 
+/*
+ * Gets all the dependencies for a given package
+ */
 struct pkg **
 pkg_get_dependencies(struct pkg *pkg)
 {
@@ -215,6 +253,9 @@ pkg_get_dependencies(struct pkg *pkg)
 	return NULL;
 }
 
+/*
+ * Frees a NULL terminated array of packages, eg. from pkg_get_dependencies
+ */
 int
 pkg_list_free(struct pkg **pkgs)
 {
@@ -231,6 +272,9 @@ pkg_list_free(struct pkg **pkgs)
 	return 0;
 }
 
+/*
+ * Frees a given package
+ */
 int
 pkg_free(struct pkg *pkg)
 {
@@ -249,6 +293,9 @@ pkg_free(struct pkg *pkg)
 	return 0;
 }
 
+/*
+ * Gets the name of a package
+ */
 char *
 pkg_get_name(struct pkg *pkg)
 {
