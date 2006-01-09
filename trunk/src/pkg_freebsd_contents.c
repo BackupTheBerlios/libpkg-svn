@@ -55,6 +55,9 @@ const char *pkg_freebsd_contents_line_str[] = {
 	NULL
 };
 
+/*
+ * Reads a FreeBSD +CONTENTS file create a struct pkg_freebsd_contents
+ */
 struct pkg_freebsd_contents *
 pkg_freebsd_contents_new(const char *contents)
 {
@@ -217,6 +220,9 @@ pkg_freebsd_contents_add_line(struct pkg_freebsd_contents *contents, int type,
 	return 0;
 }
 
+/*
+ * Adds a dependency to a +CONTENTS file
+ */
 int
 pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *contents,
 		struct pkg *pkg)
@@ -278,6 +284,9 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 	return 0;
 }
 
+/*
+ * Frees a contents struct
+ */
 int
 pkg_freebsd_contents_free(struct pkg_freebsd_contents *contents)
 {

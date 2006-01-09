@@ -49,6 +49,9 @@ pkg_repo_new_files()
 	return pkg_repo_new(file_get_pkg, NULL, NULL);
 }
 
+/*
+ * Gets a given package from the local filesystem
+ */
 static struct pkg *
 file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 {

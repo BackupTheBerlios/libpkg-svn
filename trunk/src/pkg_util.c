@@ -94,7 +94,9 @@ pkg_dir_build(const char *path)
 	return (retval);
 }
 
-/* Checks a file against a given md5 checksum */
+/*
+ * Checks a file against a given md5 checksum
+ */
 int
 pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
 {

@@ -119,6 +119,9 @@ pkg_repo_new_ftp(const char *site, const char *path)
 	return repo;
 }
 
+/*
+ * Gets a package from a FTP site
+ */
 static struct pkg *
 ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 {
@@ -185,6 +188,9 @@ ftp_free(struct pkg_repo *repo)
 	return 0;
 }
 
+/*
+ * Gets a FILE pointer for a given package name
+ */
 static FILE *
 ftp_get_fd(const char *pkg_name, struct ftp_repo *f_repo)
 {
@@ -239,6 +245,9 @@ ftp_get_fd(const char *pkg_name, struct ftp_repo *f_repo)
 	return fd;
 }
 
+/*
+ * Creates a struct ftp_repo pointer to go into repo->data
+ */
 static struct ftp_repo *
 ftp_create_repo(const char *site, const char *path)
 {
@@ -293,6 +302,9 @@ ftp_create_repo(const char *site, const char *path)
 	return f_repo;
 }
 
+/*
+ * Find if a name has a known extension
+ */
 static int
 pkg_name_has_extension(const char *name)
 {

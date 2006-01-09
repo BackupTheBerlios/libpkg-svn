@@ -80,6 +80,9 @@ static struct pkg_file		*freebsd_get_next_entry(struct archive *);
 static char 			*freebsd_get_pkg_name(const char *);
 static int			 freebsd_free_package(struct freebsd_package *);
 
+/*
+ * Creates a new FreeBSD package from a FILE pointer
+ */
 struct pkg *
 pkg_new_freebsd_from_file(FILE *fd)
 {
@@ -108,6 +111,9 @@ pkg_new_freebsd_from_file(FILE *fd)
 	return pkg;
 }
 
+/*
+ * Creates a new FreeBSD package from one installed on a system
+ */
 /* XXX Make this work through a pkg_db callback */
 struct pkg *
 pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
@@ -209,6 +215,9 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	return pkg;
 }
 
+/*
+ * Creates an empty FreeBSD package to add files to
+ */
 struct pkg *
 pkg_new_freebsd_empty(const char *pkg_name)
 {
@@ -246,6 +255,9 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	return pkg;
 }
 
+/*
+ * Returns the origin of a given package
+ */
 static char *
 freebsd_get_origin(struct pkg *pkg)
 {
@@ -370,12 +382,19 @@ freebsd_get_package(FILE *fd, struct pkg_file **control)
 	return f_pkg;
 }
 
+/*
+ * Adds a dependency to a Package
+ */
+/* XXX write */
 static int
 freebsd_add_depend(struct pkg *pkg __unused, struct pkg *depend __unused)
 {
 	return -1;
 }
 
+/*
+ * Adds a file to a FreeBSD package
+ */
 static int
 freebsd_add_file(struct pkg *pkg, struct pkg_file *file)
 {
@@ -401,7 +420,9 @@ freebsd_add_file(struct pkg *pkg, struct pkg_file *file)
 	return 0;
 }
 
-/* Return the array of control files */
+/*
+ * Gets a NULL terminated array of control files
+ */
 static struct pkg_file **
 freebsd_get_control_files(struct pkg *pkg)
 {
@@ -416,6 +437,9 @@ freebsd_get_control_files(struct pkg *pkg)
 	return f_pkg->control;
 }
 
+/*
+ * Gets a given control file
+ */
 static struct pkg_file *
 freebsd_get_control_file(struct pkg *pkg, const char *file)
 {
@@ -435,7 +459,9 @@ freebsd_get_control_file(struct pkg *pkg, const char *file)
 	return NULL;
 }
 
-/* Get the next file in the package */
+/*
+ * Gets the next file in the package
+ */
 static struct pkg_file *
 freebsd_get_next_file(struct pkg *pkg)
 {
@@ -498,7 +524,9 @@ freebsd_get_deps(struct pkg *pkg)
 	return pkgs;
 }
 
-/* Free the package */
+/*
+ * Free the package
+ */
 static int
 freebsd_free(struct pkg *pkg)
 {
@@ -510,7 +538,9 @@ freebsd_free(struct pkg *pkg)
 	return 0;
 }
 
-/* Return a pointer to the next file in the archive `a' */
+/*
+ * Return a pointer to the next file in the archive `a'
+ */
 static struct pkg_file *
 freebsd_get_next_entry(struct archive *a)
 {
@@ -543,7 +573,9 @@ freebsd_get_next_entry(struct archive *a)
 		length, str, sb);
 }
 
-/* Returns the package name from a +CONTENTS file */
+/*
+ * Returns the package name from a +CONTENTS file
+ */
 static char *
 freebsd_get_pkg_name(const char *buffer)
 {
@@ -583,7 +615,9 @@ freebsd_get_pkg_name(const char *buffer)
 	return pkg_name;
 }
 
-/* Free the struct freebsd_package */
+/*
+ * Frees the struct freebsd_package
+ */
 static int
 freebsd_free_package(struct freebsd_package *f_pkg)
 {

@@ -58,6 +58,9 @@ pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
 	return repo;
 }
 
+/*
+ * Gets a package from a repo
+ */
 struct pkg *
 pkg_repo_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 {

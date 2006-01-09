@@ -314,6 +314,9 @@ freebsd_is_installed(struct pkg_db *db, const char *package)
 	return 0;
 }
 
+/*
+ * Gets all installed packages
+ */
 static struct pkg **
 freebsd_get_installed(struct pkg_db *db)
 {
@@ -360,6 +363,9 @@ freebsd_get_installed(struct pkg_db *db)
 	return packages;
 }
 
+/*
+ * Finds a package with the name from pkg_name
+ */
 static struct pkg *
 freebsd_get_package(struct pkg_db *db, const char *pkg_name)
 {
@@ -369,6 +375,9 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
 	return pkg_new_freebsd_installed(pkg_name, dir);
 }
 
+/*
+ * Internal function to to the correct thing for an @cwd line
+ */
 static int
 freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir) {
 	char *dir;
@@ -483,7 +492,8 @@ freebsd_build_contents(struct pkg_freebsd_contents *contents)
 	return pkg_file_new_from_buffer("+CONTENTS", used, buffer, NULL);
 }
 
-/* Unlike most functions this return -1 on error.
+/*
+ * Unlike most functions this return -1 on error.
  * It will return the number of lines to
  * skip to get to the first file.
  */

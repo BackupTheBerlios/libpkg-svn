@@ -134,7 +134,9 @@ pkg_file_free(struct pkg_file *file)
 	return 0;
 }
 
-/* Writes a file to the filesystem */
+/*
+ * Writes a file to the filesystem
+ */
 int
 pkg_file_write(struct pkg_file *file)
 {
@@ -193,6 +195,9 @@ pkg_file_write(struct pkg_file *file)
 	return 0;
 }
 
+/*
+ * Gets to contents of file
+ */
 char *
 pkg_file_get(struct pkg_file *file)
 {
@@ -207,7 +212,7 @@ pkg_file_get(struct pkg_file *file)
 
 		/* 
 		 * XXX fread can only handle up to SIZE_T_MAX so fail
-		 * if the file is bigger until a better file reader
+		 * if the file is bigger until a better file reader is written
 		 */
 		assert(file->len <= SIZE_T_MAX);
 		fread(file->contents, 1, file->len, file->fd);

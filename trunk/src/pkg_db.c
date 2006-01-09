@@ -36,7 +36,7 @@
 #include "pkg_db_private.h"
 
 /*
- * Opens the FreeBSD Package Database
+ * Opens a Package Database
  */
 struct pkg_db*
 pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
@@ -68,16 +68,18 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	if (!db->db_base) {
 		free(db);
 		return NULL;
-	} else if (stat(db->db_base, &sb) == -1) {
-		free(db->db_base);
-		free(db);
+	}
+
+	/* Check the directory exists and is a directory */
+	if (stat(db->db_base, &sb) == -1) {
+		pkg_db_free(db);
 		return NULL;
 	} else if (!S_ISDIR(sb.st_mode)) {
-		free(db->db_base);
-		free(db);
+		pkg_db_free(db);
 		return NULL;
 	}
-	
+
+	/* Add the callbacks */
 	db->pkg_install = install_pkg;
 	db->pkg_is_installed = is_installed;
 	db->pkg_get_installed = get_installed;
@@ -88,6 +90,9 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	return db;
 }
 
+/*
+ * Install a given package to the database
+ */
 int
 pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
 {
@@ -106,6 +111,9 @@ pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	return db->pkg_install(db, pkg);
 }
 
+/*
+ * Check to se if a package is installed
+ */
 int
 pkg_db_is_installed(struct pkg_db *db, const char *package)
 {
@@ -120,6 +128,9 @@ pkg_db_is_installed(struct pkg_db *db, const char *package)
 	return db->pkg_is_installed(db, package);
 }
 
+/*
+ * Get a NULL terminated array of installed packages
+ */
 struct pkg **
 pkg_db_get_installed(struct pkg_db *db)
 {
@@ -132,6 +143,9 @@ pkg_db_get_installed(struct pkg_db *db)
 	return db->pkg_get_installed(db);
 }
 
+/*
+ * Gets the package with the given name
+ */
 struct pkg *
 pkg_db_get_package(struct pkg_db *db, const char *name)
 {
@@ -144,6 +158,9 @@ pkg_db_get_package(struct pkg_db *db, const char *name)
 	return NULL;
 }
 
+/*
+ * Frees the database
+ */
 int
 pkg_db_free(struct pkg_db *db)
 {
