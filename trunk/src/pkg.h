@@ -46,6 +46,7 @@ struct pkg_file	*pkg_file_new_from_buffer(const char *, uint64_t, char *,
 int		 pkg_file_free(struct pkg_file *);
 int		 pkg_file_write(struct pkg_file *);
 char		*pkg_file_get(struct pkg_file *);
+char 		*pkg_file_get_name(struct pkg_file *);
 
 /*
  * The package handling functions

@@ -204,6 +204,7 @@ pkg_file_get(struct pkg_file *file)
 	if (file == NULL || (file->contents == NULL && file->fd == NULL))
 		return NULL;
 
+	/* Only get the contents when asked for */
 	if (file->contents == NULL) {
 		file->contents = malloc(file->len + 1);
 		if (file->contents == NULL) {
@@ -220,4 +221,10 @@ pkg_file_get(struct pkg_file *file)
 	}
 
 	return file->contents;
+}
+
+char *
+pkg_file_get_name(struct pkg_file *file)
+{
+	return file->filename;
 }
