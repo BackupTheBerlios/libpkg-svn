@@ -60,11 +60,10 @@ install_package(struct pkg_db *db, const char *pkg_name)
 	if (repo_ftp == NULL)
 		repo_ftp = pkg_repo_new_ftp(NULL, NULL);
 
-	pkg = pkg_repo_find_pkg(repo_ftp, pkg_name);
-	
-	is_installed = pkg_db_is_installed(db, pkg_get_name(pkg));
-	if (is_installed != 0)
+	if (pkg_db_is_installed(db, pkg_get_name(pkg)) != 0)
 		return 0;
+
+	pkg = pkg_repo_get_pkg(repo_ftp, pkg_name);
 	
 	pkg_deps = pkg_get_dependencies(pkg);
 	if (pkg_deps != NULL) {
@@ -133,6 +132,7 @@ main (int argc __unused, char *argv[])
 		if (pkg == NULL) {
 			fprintf(stderr, "Package %s could not be found\n",
 			    *argv);
+			argv++;
 			continue;
 		}
 		/* Check if the package is installed */
@@ -140,6 +140,7 @@ main (int argc __unused, char *argv[])
 		if (is_installed == 0) {
 			fprintf(stderr, "Package %s is already installed\n",
 			    *argv);
+			argv++;
 			continue;
 		} else {
 			/* Install the package */

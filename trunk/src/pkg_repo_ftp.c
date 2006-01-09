@@ -88,7 +88,6 @@ int getosreldate(void);
 
 /* Callbacks */
 static struct pkg	*ftp_get_pkg(struct pkg_repo *, const char *);
-static struct pkg	*ftp_find_pkg(struct pkg_repo *, const char *);
 static int		 ftp_free(struct pkg_repo *);
 /* Internal */
 static FILE		*ftp_get_fd(const char *, struct ftp_repo *);
@@ -104,7 +103,7 @@ pkg_repo_new_ftp(const char *site, const char *path)
 {
 	struct pkg_repo *repo;
 
-	repo = pkg_repo_new(ftp_get_pkg, ftp_find_pkg, ftp_free);
+	repo = pkg_repo_new(ftp_get_pkg, ftp_free);
 	if (!repo) {
 		/* pkg_null will contain the error string */
 		return NULL;
@@ -144,21 +143,6 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	}
 
 	return pkg;
-}
-
-static struct pkg *
-ftp_find_pkg(struct pkg_repo *repo, const char *pkg_name)
-{
-	FILE *fd;
-
-	if (repo == NULL || pkg_name == NULL)
-		return NULL;
-
-	fd = ftp_get_fd(pkg_name, repo->data);
-	if (fd == NULL)
-		return NULL;
-
-	return pkg_new_freebsd_from_file(fd);
 }
 
 /*
