@@ -47,7 +47,15 @@ enum {
 	PKG_LINE_FILE = 11
 };
 
+struct pkg_freebsd_contents_line {
+	int	 line_type;
+	char	*line;
+	char	*data;
+};
+
 extern const char *pkg_freebsd_contents_line_str[];
+
+struct pkg_freebsd_contents *pkg_freebsd_get_contents(struct pkg *);
 
 struct pkg_freebsd_contents *pkg_freebsd_contents_new(const char *);
 int	 pkg_freebsd_contents_add_line(struct pkg_freebsd_contents *, int,
@@ -56,6 +64,9 @@ int	 pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *,
 	    struct pkg *);
 int	 pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *,
 	    struct pkg_file *);
+struct pkg_freebsd_contents_line *pkg_freebsd_contents_get_line
+					(struct pkg_freebsd_contents *,
+					 unsigned int);
 int	 pkg_freebsd_contents_free(struct pkg_freebsd_contents *);
 
 #endif /* __LIBPKG_PKG_FREEBSD_H__ */

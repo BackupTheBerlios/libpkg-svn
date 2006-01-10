@@ -285,6 +285,22 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 }
 
 /*
+ * Gets the given line from the contents file
+ */
+struct pkg_freebsd_contents_line*
+pkg_freebsd_contents_get_line(struct pkg_freebsd_contents *contents,
+		unsigned int line)
+{
+	if (contents == NULL)
+		return NULL;
+
+	if (line > contents->line_count)
+		return NULL;
+
+	return &contents->lines[line];
+}
+
+/*
  * Frees a contents struct
  */
 int

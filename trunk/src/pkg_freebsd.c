@@ -255,6 +255,15 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	return pkg;
 }
 
+struct pkg_freebsd_contents *
+pkg_freebsd_get_contents(struct pkg *pkg)
+{
+	if (pkg == NULL)
+		return NULL;
+
+	return ((struct freebsd_package *)pkg->data)->contents;
+}
+
 /*
  * Returns the origin of a given package
  */

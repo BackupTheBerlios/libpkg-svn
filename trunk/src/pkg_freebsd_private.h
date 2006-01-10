@@ -30,12 +30,6 @@
 #ifndef __LIBPKG_PKG_FREEBSD_PRIVATE_H__
 #define __LIBPKG_PKG_FREEBSD_PRIVATE_H__
 
-struct pkg_freebsd_contents_line {
-	int	 line_type;
-	char	*line;
-	char	*data;
-};
-
 struct pkg_freebsd_contents {
 	char		*file;
 	unsigned int	 line_count;
