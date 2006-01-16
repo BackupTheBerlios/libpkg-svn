@@ -71,6 +71,7 @@ static struct pkg_file		 *freebsd_get_next_file(struct pkg *);
 static struct pkg		**freebsd_get_deps(struct pkg *);
 static int			  freebsd_free(struct pkg *);
 
+static char			 *freebsd_get_version(struct pkg *);
 static char			 *freebsd_get_origin(struct pkg *);
 
 /* Internal functions */
@@ -190,7 +191,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 		FREE_CONTENTS(control);
 		return NULL;
 	}
-	pkg_add_callbacks_data(pkg, freebsd_get_origin);
+	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin);
 
 	f_pkg = freebsd_get_package(NULL, control);
 	if (f_pkg == NULL) {
@@ -262,6 +263,38 @@ pkg_freebsd_get_contents(struct pkg *pkg)
 		return NULL;
 
 	return ((struct freebsd_package *)pkg->data)->contents;
+}
+
+/*
+ * Returns a string containing the package version
+ */
+static char *
+freebsd_get_version(struct pkg *pkg)
+{
+	struct freebsd_package *f_pkg;
+	char *s;
+
+	assert(pkg != NULL);
+	assert(pkg->data != NULL);
+
+	f_pkg = pkg->data;
+
+	/* Check the package struct is correct
+	 * If any fail it means there is a bug in the library
+	 */
+	assert(f_pkg->contents != NULL);
+	assert(f_pkg->contents->lines != NULL);
+	assert(f_pkg->contents->lines[0].data != NULL);
+	assert(f_pkg->contents->lines[0].line_type == PKG_LINE_COMMENT);
+	assert(strcmp("PKG_FORMAT_REVISION:1.1", f_pkg->contents->lines[0].data) == 0);
+	s = strchr(f_pkg->contents->lines[0].data, ':');
+	if (s == NULL)
+		return NULL;
+	s++;
+	if (s[0] == '\0')
+		return NULL;
+
+	return s;
 }
 
 /*

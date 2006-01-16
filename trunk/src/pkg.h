@@ -58,6 +58,7 @@ struct pkg		 *pkg_new_freebsd_from_file(FILE *);
 struct pkg		 *pkg_new_freebsd_installed(const char *, const char *);
 struct pkg		 *pkg_new_freebsd_empty(const char *);
 int			  pkg_compare(const void *, const void *);
+char			 *pkg_get_version(struct pkg *);
 char			 *pkg_get_origin(struct pkg *);
 int			  pkg_add_dependency(struct pkg *, struct pkg *);
 int			  pkg_add_file(struct pkg *, struct pkg_file *);

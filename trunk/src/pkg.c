@@ -68,6 +68,7 @@ pkg_new(const char *name,
 	pkg->pkg_free = free_pkg;
 
 	/* Set the other callbacks to NULL */
+	pkg->pkg_get_version = NULL;
 	pkg->pkg_get_origin = NULL;
 	pkg->pkg_add_depend = NULL;
 	pkg->pkg_add_file = NULL;
@@ -84,11 +85,14 @@ pkg_new(const char *name,
  * eg. the packages origin on FreeBSD
  */
 int
-pkg_add_callbacks_data(struct pkg *pkg, pkg_get_origin_callback *get_origin)
+pkg_add_callbacks_data(struct pkg *pkg,
+		pkg_get_version_callback *get_version,
+		pkg_get_origin_callback *get_origin)
 {
 	if (pkg == NULL)
 		return -1;
 
+	pkg->pkg_get_version = get_version;
 	pkg->pkg_get_origin = get_origin;
 	return 0;
 }
@@ -142,6 +146,18 @@ pkg_compare(const void *a, const void *b)
 	/* XXX Makes WARNS <= 3 */
 	return strcmp((*(const struct pkg **)a)->pkg_name,
 	    (*(const struct pkg **)b)->pkg_name);
+}
+
+char *
+pkg_get_version(struct pkg *pkg)
+{
+	if (pkg == NULL)
+		return NULL;
+
+	if (pkg->pkg_get_version != NULL)
+		return pkg->pkg_get_version(pkg);
+
+	return NULL;
 }
 
 /*
