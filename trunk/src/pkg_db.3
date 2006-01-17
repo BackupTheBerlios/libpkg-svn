@@ -1,5 +1,5 @@
 .\" Copyright (c) 2003 Tim Kientzle
-.\" Copyright (c) 2005 Andrew Turner
+.\" Copyright (c) 2005, 2006 Andrew Turner
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -63,7 +63,7 @@ filesystem tree with it's root at
 .It Fn pkg_db_install_pkg
 Runs the package install callback to install a package.
 .It Fn pkg_db_is_installed
-Checks if the named package is installed. Returns PKG_YES if it is installed, PKG_NO if it is uninstalled or PKG_FAIL if there was an error.
+Checks if the named package is installed. Returns 0 if it is installed, -1 otherwise.
 .It Fn pkg_db_get_packages
 Returns a NULL terminated array of packages installed in
 the database
