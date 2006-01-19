@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, Andrew Turner, All rights reserved.
+ * Copyright (C) 2005, 2006 Andrew Turner, All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@
 struct pkg_db*
 pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 		pkg_db_is_installed_callback *is_installed,
-		pkg_db_get_installed_callback *get_installed,
+		pkg_db_get_installed_match_callback *get_installed_match,
 		pkg_db_get_package_callback *get_package)
 {
 	struct pkg_db *db;
@@ -82,7 +82,7 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	/* Add the callbacks */
 	db->pkg_install = install_pkg;
 	db->pkg_is_installed = is_installed;
-	db->pkg_get_installed = get_installed;
+	db->pkg_get_installed_match = get_installed_match;
 	db->pkg_get_package = get_package;
 
 	db->data = NULL;
@@ -134,13 +134,35 @@ pkg_db_is_installed(struct pkg_db *db, const char *package)
 struct pkg **
 pkg_db_get_installed(struct pkg_db *db)
 {
+	return pkg_db_get_installed_match(db, NULL, NULL);
+}
+
+/*
+ * Get a NULL terminated array of installed packages that match accepts
+ */
+struct pkg **
+pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match, void *data)
+{
 	if (!db)
 		return NULL;
 
-	if (!db->pkg_get_installed)
-		return NULL;
+	if (match == NULL)
+		match = pkg_match_all;
 
-	return db->pkg_get_installed(db);
+	if (db->pkg_get_installed_match)
+		return db->pkg_get_installed_match(db, match, data);
+
+	return NULL;
+}
+
+/*
+ * Matches all packages.
+ * This is here because it is used with pkg_db_get_installed_match
+ */
+int
+pkg_match_all(struct pkg *pkg __unused, void *data __unused)
+{
+	return 0;
 }
 
 /*

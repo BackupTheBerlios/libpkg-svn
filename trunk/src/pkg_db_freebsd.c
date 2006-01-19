@@ -64,7 +64,8 @@ static int pkg_states[7][12] = {
 
 static int		  freebsd_install_pkg(struct pkg_db *, struct pkg *);
 static int		  freebsd_is_installed(struct pkg_db *, const char *);
-static struct pkg	**freebsd_get_installed(struct pkg_db *);
+static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
+				pkg_db_match *, void *);
 static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
 
 /* Internal */
@@ -81,7 +82,7 @@ struct pkg_db*
 pkg_db_open_freebsd(const char *base)
 {
 	return pkg_db_open(base, freebsd_install_pkg, freebsd_is_installed,
-	    freebsd_get_installed, freebsd_get_package);
+	    freebsd_get_installed_match, freebsd_get_package);
 }
 
 /*
@@ -318,7 +319,7 @@ freebsd_is_installed(struct pkg_db *db, const char *package)
  * Gets all installed packages
  */
 static struct pkg **
-freebsd_get_installed(struct pkg_db *db)
+freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match, void *data)
 {
 	DIR *d;
 	struct dirent *de;
@@ -347,17 +348,23 @@ freebsd_get_installed(struct pkg_db *db)
 	packages[0] = NULL;
 	packages_pos = 0;
 	while((de = readdir(d)) != NULL) {
+		struct pkg *pkg;
+
 		if (de->d_name[0] == '.' || de->d_type != DT_DIR)
 			continue;
 		asprintf(&dir, "%s" DB_LOCATION "/%s",
 		    db->db_base, de->d_name);
-		packages_size += sizeof(char *);
-		packages = realloc(packages, packages_size);
-		packages[packages_pos] = pkg_new_freebsd_installed(de->d_name,
-		    dir);
+
+		pkg = pkg_new_freebsd_installed(de->d_name, dir);
+		if (match(pkg, data) == 0) {
+			packages_size += sizeof(char *);
+			packages = realloc(packages, packages_size);
+			packages[packages_pos] = pkg;
+			packages_pos++;
+			packages[packages_pos] = NULL;
+		} else
+			pkg_free(pkg);
 		free(dir);
-		packages_pos++;
-		packages[packages_pos] = NULL;
 	}
 	closedir(d);
 	return packages;

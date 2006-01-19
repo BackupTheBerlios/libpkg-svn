@@ -35,10 +35,20 @@
  */
 struct pkg_db;
 
+/*
+ * Definition of the match function to be passed to pkg_get_installed_match.
+ * It will take a package and some user specified data in.
+ * Returns 0 if the package matches or -1 otherwise.
+ */
+typedef		  int pkg_db_match(struct pkg *, void *);
+
 struct pkg_db	 *pkg_db_open_freebsd(const char *);
 int		  pkg_db_install_pkg(struct pkg_db *, struct pkg *);
 int		  pkg_db_is_installed(struct pkg_db *, const char *);
 struct pkg	**pkg_db_get_installed(struct pkg_db *);
+struct pkg	**pkg_db_get_installed_match(struct pkg_db *, pkg_db_match *,
+			void *);
+int		  pkg_match_all(struct pkg *, void *data);
 struct pkg	 *pkg_db_get_package(struct pkg_db *, const char *);
 int		  pkg_db_free(struct pkg_db *);
 
