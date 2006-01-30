@@ -1,3 +1,3 @@
-SUBDIR=src tools demo
+SUBDIR=pkg_info
 
 .include <bsd.subdir.mk>
