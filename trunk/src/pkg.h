@@ -43,10 +43,10 @@ struct pkg_file;
 struct pkg_file	*pkg_file_new(const char *);
 struct pkg_file	*pkg_file_new_from_buffer(const char *, uint64_t, char *,
 			const struct stat *);
-int		 pkg_file_free(struct pkg_file *);
 int		 pkg_file_write(struct pkg_file *);
 char		*pkg_file_get(struct pkg_file *);
 char 		*pkg_file_get_name(struct pkg_file *);
+int		 pkg_file_free(struct pkg_file *);
 
 /*
  * The package handling functions
@@ -58,22 +58,16 @@ struct pkg		 *pkg_new_freebsd_from_file(FILE *);
 struct pkg		 *pkg_new_freebsd_installed(const char *, const char *);
 struct pkg		 *pkg_new_freebsd_empty(const char *);
 int			  pkg_compare(const void *, const void *);
-char			 *pkg_get_version(struct pkg *);
-char			 *pkg_get_origin(struct pkg *);
-int			  pkg_add_dependency(struct pkg *, struct pkg *);
-int			  pkg_add_file(struct pkg *, struct pkg_file *);
-struct pkg		**pkg_get_dependencies(struct pkg *);
-/*
- * Returns all control files from the package
- * Eg. +CONTENTS from FreeBSD Packages
- */
 struct pkg_file		**pkg_get_control_files(struct pkg *);
 struct pkg_file		 *pkg_get_control_file(struct pkg *, const char *);
-/* Returns the next non-control file */
+struct pkg		**pkg_get_dependencies(struct pkg *);
+char			 *pkg_get_name(struct pkg *);
 struct pkg_file		 *pkg_get_next_file(struct pkg *);
+char			 *pkg_get_origin(struct pkg *);
+char			 *pkg_get_version(struct pkg *);
+int			  pkg_add_dependency(struct pkg *, struct pkg *);
+int			  pkg_add_file(struct pkg *, struct pkg_file *);
 int			  pkg_list_free(struct pkg **);
 int			  pkg_free(struct pkg *);
-
-char			 *pkg_get_name(struct pkg *);
 
 #endif /* __LIBPKG_PKG_H__ */

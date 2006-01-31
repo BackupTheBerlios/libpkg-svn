@@ -38,7 +38,7 @@
  * used by most types of packages
  */
 struct pkg *
-pkg_new(const char *name,
+pkg_new(const char *pkg_name,
 		pkg_get_control_files_callback *control_files,
 		pkg_get_control_file_callback *control_file,
 		pkg_get_dependencies_callback *get_deps,
@@ -47,7 +47,7 @@ pkg_new(const char *name,
 	struct pkg *pkg;
 
 	/* A package must have a name */
-	if (name == NULL)
+	if (pkg_name == NULL)
 		return NULL;
 
 	pkg = malloc(sizeof(struct pkg));
@@ -55,7 +55,7 @@ pkg_new(const char *name,
 		return NULL;
 	}
 
-	pkg->pkg_name = strdup(name);
+	pkg->pkg_name = strdup(pkg_name);
 	if (!pkg->pkg_name) {
 		free(pkg);
 		return NULL;
@@ -132,32 +132,95 @@ pkg_add_callbacks_install (struct pkg *pkg,
  * Creates an empty package with no callbacks
  */
 struct pkg*
-pkg_new_empty(const char *name)
+pkg_new_empty(const char *pkg_name)
 {
-	return pkg_new(name, NULL, NULL, NULL, NULL);
+	return pkg_new(pkg_name, NULL, NULL, NULL, NULL);
 }
 
 /*
  * A function to pass to *sort[_r] to sort alphabeticly by package name
  */
 int
-pkg_compare(const void *a, const void *b)
+pkg_compare(const void *pkg_a, const void *pkg_b)
 {
 	/* XXX Makes WARNS <= 3 */
-	return strcmp((*(const struct pkg **)a)->pkg_name,
-	    (*(const struct pkg **)b)->pkg_name);
+	return strcmp((*(const struct pkg **)pkg_a)->pkg_name,
+	    (*(const struct pkg **)pkg_b)->pkg_name);
 }
 
-char *
-pkg_get_version(struct pkg *pkg)
+/*
+ * Gets the control files from a given package
+ */
+struct pkg_file **
+pkg_get_control_files(struct pkg *pkg)
 {
-	if (pkg == NULL)
+	if (!pkg) {
+		return NULL;
+	}
+
+	if (!pkg->pkg_get_control_files) {
+		return NULL;
+	}
+
+	return pkg->pkg_get_control_files(pkg);
+}
+
+/*
+ * Gets a given control file from a package
+ */
+struct pkg_file *
+pkg_get_control_file(struct pkg *pkg, const char *pkg_name)
+{
+	if (!pkg || !pkg_name)
 		return NULL;
 
-	if (pkg->pkg_get_version != NULL)
-		return pkg->pkg_get_version(pkg);
+	if (pkg->pkg_get_control_file)
+		return pkg->pkg_get_control_file(pkg, pkg_name);
 
 	return NULL;
+}
+
+/*
+ * Gets all the dependencies for a given package
+ */
+struct pkg **
+pkg_get_dependencies(struct pkg *pkg)
+{
+	if (!pkg)
+		return NULL;
+
+	if (pkg->pkg_get_deps)
+		return pkg->pkg_get_deps(pkg);
+	return NULL;
+}
+
+/*
+ * Gets the name of a package
+ */
+char *
+pkg_get_name(struct pkg *pkg)
+{
+	if (!pkg)
+		return NULL;
+	return pkg->pkg_name;
+}
+
+/*
+ * Gets the next file in a package, used for installation
+ * to iterate over all files to be installed in a package
+ */
+struct pkg_file *
+pkg_get_next_file(struct pkg *pkg)
+{
+	if (!pkg) {
+		return NULL;
+	}
+
+	if (!pkg->pkg_get_next_file) {
+		return NULL;
+	}
+
+	return pkg->pkg_get_next_file(pkg);
 }
 
 /*
@@ -171,6 +234,21 @@ pkg_get_origin(struct pkg *pkg)
 
 	if (pkg->pkg_get_origin)
 		return pkg->pkg_get_origin(pkg);
+
+	return NULL;
+}
+
+/*
+ * Return a string containg the package format version
+ */
+char *
+pkg_get_version(struct pkg *pkg)
+{
+	if (pkg == NULL)
+		return NULL;
+
+	if (pkg->pkg_get_version != NULL)
+		return pkg->pkg_get_version(pkg);
 
 	return NULL;
 }
@@ -203,70 +281,6 @@ pkg_add_file(struct pkg *pkg, struct pkg_file *file)
 		return pkg->pkg_add_file(pkg, file);
 
 	return -1;
-}
-
-/*
- * Gets the control files from a given package
- */
-struct pkg_file **
-pkg_get_control_files(struct pkg *pkg)
-{
-	if (!pkg) {
-		return NULL;
-	}
-
-	if (!pkg->pkg_get_control_files) {
-		return NULL;
-	}
-
-	return pkg->pkg_get_control_files(pkg);
-}
-
-/*
- * Gets a given control file from a package
- */
-struct pkg_file *
-pkg_get_control_file(struct pkg *pkg, const char *name)
-{
-	if (!pkg || !name)
-		return NULL;
-
-	if (pkg->pkg_get_control_file)
-		return pkg->pkg_get_control_file(pkg, name);
-
-	return NULL;
-}
-
-/*
- * Gets the next file in a package, used for installation
- * to iterate over all files to be installed in a package
- */
-struct pkg_file *
-pkg_get_next_file(struct pkg *pkg)
-{
-	if (!pkg) {
-		return NULL;
-	}
-
-	if (!pkg->pkg_get_next_file) {
-		return NULL;
-	}
-
-	return pkg->pkg_get_next_file(pkg);
-}
-
-/*
- * Gets all the dependencies for a given package
- */
-struct pkg **
-pkg_get_dependencies(struct pkg *pkg)
-{
-	if (!pkg)
-		return NULL;
-
-	if (pkg->pkg_get_deps)
-		return pkg->pkg_get_deps(pkg);
-	return NULL;
 }
 
 /*
@@ -307,15 +321,4 @@ pkg_free(struct pkg *pkg)
 	free(pkg);
 
 	return 0;
-}
-
-/*
- * Gets the name of a package
- */
-char *
-pkg_get_name(struct pkg *pkg)
-{
-	if (!pkg)
-		return NULL;
-	return pkg->pkg_name;
 }
