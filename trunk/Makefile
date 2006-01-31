@@ -1,3 +1,3 @@
-SUBDIR=src tools demo
+SUBDIR=src tools
 
 .include <bsd.subdir.mk>
