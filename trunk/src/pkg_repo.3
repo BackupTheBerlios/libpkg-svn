@@ -32,7 +32,6 @@
 .Nm pkg_repo_new_files ,
 .Nm pkg_repo_new_ftp ,
 .Nm pkg_repo_get_pkg ,
-.Nm pkg_repo_find_pkg ,
 .Nm pkg_repo_free ,
 .Nd functions for communicating with a package repository
 .Sh LIBRARY
@@ -45,8 +44,6 @@
 .Fn pkg_repo_new_ftp "const char *site" "const char *path"
 .Ft struct pkg *
 .Fn pkg_repo_get_pkg "struct pkg_repo *repo" "const char *pkg_name"
-.Ft struct pkg *
-.Fn pkg_repo_find_pkg "struct pkg_repo *repo" "struct pkg *pkg"
 .Ft int
 .Fn pkg_repo_free "struct pkg_repo *repo"
 .Sh DESCRIPTION
@@ -80,12 +77,6 @@ Retrieves the
 with the name
 .Vt pkg_name
 from the repo.
-.It Fn pkg_repo_find_pkg
-Finds an empty package
-.Vt pkg
-in a respority
-.Vt repo
-and sets the appropriate data to make it installable.
 .It Fn pkg_repo_free
 Frees all allocated memory from the given
 .Tn pkg_repo .

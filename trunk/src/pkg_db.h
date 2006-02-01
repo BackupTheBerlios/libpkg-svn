@@ -48,8 +48,9 @@ int		  pkg_db_is_installed(struct pkg_db *, const char *);
 struct pkg	**pkg_db_get_installed(struct pkg_db *);
 struct pkg	**pkg_db_get_installed_match(struct pkg_db *, pkg_db_match *,
 			void *);
-int		  pkg_match_all(struct pkg *, void *data);
 struct pkg	 *pkg_db_get_package(struct pkg_db *, const char *);
 int		  pkg_db_free(struct pkg_db *);
+
+int		  pkg_match_all(struct pkg *, void *);
 
 #endif /* __LIBPKG_PKG_DB_H__ */

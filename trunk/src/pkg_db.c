@@ -156,26 +156,16 @@ pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match, void *data)
 }
 
 /*
- * Matches all packages.
- * This is here because it is used with pkg_db_get_installed_match
- */
-int
-pkg_match_all(struct pkg *pkg __unused, void *data __unused)
-{
-	return 0;
-}
-
-/*
  * Gets the package with the given name
  */
 struct pkg *
-pkg_db_get_package(struct pkg_db *db, const char *name)
+pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
 {
-	if (!db || !name)
+	if (!db || !pkg_name)
 		return NULL;
 
 	if (db->pkg_get_package)
-		return db->pkg_get_package(db, name);
+		return db->pkg_get_package(db, pkg_name);
 
 	return NULL;
 }
@@ -195,5 +185,15 @@ pkg_db_free(struct pkg_db *db)
 
 	free(db);
 
+	return 0;
+}
+
+/*
+ * Matches all packages.
+ * This is here because it is used with pkg_db_get_installed_match
+ */
+int
+pkg_match_all(struct pkg *pkg __unused, void *data __unused)
+{
 	return 0;
 }
