@@ -71,8 +71,8 @@ static struct pkg_file		 *freebsd_get_next_file(struct pkg *);
 static struct pkg		**freebsd_get_deps(struct pkg *);
 static int			  freebsd_free(struct pkg *);
 
-static char			 *freebsd_get_version(struct pkg *);
-static char			 *freebsd_get_origin(struct pkg *);
+static const char		 *freebsd_get_version(struct pkg *);
+static const char		 *freebsd_get_origin(struct pkg *);
 
 /* Internal functions */
 struct pkg_file			**freebsd_open_control_files(const char *);
@@ -286,7 +286,7 @@ freebsd_open_control_files(const char *pkg_db_dir)
 /*
  * Returns a string containing the package version
  */
-static char *
+static const char *
 freebsd_get_version(struct pkg *pkg)
 {
 	struct freebsd_package *f_pkg;
@@ -318,7 +318,7 @@ freebsd_get_version(struct pkg *pkg)
 /*
  * Returns the origin of a given package
  */
-static char *
+static const char *
 freebsd_get_origin(struct pkg *pkg)
 {
 	struct freebsd_package *f_pkg;

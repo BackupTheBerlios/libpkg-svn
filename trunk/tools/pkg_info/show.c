@@ -163,7 +163,7 @@ show_file(struct pkg_file *file, const char *title, int quiet)
 static void
 show_fmtrev(struct pkg* pkg, const char *title, int quiet)
 {
-	char *version;
+	const char *version;
 	if (!quiet)
 		printf("%s", title);
 

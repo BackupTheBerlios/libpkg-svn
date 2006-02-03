@@ -197,7 +197,7 @@ pkg_get_dependencies(struct pkg *pkg)
 /*
  * Gets the name of a package
  */
-char *
+const char *
 pkg_get_name(struct pkg *pkg)
 {
 	if (!pkg)
@@ -226,7 +226,7 @@ pkg_get_next_file(struct pkg *pkg)
 /*
  * Gets a packages origin if it has one
  */
-char *
+const char *
 pkg_get_origin(struct pkg *pkg)
 {
 	if (pkg == NULL)
@@ -241,7 +241,7 @@ pkg_get_origin(struct pkg *pkg)
 /*
  * Return a string containg the package format version
  */
-char *
+const char *
 pkg_get_version(struct pkg *pkg)
 {
 	if (pkg == NULL)

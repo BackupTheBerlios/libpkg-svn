@@ -60,8 +60,8 @@ struct pkg		 *pkg_new(const char *,
 				pkg_free_callback *);
 
 /* Callbacks to get data from a package, eg. the description */
-typedef char		 *pkg_get_version_callback(struct pkg *);
-typedef char		 *pkg_get_origin_callback(struct pkg *);
+typedef const char	 *pkg_get_version_callback(struct pkg *);
+typedef const char	 *pkg_get_origin_callback(struct pkg *);
 int			  pkg_add_callbacks_data(struct pkg *,
 				pkg_get_version_callback *,
 				pkg_get_origin_callback *);

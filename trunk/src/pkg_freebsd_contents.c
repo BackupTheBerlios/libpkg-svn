@@ -227,7 +227,7 @@ int
 pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *contents,
 		struct pkg *pkg)
 {
-	char *origin;
+	const char *origin;
 
 	if (contents == NULL || contents->file != NULL || pkg == NULL)
 		return -1;
