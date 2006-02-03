@@ -44,7 +44,7 @@ _pkg_match_regex(struct pkg *pkg, void *data)
 
 	rex = data;
 	for(i=0; i < rex->count; i++) {
-		if (regexec(rex->rex, pkg_get_name(pkg), 0, NULL, 0) == 0)
+		if (regexec(&rex->rex[i], pkg_get_name(pkg), 0, NULL, 0) == 0)
 			return 0;
 	}
 	return -1;
