@@ -3,7 +3,9 @@ libpkg is a library to fetch, install, remove and modify packages in a package m
 It is initialy designed for FreeBSD but could be extended for any system.
 
 libpkg has been developed and tested on FreeBSD.
-To build libpkg type "make" in this directory. It will build the library and a demo program. The depo program will install a given package to ./fakeroot/
+To build libpkg type "make" in this directory.
+
+libpkg will not currently build on Linux because it used libfetch from the FreeBSD cvs tree to download packages. There is currently no support for formats other then FreeBSD packages version 1.1.
 
 Pros:
     * It appears to be faster than using pkg_add because it extracts the files directly to the correct location rather than to a tempory location then copy to the correct location.
