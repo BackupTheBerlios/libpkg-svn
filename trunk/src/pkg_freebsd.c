@@ -43,8 +43,8 @@
 #include "pkg_freebsd_private.h"
 
 struct freebsd_package {
-	struct archive	*archive;
-	FILE		*fd;
+	struct archive	 *archive;
+	FILE		 *fd;
 
 	struct pkg_file **control;
 	struct pkg_freebsd_contents *contents;
@@ -52,7 +52,7 @@ struct freebsd_package {
 
 	/* If not null contains the next file in
 	 * the archive after the control files */
-	struct pkg_file	*next;
+	struct pkg_file	 *next;
 
 	struct pkg_file **all_files;
 	unsigned int	  all_files_size;
@@ -75,11 +75,21 @@ static char			 *freebsd_get_version(struct pkg *);
 static char			 *freebsd_get_origin(struct pkg *);
 
 /* Internal functions */
+struct pkg_file			**freebsd_open_control_files(const char *);
 static struct freebsd_package	*freebsd_get_package(FILE *,
 					struct pkg_file **);
 static struct pkg_file		*freebsd_get_next_entry(struct archive *);
 static char 			*freebsd_get_pkg_name(const char *);
 static int			 freebsd_free_package(struct freebsd_package *);
+
+#define FREE_CONTENTS(c) \
+	{ \
+		int i; \
+		for (i=0; c[i] != NULL; i++) { \
+			pkg_file_free(c[i]); \
+		} \
+		free(c); \
+	}
 
 /*
  * Creates a new FreeBSD package from a FILE pointer
@@ -119,70 +129,20 @@ pkg_new_freebsd_from_file(FILE *fd)
 struct pkg *
 pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 {
-	DIR *d;
-	struct dirent *de;
 	struct pkg *pkg;
 	struct freebsd_package *f_pkg;
 	struct pkg_file **control;
-	unsigned int control_size, control_count, line;
+	unsigned int line;
 
-#define FREE_CONTENTS(c) \
-	{ \
-		int i; \
-		for (i=0; c[i] != NULL; i++) { \
-			pkg_file_free(c[i]); \
-		} \
-		free(c); \
-	}
 
 	if (!pkg_name || ! pkg_db_dir)
 		return NULL;
-
-	control = NULL;
 
 	/*
 	 * This section until the closedir takes too long in pkg_info.
 	 * It needs to be optimised to just read the required data
 	 */
-	d = opendir(pkg_db_dir);
-	if (d == NULL)
-		return NULL;
-
-	/* Load all the + files into control */
-	control_size = sizeof(struct pkg_file **);
-	control = malloc(control_size);
-	control[0] = NULL;
-	control_count = 0;
-	while ((de = readdir(d)) != NULL) {
-		char *file;
-	
-		if (de->d_name[0] == '.') {
-			continue;
-		} else if (de->d_type != DT_REG) {
-			closedir(d);
-			FREE_CONTENTS(control);
-			return NULL;
-		} else if (de->d_name[0] != '+') {
-			/* All files must begin with + */
-			closedir(d);
-			FREE_CONTENTS(control);
-			return NULL;
-		}
-		asprintf(&file, "%s/%s", pkg_db_dir, de->d_name);
-		if (!file) {
-			closedir(d);
-			FREE_CONTENTS(control);
-			return NULL;
-		}
-		control_size += sizeof(struct pkg_file **);
-		control = realloc(control, control_size);
-		control[control_count] = pkg_file_new(file);
-		control_count++;
-		control[control_count] = NULL;
-		free(file);
-	}
-
-	closedir(d);
+	control = freebsd_open_control_files(pkg_db_dir);
 
 	/* Only the get_deps and free callbacks will work */
 	pkg = pkg_new(pkg_name, freebsd_get_control_files,
@@ -198,7 +158,9 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 		pkg_free(pkg);
 		return NULL;
 	}
+	pkg->data = f_pkg;
 
+	assert(f_pkg->contents != NULL);
 	for (line = 0; line < f_pkg->contents->line_count; line++) {
 		if (f_pkg->contents->lines[line].line_type == PKG_LINE_COMMENT)
 		    {
@@ -210,8 +172,6 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 			}
 		}
 	}
-	
-	pkg->data = f_pkg;
 
 	return pkg;
 }
@@ -249,6 +209,7 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	f_pkg->all_files[0] = NULL;
 
 	/* Setup the +CONTENTS file */
+	assert(f_pkg->contents != NULL);
 	pkg_freebsd_contents_add_line(f_pkg->contents, PKG_LINE_COMMENT,
 	    "PKG_FORMAT_REVISION:1.1");
 	pkg_freebsd_contents_add_line(f_pkg->contents, PKG_LINE_NAME, pkg_name);
@@ -259,10 +220,67 @@ pkg_new_freebsd_empty(const char *pkg_name)
 struct pkg_freebsd_contents *
 pkg_freebsd_get_contents(struct pkg *pkg)
 {
+	struct freebsd_package *f_pkg;
 	if (pkg == NULL)
 		return NULL;
 
-	return ((struct freebsd_package *)pkg->data)->contents;
+	f_pkg = (struct freebsd_package *)pkg->data;
+	assert(f_pkg != NULL);
+
+	/* Load the +CONTENTS file if it is NULL */
+	assert(f_pkg->contents != NULL);
+	return f_pkg->contents;
+}
+
+struct pkg_file **
+freebsd_open_control_files(const char *pkg_db_dir)
+{
+	struct pkg_file **control;
+	unsigned int control_size, control_count;
+	DIR *d;
+	struct dirent *de;
+	
+
+	d = opendir(pkg_db_dir);
+	if (d == NULL)
+		return NULL;
+
+	/* Load all the + files into control */
+	control_size = sizeof(struct pkg_file **);
+	control = malloc(control_size);
+	control[0] = NULL;
+	control_count = 0;
+	while ((de = readdir(d)) != NULL) {
+		char *file;
+	
+		if (de->d_name[0] == '.') {
+			continue;
+		} else if (de->d_type != DT_REG) {
+			closedir(d);
+			FREE_CONTENTS(control);
+			return NULL;
+		} else if (de->d_name[0] != '+') {
+			/* All files must begin with + */
+			closedir(d);
+			FREE_CONTENTS(control);
+			return NULL;
+		}
+		asprintf(&file, "%s/%s", pkg_db_dir, de->d_name);
+		if (!file) {
+			closedir(d);
+			FREE_CONTENTS(control);
+			return NULL;
+		}
+		control_size += sizeof(struct pkg_file **);
+		control = realloc(control, control_size);
+		control[control_count] = pkg_file_new(file);
+		control_count++;
+		control[control_count] = NULL;
+		free(file);
+	}
+	closedir(d);
+
+	return control;
 }
 
 /*
