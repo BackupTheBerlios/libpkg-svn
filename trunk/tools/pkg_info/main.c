@@ -204,8 +204,16 @@ pkg_info(struct pkg_info info)
 
 	switch(info.match_type) {
 	case MATCH_ALL:
+	case MATCH_REGEX:
+	case MATCH_EREGEX:
 		/* Display all packages installed */
-		pkgs = pkg_db_get_installed(info.db);
+		if (info.match_type == MATCH_ALL)
+			pkgs = pkg_db_get_installed(info.db);
+		else
+			pkgs = match_regex(info.db, info.pkgs,
+			    (info.match_type == MATCH_EREGEX));
+
+		/* Sort the packages and display them */
 		if (pkgs == NULL) {
 			/* XXX Error message */
 			return 1;
@@ -215,34 +223,6 @@ pkg_info(struct pkg_info info)
 		qsort(pkgs, cur, sizeof(struct pkg *), pkg_compare);
 		for (cur = 0; pkgs[cur] != NULL; cur++) {
 			show(info.db, pkgs[cur], info.flags, info.quiet);
-		}
-		retval = 0;
-		break;
-	case MATCH_REGEX:
-	case MATCH_EREGEX:
-		/* Match all packages that match one of the [e]regex given */
-		{
-		char *prev;
-
-		//pkgs = pkg_db_get_installed(info.db);
-		//if (pkgs == NULL) {
-			/* XXX Error message */
-		//	break;
-		//}
-
-		pkgs = match_regex(info.db, info.pkgs,
-		    (info.match_type == MATCH_EREGEX));
-
-		/* Display all packages that matches atleast one regex */
-		prev = NULL;
-		for (cur = 0; pkgs[cur] != NULL; cur++) {
-			/* Only show one instance of each package */
-			if (prev == NULL ||
-			    strcmp(prev, pkg_get_name(pkgs[cur])) != 0) {
-				show(info.db, pkgs[cur], info.flags, info.quiet);
-			}
-			prev = pkg_get_name(pkgs[cur]);
-		}
 		}
 		retval = 0;
 		break;
