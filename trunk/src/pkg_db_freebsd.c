@@ -63,7 +63,7 @@ static int pkg_states[7][12] = {
 };
 
 static int		  freebsd_install_pkg(struct pkg_db *, struct pkg *);
-static int		  freebsd_is_installed(struct pkg_db *, const char *);
+static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
 static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, void *);
 static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
@@ -283,15 +283,15 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
  *        -1 otherwise
  */
 static int
-freebsd_is_installed(struct pkg_db *db, const char *package)
+freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 {
 	struct stat sb;
 	char *dir;
 
 	assert(db != NULL);
-	assert(package != NULL);
+	assert(pkg != NULL);
 
-	asprintf(&dir, "%s" DB_LOCATION "/%s", db->db_base, package);
+	asprintf(&dir, "%s" DB_LOCATION "/%s", db->db_base, pkg_get_name(pkg));
 	if (!dir) {
 		return -1;
 	}

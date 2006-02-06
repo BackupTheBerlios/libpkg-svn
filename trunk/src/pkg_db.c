@@ -115,7 +115,7 @@ pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
  * Check to se if a package is installed
  */
 int
-pkg_db_is_installed(struct pkg_db *db, const char *package)
+pkg_db_is_installed(struct pkg_db *db, struct pkg *pkg)
 {
 	if (!db) {
 		return -1;
@@ -125,7 +125,7 @@ pkg_db_is_installed(struct pkg_db *db, const char *package)
 		return -1;
 	}
 
-	return db->pkg_is_installed(db, package);
+	return db->pkg_is_installed(db, pkg);
 }
 
 /*

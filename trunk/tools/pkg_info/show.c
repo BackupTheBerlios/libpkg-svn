@@ -114,12 +114,12 @@ show(struct pkg_db *db __unused, struct pkg *pkg, int flags, int quiet)
 	//    show_files("Files:\n", &plist);
 	}
 	if ((flags & SHOW_SIZE) &&
-	    pkg_db_is_installed(db, pkg_get_name(pkg)) == 0) {
+	    pkg_db_is_installed(db, pkg) == 0) {
 		show_size(pkg, "Package Size:\n", quiet);
 	//    show_size("Package Size:\n", &plist);
 	}
 	if ((flags & SHOW_CKSUM) &&
-	    pkg_db_is_installed(db, pkg_get_name(pkg)) == 0) {
+	    pkg_db_is_installed(db, pkg) == 0) {
 		show_cksum(pkg, "Mismatched Checksums:\n", quiet);
 	//    show_cksum("Mismatched Checksums:\n", &plist);
 	}
