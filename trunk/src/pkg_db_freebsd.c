@@ -287,6 +287,8 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 {
 	struct stat sb;
 	char *dir;
+	struct pkg **pkgs;
+	int is_installed;
 
 	assert(db != NULL);
 	assert(pkg != NULL);
@@ -296,23 +298,26 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 		return -1;
 	}
 
+	is_installed = -1;
+
 	/* Does the package repo directory exist */
-	errno = 0;
-	if (stat(dir, &sb)) {
-		free(dir);
-		return -1;
+	if (stat(dir, &sb) == 0 && S_ISDIR(sb.st_mode) != 0) {
+		/* The passed package is installed */
+		is_installed = 0;
 	}
-
-	if (!S_ISDIR(sb.st_mode)) {
-		free(dir);
-		return -1;
-	}
-
 	free(dir);
+	if (is_installed == 0)
+		return 0;
 
-	/* XXX Check the correct files are there */
-
-	return 0;
+	/* Does the package have an origin and if so is that origin installed */
+	if (pkg_get_origin(pkg) != NULL) {
+		pkgs = freebsd_get_installed_match(db, pkg_match_by_origin,
+		    (void *)pkg_get_origin(pkg));
+		if (pkgs[0] != NULL)
+			is_installed = 0;
+		pkg_list_free(pkgs);
+	}
+	return is_installed;
 }
 
 /*

@@ -197,3 +197,12 @@ pkg_match_all(struct pkg *pkg __unused, void *data __unused)
 {
 	return 0;
 }
+
+/*
+ * Matches all packages by origin. The origin is a string pointed to by data
+ */
+int
+pkg_match_by_origin(struct pkg *pkg, void *data)
+{
+	return strcmp(pkg_get_origin(pkg), (const char *)data);
+}

@@ -100,6 +100,7 @@ pkg_new_freebsd_from_file(FILE *fd)
 	struct pkg *pkg;
 	struct freebsd_package *f_pkg;
 	char *pkg_name;
+	unsigned int line;
 
 	if (fd == NULL)
 		return NULL;
@@ -116,8 +117,22 @@ pkg_new_freebsd_from_file(FILE *fd)
 	if (pkg == NULL)
 		return NULL;
 	pkg_add_callbacks_install(pkg, freebsd_get_next_file);
+	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin);
 
 	pkg->data = f_pkg;
+	
+	assert(f_pkg->contents != NULL);
+	for (line = 0; line < f_pkg->contents->line_count; line++) {
+		if (f_pkg->contents->lines[line].line_type == PKG_LINE_COMMENT)
+		    {
+			if (strncmp("ORIGIN:",
+			    f_pkg->contents->lines[line].data, 7) == 0) {
+				f_pkg->origin = strdup(
+				    f_pkg->contents->lines[line].data + 7);
+				break;
+			}
+		}
+	}
 
 	return pkg;
 }
