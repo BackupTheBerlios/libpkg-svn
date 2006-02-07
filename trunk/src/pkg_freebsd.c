@@ -33,6 +33,7 @@
 #include <archive_entry.h>
 #include <assert.h>
 #include <dirent.h>
+#include <err.h>
 #include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
@@ -631,21 +632,32 @@ freebsd_get_next_entry(struct archive *a)
 		return NULL;
 	}
 
-	/* Allocate enough space for the file and copy it to the string */
-	length = archive_entry_size(entry);
-	str = malloc(length+1);
-	if (!str) {
-		return NULL;
-	}
-	archive_read_data_into_buffer(a, str, length);
-	str[length] = '\0';
-
 	/* Get the needed struct stat from the archive */
 	sb = archive_entry_stat(entry);
 
-	/* Create the pkg_file and return it */
-	return pkg_file_new_from_buffer(archive_entry_pathname(entry),
-		length, str, sb);
+	if (S_ISREG(sb->st_mode)) {
+		/* Allocate enough space for the file and copy it to the string */
+		length = archive_entry_size(entry);
+		str = malloc(length+1);
+		if (!str) {
+			return NULL;
+		}
+		archive_read_data_into_buffer(a, str, length);
+		str[length] = '\0';
+
+		/* Create the pkg_file and return it */
+		return pkg_file_new_from_buffer(archive_entry_pathname(entry),
+			length, str, sb);
+	} else if (S_ISLNK(sb->st_mode)) {
+		str = strdup(archive_entry_symlink(entry));
+		if (!str)
+			return NULL;
+
+		return pkg_file_new_symlink(archive_entry_pathname(entry),
+		    str, sb);
+	}
+	errx(1, "File is not regular or symbolic link");
+	return NULL;
 }
 
 /*

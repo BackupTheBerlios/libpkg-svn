@@ -41,6 +41,7 @@
 struct pkg_file;
 
 struct pkg_file	*pkg_file_new(const char *);
+struct pkg_file	*pkg_file_new_symlink(const char *, char *,const struct stat *);
 struct pkg_file	*pkg_file_new_from_buffer(const char *, uint64_t, char *,
 			const struct stat *);
 int		 pkg_file_write(struct pkg_file *);

@@ -67,6 +67,16 @@ pkg_file_new(const char *filename)
 	return file;
 }
 
+struct pkg_file *
+pkg_file_new_symlink(const char *filename, char *link,
+		const struct stat *sb)
+{
+	if (!filename || !link || !sb)
+		return NULL;
+
+	return pkg_file_new_from_buffer(filename, strlen(link), link, sb);
+}
+
 /*
  * Creates a new pkg_file from a buffer
  */
@@ -148,51 +158,49 @@ pkg_file_write(struct pkg_file *file)
 		return -1;
 	}
 
-	if (file->stat) {
-		/* Check the file to be written is regular */
-		if (!S_ISREG(file->stat->st_mode)) {
-			return -1;
-		}
-	}
-
-	/* Open the file to append to it */
-	fd = fopen(file->filename, "a");
-	if (fd == NULL) {
-		char *dir_name;
-
-		/*
-		 * The open failed, try running mkdir -p
-		 * on the dir and opening again
-		 */
-		dir_name = dirname(file->filename);
-		pkg_dir_build(dir_name);
+	if (!file->stat || S_ISREG(file->stat->st_mode)) {
+		/* Open the file to append to it */
 		fd = fopen(file->filename, "a");
 		if (fd == NULL) {
+			char *dir_name;
+
+			/*
+			 * The open failed, try running mkdir -p
+			 * on the dir and opening again
+			 */
+			dir_name = dirname(file->filename);
+			pkg_dir_build(dir_name);
+			fd = fopen(file->filename, "a");
+			if (fd == NULL) {
+				return -1;
+			}
+		}
+		/* Check the file we just created is a regular file */
+		fstat(fileno(fd), &sb);
+		if (!S_ISREG(sb.st_mode)) {
+			fclose(fd);
+			return -1;
+		} else if (sb.st_size > 0) {
+			/* And the file is empty */
+			fclose(fd);
 			return -1;
 		}
-	}
-	/* Check the file we just created is a regular file */
-	fstat(fileno(fd), &sb);
-	if (!S_ISREG(sb.st_mode)) {
+
+		/* Write the file to disk */
+		fwrite(file->contents, file->len, 1, fd);
+
+		if (file->stat) {
+			/* Set the correct permission for the file */
+			fchmod(fileno(fd), file->stat->st_mode);
+		}
+
 		fclose(fd);
-		return -1;
-	} else if (sb.st_size > 0) {
-		/* And the file is empty */
-		fclose(fd);
-		return -1;
+
+		return 0;
+	} else if (S_ISLNK(file->stat->st_mode)) {
+		return symlink(file->contents, file->filename);
 	}
-
-	/* Write the file to disk */
-	fwrite(file->contents, file->len, 1, fd);
-
-	if (file->stat) {
-		/* Set the correct permission for the file */
-		fchmod(fileno(fd), file->stat->st_mode);
-	}
-
-	fclose(fd);
-
-	return 0;
+	return -1;
 }
 
 /*

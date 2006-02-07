@@ -222,7 +222,8 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			contents_sum = strchr(contents->lines[line+1].data,
 			    ':');
 			contents_sum++;
-			if (pkg_checksum_md5(file, contents_sum) != 0) {
+			if (S_ISREG(file->stat->st_mode) &&
+			    pkg_checksum_md5(file, contents_sum) != 0) {
 				chdir(cwd);
 				free(cwd);
 				free(directory);
