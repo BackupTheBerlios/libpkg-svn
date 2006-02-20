@@ -11,6 +11,7 @@ LDADD	 = ${.CURDIR}/../../src/libpkg.a
 .endif
 LDADD	+= -lmd -larchive -lbz2 -lz
 NOMAN	 = 1
+NO_MAN	 = 1
 
 WARNS	?= 6
 
