@@ -135,6 +135,8 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	assert(f_repo != NULL);
 
 	fd = ftp_get_fd(pkg_name, f_repo);
+	if (fd == NULL)
+		return NULL;
 	
 	pkg = pkg_new_freebsd_from_file(fd);
 	if (!pkg) {

@@ -144,8 +144,8 @@ int
 pkg_compare(const void *pkg_a, const void *pkg_b)
 {
 	/* XXX Makes WARNS <= 3 */
-	return strcmp((*(const struct pkg **)pkg_a)->pkg_name,
-	    (*(const struct pkg **)pkg_b)->pkg_name);
+	return strcmp((*(struct pkg * const *)pkg_a)->pkg_name,
+	    (*(struct pkg * const *)pkg_b)->pkg_name);
 }
 
 /*
