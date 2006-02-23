@@ -68,13 +68,13 @@ pkg_file_new(const char *filename)
 }
 
 struct pkg_file *
-pkg_file_new_symlink(const char *filename, char *link,
+pkg_file_new_symlink(const char *filename, char *lnk,
 		const struct stat *sb)
 {
-	if (!filename || !link || !sb)
+	if (!filename || !lnk || !sb)
 		return NULL;
 
-	return pkg_file_new_from_buffer(filename, strlen(link), link, sb);
+	return pkg_file_new_from_buffer(filename, strlen(lnk), lnk, sb);
 }
 
 /*

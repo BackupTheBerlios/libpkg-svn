@@ -35,7 +35,7 @@ typedef int 	 pkg_db_is_installed_callback(struct pkg_db *, struct pkg *);
 typedef struct pkg	 *pkg_db_get_package_callback(struct pkg_db *,
 				const char *);
 typedef struct pkg	**pkg_db_get_installed_match_callback(struct pkg_db *,
-				pkg_db_match *, void *);
+				pkg_db_match *, const void *);
 
 
 struct pkg_db	*pkg_db_open(const char *, pkg_db_install_pkg_callback *,

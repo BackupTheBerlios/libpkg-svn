@@ -65,7 +65,7 @@ static int pkg_states[7][12] = {
 static int		  freebsd_install_pkg(struct pkg_db *, struct pkg *);
 static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
 static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
-				pkg_db_match *, void *);
+				pkg_db_match *, const void *);
 static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
 
 /* Internal */
@@ -313,7 +313,7 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 	/* Does the package have an origin and if so is that origin installed */
 	if (pkg_get_origin(pkg) != NULL) {
 		pkgs = freebsd_get_installed_match(db, pkg_match_by_origin,
-		    (void *)pkg_get_origin(pkg));
+		    (const void *)pkg_get_origin(pkg));
 		if (pkgs[0] != NULL)
 			is_installed = 0;
 		pkg_list_free(pkgs);
@@ -325,7 +325,7 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
  * Gets all installed packages
  */
 static struct pkg **
-freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match, void *data)
+freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *data)
 {
 	DIR *d;
 	struct dirent *de;

@@ -31,13 +31,13 @@ struct regex_or {
 	regex_t *rex;
 };
 
-static int _pkg_match_regex(struct pkg *, void *);
+static int _pkg_match_regex(struct pkg *, const void *);
 
 static int
-_pkg_match_regex(struct pkg *pkg, void *data)
+_pkg_match_regex(struct pkg *pkg, const void *data)
 {
 	unsigned int i;
-	struct regex_or *rex;
+	const struct regex_or *rex;
 	
 	assert(pkg != NULL);
 	assert(data != NULL);

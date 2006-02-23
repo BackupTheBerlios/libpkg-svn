@@ -40,18 +40,18 @@ struct pkg_db;
  * It will take a package and some user specified data in.
  * Returns 0 if the package matches or -1 otherwise.
  */
-typedef		  int pkg_db_match(struct pkg *, void *);
+typedef		  int pkg_db_match(struct pkg *, const void *);
 
 struct pkg_db	 *pkg_db_open_freebsd(const char *);
 int		  pkg_db_install_pkg(struct pkg_db *, struct pkg *);
 int		  pkg_db_is_installed(struct pkg_db *, struct pkg *);
 struct pkg	**pkg_db_get_installed(struct pkg_db *);
 struct pkg	**pkg_db_get_installed_match(struct pkg_db *, pkg_db_match *,
-			void *);
+			const void *);
 struct pkg	 *pkg_db_get_package(struct pkg_db *, const char *);
 int		  pkg_db_free(struct pkg_db *);
 
-int		  pkg_match_all(struct pkg *, void *);
-int		  pkg_match_by_origin(struct pkg *, void *);
+int		  pkg_match_all(struct pkg *, const void *);
+int		  pkg_match_by_origin(struct pkg *, const void *);
 
 #endif /* __LIBPKG_PKG_DB_H__ */

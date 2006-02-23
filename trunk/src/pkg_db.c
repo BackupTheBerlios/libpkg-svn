@@ -141,7 +141,7 @@ pkg_db_get_installed(struct pkg_db *db)
  * Get a NULL terminated array of installed packages that match accepts
  */
 struct pkg **
-pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match, void *data)
+pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *data)
 {
 	if (!db)
 		return NULL;
@@ -193,7 +193,7 @@ pkg_db_free(struct pkg_db *db)
  * This is here because it is used with pkg_db_get_installed_match
  */
 int
-pkg_match_all(struct pkg *pkg __unused, void *data __unused)
+pkg_match_all(struct pkg *pkg __unused, const void *data __unused)
 {
 	return 0;
 }
@@ -202,7 +202,7 @@ pkg_match_all(struct pkg *pkg __unused, void *data __unused)
  * Matches all packages by origin. The origin is a string pointed to by data
  */
 int
-pkg_match_by_origin(struct pkg *pkg, void *data)
+pkg_match_by_origin(struct pkg *pkg, const void *data)
 {
 	return strcmp(pkg_get_origin(pkg), (const char *)data);
 }
