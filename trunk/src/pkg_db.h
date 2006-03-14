@@ -42,8 +42,15 @@ struct pkg_db;
  */
 typedef		  int pkg_db_match(struct pkg *, const void *);
 
+#define PKG_DB_ERROR	1 /* Error messages */
+#define PKG_DB_INFO	2 /* General info */
+#define PKG_DB_PACKAGE	3 /* Specific info from the package */
+typedef		  void pkg_db_action(int, const char *, ...);
+
 struct pkg_db	 *pkg_db_open_freebsd(const char *);
 int		  pkg_db_install_pkg(struct pkg_db *, struct pkg *);
+int		  pkg_db_install_pkg_action(struct pkg_db *, struct pkg *,
+			pkg_db_action *);
 int		  pkg_db_is_installed(struct pkg_db *, struct pkg *);
 struct pkg	**pkg_db_get_installed(struct pkg_db *);
 struct pkg	**pkg_db_get_installed_match(struct pkg_db *, pkg_db_match *,

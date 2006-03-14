@@ -96,6 +96,16 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 int
 pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
 {
+	return pkg_db_install_pkg_action(db, pkg, NULL);
+}
+
+/*
+ * Install a given package to the database with a given action
+ */
+int
+pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
+    pkg_db_action *action)
+{
 	if (!db) {
 		return -1;
 	}
@@ -108,7 +118,7 @@ pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
 		return -1;
 	}
 
-	return db->pkg_install(db, pkg);
+	return db->pkg_install(db, pkg, action);
 }
 
 /*

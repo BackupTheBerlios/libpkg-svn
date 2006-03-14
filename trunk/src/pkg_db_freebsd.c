@@ -62,7 +62,8 @@ static int pkg_states[7][12] = {
 	{ -1, -1, -1, -1, -1,  6, -1, -1, -1, -1, -1, -1 }  /* p6 */
 };
 
-static int		  freebsd_install_pkg(struct pkg_db *, struct pkg *);
+static int		  freebsd_install_pkg_action(struct pkg_db *,
+				struct pkg *, pkg_db_action *);
 static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
 static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, const void *);
@@ -81,15 +82,18 @@ static int		 freebsd_check_contents(struct pkg_db *,
 struct pkg_db*
 pkg_db_open_freebsd(const char *base)
 {
-	return pkg_db_open(base, freebsd_install_pkg, freebsd_is_installed,
-	    freebsd_get_installed_match, freebsd_get_package);
+	return pkg_db_open(base, freebsd_install_pkg_action,
+	    freebsd_is_installed, freebsd_get_installed_match,
+	    freebsd_get_package);
 }
 
 /*
  * Installs the package pkg to the database db
+ * Calls action on each action. This is used for verbose support.
  */
 static int
-freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
+freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
+    pkg_db_action *pkg_action)
 {
 	struct pkg_file	*contents_file;
 	struct pkg_file **control;
@@ -119,6 +123,10 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	if (!contents) {
 		return -1;
 	}
+
+	if (pkg_action != NULL)
+		pkg_action(PKG_DB_PACKAGE, "Package name is %s",
+		    pkg_get_name(pkg));
 
 	cwd = getcwd(NULL, 0);
 	if (!cwd) {
@@ -158,6 +166,9 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 				pkg_freebsd_contents_free(contents);
 				return -1;
 			}
+			if (pkg_action != NULL)
+				pkg_action(PKG_DB_PACKAGE, "CWD to %s",
+				    contents->lines[line].data);
 			directory = getcwd(NULL, 0);
 			break;
 		case PKG_LINE_EXEC: {
@@ -165,6 +176,8 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 			freebsd_format_cmd(cmd, FILENAME_MAX,
 			    contents->lines[line].data, directory, last_file);
 			printf("exec %s\n", cmd);
+			if (pkg_action != NULL)
+				pkg_action(PKG_DB_PACKAGE, "execute '%s'", cmd);
 			break;
 		}
 		case PKG_LINE_FILE: {
@@ -217,6 +230,9 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 					pkg_freebsd_contents_free(contents);
 					return -1;
 				}
+				if (pkg_action != NULL)
+					pkg_action(PKG_DB_PACKAGE, "%s/%s",
+					    directory, pkg_file_get_name(file));
 			}
 
 			contents_sum = strchr(contents->lines[line+1].data,
@@ -267,6 +283,22 @@ freebsd_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	contents_file = freebsd_build_contents(contents);
 	pkg_file_write(contents_file);
 	pkg_file_free(contents_file);
+
+	if (pkg_action != NULL)
+		pkg_action(PKG_DB_INFO, "Running mtree for %s..",
+		    pkg_get_name(pkg));
+	/* XXX Run mtree: mtree -U -f +MTREE_DIRS -d -e -p $PREFIX >/dev/null */
+	
+	if (pkg_action != NULL)
+		pkg_action(PKG_DB_INFO,
+		    "Attempting to record package into /var/db/pkg/%s..",
+		    pkg_get_name(pkg));
+
+	/* XXX Register the reverse dependencies */
+	if (pkg_action != NULL)
+		pkg_action(PKG_DB_INFO,
+		    "Package %s registered in /var/db/pkg/%s",
+		    pkg_get_name(pkg), pkg_get_name(pkg));
 
 	free(directory);
 	if (last_file)
