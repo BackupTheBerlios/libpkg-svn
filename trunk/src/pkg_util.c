@@ -35,6 +35,7 @@ __FBSDID("$FreeBSD$");
 #include <err.h>
 #include <errno.h>
 #include <md5.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -115,5 +116,25 @@ pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
 	if (strcmp(sum, chk_sum)) {
 		return -1;
 	}
+	return 0;
+}
+
+/*
+ * Executes a program. It will use fmt as the
+ * format to generate the execv string
+ */
+int
+pkg_exec(const char *fmt, ...)
+{
+	va_list ap;
+	char *str;
+
+	va_start(ap, fmt);
+	vasprintf(&str, fmt, ap);
+	va_end(ap);
+
+	printf("exec: %s\n", str);
+	free(str);
+
 	return 0;
 }

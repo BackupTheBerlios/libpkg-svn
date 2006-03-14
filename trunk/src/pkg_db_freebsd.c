@@ -99,7 +99,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	struct pkg_file **control;
 	struct pkg_freebsd_contents *contents;
 	char *cwd;
-	char *directory, *last_file;
+	char *directory, *prefix, *last_file;
 	int i;
 	unsigned int pos, line;
 
@@ -145,6 +145,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 
 	/* directory is used int the processing of +CONTENTS files */
 	directory = getcwd(NULL, 0);
+	prefix = strdup(directory);
 	last_file = NULL;
 
 	/* Read through the contents file and install the package */
@@ -163,6 +164,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 			    != 0) {
 				chdir(cwd);
 				free(cwd);
+				free(prefix);
 				pkg_freebsd_contents_free(contents);
 				return -1;
 			}
@@ -175,7 +177,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 			char cmd[FILENAME_MAX];
 			freebsd_format_cmd(cmd, FILENAME_MAX,
 			    contents->lines[line].data, directory, last_file);
-			printf("exec %s\n", cmd);
+			pkg_exec(cmd);
 			if (pkg_action != NULL)
 				pkg_action(PKG_DB_PACKAGE, "execute '%s'", cmd);
 			break;
@@ -193,6 +195,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 				chdir(cwd);
 				free(cwd);
 				free(directory);
+				free(prefix);
 				pkg_freebsd_contents_free(contents);
 				return -1;
 			} else if (strncmp("MD5:", contents->lines[line+1].data,
@@ -200,6 +203,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 				chdir(cwd);
 				free(cwd);
 				free(directory);
+				free(prefix);
 				pkg_freebsd_contents_free(contents);
 				return -1;
 			}
@@ -226,6 +230,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 					chdir(cwd);
 					free(cwd);
 					free(directory);
+					free(prefix);
 					pkg_file_free(file);
 					pkg_freebsd_contents_free(contents);
 					return -1;
@@ -243,6 +248,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 				chdir(cwd);
 				free(cwd);
 				free(directory);
+				free(prefix);
 				pkg_file_free(file);
 				pkg_freebsd_contents_free(contents);
 				return -1;
@@ -254,6 +260,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 				chdir(cwd);
 				free(cwd);
 				free(directory);
+				free(prefix);
 				pkg_file_free(file);
 				pkg_freebsd_contents_free(contents);
 				return -1;
@@ -288,6 +295,8 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 		pkg_action(PKG_DB_INFO, "Running mtree for %s..",
 		    pkg_get_name(pkg));
 	/* XXX Run mtree: mtree -U -f +MTREE_DIRS -d -e -p $PREFIX >/dev/null */
+	pkg_exec("mtree -U -f +MTREE_DIRS -d -e -p %s >/dev/null", prefix);
+	free(prefix);
 	
 	if (pkg_action != NULL)
 		pkg_action(PKG_DB_INFO,

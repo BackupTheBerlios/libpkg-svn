@@ -104,5 +104,7 @@ struct pkg {
 
 int pkg_dir_build(const char *);
 int pkg_checksum_md5(struct pkg_file *, char *);
+int pkg_exec(const char *, ...);
+
 
 #endif /* __LIBPKG_PKG_PRIVATE_H__ */
