@@ -35,6 +35,12 @@
 
 #include <stdio.h>	/* FILE */
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+#define pkg_static static
+#else
+#define pkg_static
+#endif
+
 /*
  * Object to hold files in
  */

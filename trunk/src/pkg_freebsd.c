@@ -61,27 +61,27 @@ struct freebsd_package {
 };
 
 /* Callbacks */
-static int			  freebsd_add_depend(struct pkg *,
+pkg_static int			  freebsd_add_depend(struct pkg *,
 					struct pkg *);
-static int			  freebsd_add_file(struct pkg *,
+pkg_static int			  freebsd_add_file(struct pkg *,
 					struct pkg_file *);
-static struct pkg_file		**freebsd_get_control_files(struct pkg *);
-static struct pkg_file		 *freebsd_get_control_file(struct pkg *,
+pkg_static struct pkg_file	**freebsd_get_control_files(struct pkg *);
+pkg_static struct pkg_file	 *freebsd_get_control_file(struct pkg *,
 					const char *);
-static struct pkg_file		 *freebsd_get_next_file(struct pkg *);
-static struct pkg		**freebsd_get_deps(struct pkg *);
-static int			  freebsd_free(struct pkg *);
+pkg_static struct pkg_file	 *freebsd_get_next_file(struct pkg *);
+pkg_static struct pkg		**freebsd_get_deps(struct pkg *);
+pkg_static int			  freebsd_free(struct pkg *);
 
-static const char		 *freebsd_get_version(struct pkg *);
-static const char		 *freebsd_get_origin(struct pkg *);
+pkg_static const char		 *freebsd_get_version(struct pkg *);
+pkg_static const char		 *freebsd_get_origin(struct pkg *);
 
 /* Internal functions */
-struct pkg_file			**freebsd_open_control_files(const char *);
-static struct freebsd_package	*freebsd_get_package(FILE *,
+pkg_static struct pkg_file			**freebsd_open_control_files(const char *);
+pkg_static struct freebsd_package	*freebsd_get_package(FILE *,
 					struct pkg_file **);
-static struct pkg_file		*freebsd_get_next_entry(struct archive *);
-static char 			*freebsd_get_pkg_name(const char *);
-static int			 freebsd_free_package(struct freebsd_package *);
+pkg_static struct pkg_file		*freebsd_get_next_entry(struct archive *);
+pkg_static char 			*freebsd_get_pkg_name(const char *);
+pkg_static int			 freebsd_free_package(struct freebsd_package *);
 
 #define FREE_CONTENTS(c) \
 	{ \
@@ -92,8 +92,20 @@ static int			 freebsd_free_package(struct freebsd_package *);
 		free(c); \
 	}
 
-/*
- * Creates a new FreeBSD package from a FILE pointer
+/**
+ * @defgroup FreebsdPackage FreeBSD Package
+ * @ingroup pkg
+ *
+ * @{
+ */
+
+/**
+ * @brief Creates a new FreeBSD package from a FILE pointer
+ * @param fd A pointer to a FILE object containing a FreeBSD Package
+ *
+ * This creates a pkg object from a given file pointer.
+ * It is able to then manipulate the package and install the it to the pkg_db.
+ * @return A new package object or NULL
  */
 struct pkg *
 pkg_new_freebsd_from_file(FILE *fd)
@@ -138,10 +150,18 @@ pkg_new_freebsd_from_file(FILE *fd)
 	return pkg;
 }
 
-/*
- * Creates a new FreeBSD package from one installed on a system
+/**
+ * @brief Creates a new FreeBSD package from one installed on a system
+ * @param pkg_name The name of the package to retrieve
+ * @param pkg_db_dir The directory in the database the package is registered in
+ * @todo Make this work through a pkg_db callback
+ * @todo Remove the need for pkg_db_dir by using a struct pkg_repo
+ *
+ * This creates a package object from an installed package.
+ * It can be used to retrieve information from the pkg_db and deintall
+ * the package.
+ * @return A pkg object or NULL
  */
-/* XXX Make this work through a pkg_db callback */
 struct pkg *
 pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 {
@@ -192,8 +212,13 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	return pkg;
 }
 
-/*
- * Creates an empty FreeBSD package to add files to
+/**
+ * @brief Creates an empty FreeBSD package to add files to
+ * @param pkg_name The name of the package
+ *
+ * This creates an empty FreeBSD Package.
+ * It can then have files added to it, eg. in pkg_create(1)
+ * @return A package object or NULL
  */
 struct pkg *
 pkg_new_freebsd_empty(const char *pkg_name)
@@ -233,6 +258,11 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	return pkg;
 }
 
+/**
+ * @brief Gets the contents struct from a package
+ * @todo Remove the need for this function to be exported
+ * @return The contents struct
+ */
 struct pkg_freebsd_contents *
 pkg_freebsd_get_contents(struct pkg *pkg)
 {
@@ -248,7 +278,258 @@ pkg_freebsd_get_contents(struct pkg *pkg)
 	return f_pkg->contents;
 }
 
-struct pkg_file **
+/**
+ * @}
+ */
+
+/**
+ * @defgroup FreebsdPackageCallbacks FreeBSD Package callbacks
+ * @ingroup FreebsdPackage
+ * @brief FreeBSD Package callback functions
+ *
+ * These are the callbacks the @link pkg package object @endlink uses
+ * when pkg_new_freebsd_from_file(), pkg_new_freebsd_installed() or
+ * pkg_new_freebsd_empty() is used to create the object
+ *
+ * @{
+ */
+
+/**
+ * @brief Callback for pkg_get_version()
+ *
+ * @return A string containing the package version. Do not Free.
+ */
+static const char *
+freebsd_get_version(struct pkg *pkg)
+{
+	struct freebsd_package *f_pkg;
+	char *s;
+
+	assert(pkg != NULL);
+	assert(pkg->data != NULL);
+
+	f_pkg = pkg->data;
+
+	/* Check the package struct is correct
+	 * If any fail it means there is a bug in the library
+	 */
+	assert(f_pkg->contents != NULL);
+	assert(f_pkg->contents->lines != NULL);
+	assert(f_pkg->contents->lines[0].data != NULL);
+	assert(f_pkg->contents->lines[0].line_type == PKG_LINE_COMMENT);
+	assert(strcmp("PKG_FORMAT_REVISION:1.1", f_pkg->contents->lines[0].data) == 0);
+	s = strchr(f_pkg->contents->lines[0].data, ':');
+	if (s == NULL)
+		return NULL;
+	s++;
+	if (s[0] == '\0')
+		return NULL;
+
+	return s;
+}
+
+/**
+ * @brief Callback for pkg_get_origin()
+ * 
+ * @return A string containing the origin of the Package. Do not free.
+ */
+static const char *
+freebsd_get_origin(struct pkg *pkg)
+{
+	struct freebsd_package *f_pkg;
+
+	assert(pkg != NULL);
+	assert(pkg->data != NULL);
+
+	f_pkg = pkg->data;
+	return f_pkg->origin;
+}
+
+/**
+ * @brief Callback for pkg_add_dependency()
+ * @todo write
+ * @return -1
+ */
+static int
+freebsd_add_depend(struct pkg *pkg __unused, struct pkg *depend __unused)
+{
+	return -1;
+}
+
+/**
+ * @brief Callback for pkg_add_file()
+ * @todo rewrite to work
+ * @return 0 on success or -1 on error
+ */
+static int
+freebsd_add_file(struct pkg *pkg, struct pkg_file *file)
+{
+	struct freebsd_package *f_pkg;
+
+	assert(pkg != NULL);
+	assert(file != NULL);
+	assert(pkg->data != NULL);
+
+	f_pkg = pkg->data;
+
+	assert(f_pkg->all_files != NULL);
+
+	f_pkg->all_files_size += sizeof(struct pkg_file *);
+	f_pkg->all_files = realloc(f_pkg->all_files, f_pkg->all_files_size);
+	f_pkg->all_files[f_pkg->all_files_pos] = file;
+	f_pkg->all_files_pos++;
+	f_pkg->all_files[f_pkg->all_files_pos] = NULL;
+
+	assert(f_pkg->contents != NULL);
+	pkg_freebsd_contents_add_file(f_pkg->contents, file);
+	
+	return 0;
+}
+
+/**
+ * @brief Callback for pkg_get_control_files()
+ * @return An array of pkg_file or NULL
+ */
+static struct pkg_file **
+freebsd_get_control_files(struct pkg *pkg)
+{
+	struct freebsd_package *f_pkg;
+
+	assert(pkg != NULL);
+
+	f_pkg = pkg->data;
+
+	assert(f_pkg != NULL);
+
+	return f_pkg->control;
+}
+
+/**
+ * @brief for pkg_get_control_file()
+ * @return The named pkg_file or NULL
+ */
+static struct pkg_file *
+freebsd_get_control_file(struct pkg *pkg, const char *file)
+{
+	struct freebsd_package *f_pkg;
+	unsigned int pos;
+
+	assert(pkg != NULL);
+	assert(file != NULL);
+
+	f_pkg = pkg->data;
+	assert(f_pkg != NULL);
+
+	for (pos = 0; f_pkg->control[pos] != NULL; pos++)
+		if (strcmp(basename(f_pkg->control[pos]->filename), file) == 0)
+			return f_pkg->control[pos];
+
+	return NULL;
+}
+
+/**
+ * @brief Callback for pkg_get_next_file()
+ * @return The next non-control pkg_file or NULL
+ */
+static struct pkg_file *
+freebsd_get_next_file(struct pkg *pkg)
+{
+	struct freebsd_package *f_pkg;
+
+	assert(pkg != NULL);
+
+	f_pkg = pkg->data;
+	assert(f_pkg != NULL);
+	assert(f_pkg->archive != NULL);
+
+	if (f_pkg->next) {
+		struct pkg_file *ret;
+
+		ret = f_pkg->next;
+		f_pkg->next = NULL;
+
+		return ret;
+	}
+
+	return freebsd_get_next_entry(f_pkg->archive);
+}
+
+/**
+ * @brief Callback for pkg_get_dependencies()
+ * @return An array of empty package objects, or NULL
+ */
+static struct pkg **
+freebsd_get_deps(struct pkg *pkg)
+{
+	unsigned int line;
+	struct pkg_freebsd_contents *contents;
+	struct pkg **pkgs;
+	unsigned int pkg_count;
+	size_t pkg_size;
+
+	assert(pkg != NULL);
+	assert(pkg->data != NULL);
+
+	/* If this is null there was an error that should have been checked */
+	contents = ((struct freebsd_package *)pkg->data)->contents;
+	assert(contents != NULL);
+
+	pkg_count = 0;
+	pkg_size = sizeof(struct pkg *);
+	pkgs = malloc(pkg_size);
+	if (!pkgs)
+		return NULL;
+	pkgs[0] = NULL;
+	for (line = 0; line < contents->line_count; line++) {
+		if (contents->lines[line].line_type == PKG_LINE_PKGDEP) {
+			pkg_size += sizeof(struct pkg *);
+			pkgs = realloc(pkgs, pkg_size);
+			pkgs[pkg_count] = pkg_new_empty
+			    (contents->lines[line].data);
+			pkg_count++;
+			pkgs[pkg_count] = NULL;
+		}
+	}
+	return pkgs;
+}
+
+/**
+ * @brief Callback for pkg_free()
+ * @return 0
+ */
+static int
+freebsd_free(struct pkg *pkg)
+{
+	assert(pkg != NULL);
+
+	if (pkg->data)
+		freebsd_free_package(pkg->data);
+
+	return 0;
+}
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup FreebsdPackageInternals FreeBSD Package internal functions
+ * @ingroup FreebsdPackage
+ * @brief Internal package functions
+ *
+ * These are the internal FreeBSD package functions.
+ * They are all declared static.
+ * They are documented to help others understand the internals of a
+ * package class callback system.
+ *
+ * @{
+ */
+
+/**
+ * @brief Opens all the control files in a directory dir
+ * @return An array of files or NULL
+ */
+static struct pkg_file **
 freebsd_open_control_files(const char *pkg_db_dir)
 {
 	struct pkg_file **control;
@@ -299,55 +580,10 @@ freebsd_open_control_files(const char *pkg_db_dir)
 	return control;
 }
 
-/*
- * Returns a string containing the package version
- */
-static const char *
-freebsd_get_version(struct pkg *pkg)
-{
-	struct freebsd_package *f_pkg;
-	char *s;
-
-	assert(pkg != NULL);
-	assert(pkg->data != NULL);
-
-	f_pkg = pkg->data;
-
-	/* Check the package struct is correct
-	 * If any fail it means there is a bug in the library
-	 */
-	assert(f_pkg->contents != NULL);
-	assert(f_pkg->contents->lines != NULL);
-	assert(f_pkg->contents->lines[0].data != NULL);
-	assert(f_pkg->contents->lines[0].line_type == PKG_LINE_COMMENT);
-	assert(strcmp("PKG_FORMAT_REVISION:1.1", f_pkg->contents->lines[0].data) == 0);
-	s = strchr(f_pkg->contents->lines[0].data, ':');
-	if (s == NULL)
-		return NULL;
-	s++;
-	if (s[0] == '\0')
-		return NULL;
-
-	return s;
-}
-
-/*
- * Returns the origin of a given package
- */
-static const char *
-freebsd_get_origin(struct pkg *pkg)
-{
-	struct freebsd_package *f_pkg;
-
-	assert(pkg != NULL);
-	assert(pkg->data != NULL);
-
-	f_pkg = pkg->data;
-	return f_pkg->origin;
-}
-
-/*
- * Returns a pointer to be placed into the data of the Package object
+/**
+ * @brief Retrieves a pointer to be placed into the data of the Package object
+ *
+ * @return A newley created freebsd_package or NULL
  */
 static struct freebsd_package *
 freebsd_get_package(FILE *fd, struct pkg_file **control)
@@ -458,164 +694,10 @@ freebsd_get_package(FILE *fd, struct pkg_file **control)
 	return f_pkg;
 }
 
-/*
- * Adds a dependency to a Package
- */
-/* XXX write */
-static int
-freebsd_add_depend(struct pkg *pkg __unused, struct pkg *depend __unused)
-{
-	return -1;
-}
-
-/*
- * Adds a file to a FreeBSD package
- */
-static int
-freebsd_add_file(struct pkg *pkg, struct pkg_file *file)
-{
-	struct freebsd_package *f_pkg;
-
-	assert(pkg != NULL);
-	assert(file != NULL);
-	assert(pkg->data != NULL);
-
-	f_pkg = pkg->data;
-
-	assert(f_pkg->all_files != NULL);
-
-	f_pkg->all_files_size += sizeof(struct pkg_file *);
-	f_pkg->all_files = realloc(f_pkg->all_files, f_pkg->all_files_size);
-	f_pkg->all_files[f_pkg->all_files_pos] = file;
-	f_pkg->all_files_pos++;
-	f_pkg->all_files[f_pkg->all_files_pos] = NULL;
-
-	assert(f_pkg->contents != NULL);
-	pkg_freebsd_contents_add_file(f_pkg->contents, file);
-	
-	return 0;
-}
-
-/*
- * Gets a NULL terminated array of control files
- */
-static struct pkg_file **
-freebsd_get_control_files(struct pkg *pkg)
-{
-	struct freebsd_package *f_pkg;
-
-	assert(pkg != NULL);
-
-	f_pkg = pkg->data;
-
-	assert(f_pkg != NULL);
-
-	return f_pkg->control;
-}
-
-/*
- * Gets a given control file
- */
-static struct pkg_file *
-freebsd_get_control_file(struct pkg *pkg, const char *file)
-{
-	struct freebsd_package *f_pkg;
-	unsigned int pos;
-
-	assert(pkg != NULL);
-	assert(file != NULL);
-
-	f_pkg = pkg->data;
-	assert(f_pkg != NULL);
-
-	for (pos = 0; f_pkg->control[pos] != NULL; pos++)
-		if (strcmp(basename(f_pkg->control[pos]->filename), file) == 0)
-			return f_pkg->control[pos];
-
-	return NULL;
-}
-
-/*
- * Gets the next file in the package
- */
-static struct pkg_file *
-freebsd_get_next_file(struct pkg *pkg)
-{
-	struct freebsd_package *f_pkg;
-
-	assert(pkg != NULL);
-
-	f_pkg = pkg->data;
-	assert(f_pkg != NULL);
-	assert(f_pkg->archive != NULL);
-
-	if (f_pkg->next) {
-		struct pkg_file *ret;
-
-		ret = f_pkg->next;
-		f_pkg->next = NULL;
-
-		return ret;
-	}
-
-	return freebsd_get_next_entry(f_pkg->archive);
-}
-
-/*
- * Find all the packages that depend on this package
- * and return an array of empty package objects
- */
-static struct pkg **
-freebsd_get_deps(struct pkg *pkg)
-{
-	unsigned int line;
-	struct pkg_freebsd_contents *contents;
-	struct pkg **pkgs;
-	unsigned int pkg_count;
-	size_t pkg_size;
-
-	assert(pkg != NULL);
-	assert(pkg->data != NULL);
-
-	/* If this is null there was an error that should have been checked */
-	contents = ((struct freebsd_package *)pkg->data)->contents;
-	assert(contents != NULL);
-
-	pkg_count = 0;
-	pkg_size = sizeof(struct pkg *);
-	pkgs = malloc(pkg_size);
-	if (!pkgs)
-		return NULL;
-	pkgs[0] = NULL;
-	for (line = 0; line < contents->line_count; line++) {
-		if (contents->lines[line].line_type == PKG_LINE_PKGDEP) {
-			pkg_size += sizeof(struct pkg *);
-			pkgs = realloc(pkgs, pkg_size);
-			pkgs[pkg_count] = pkg_new_empty
-			    (contents->lines[line].data);
-			pkg_count++;
-			pkgs[pkg_count] = NULL;
-		}
-	}
-	return pkgs;
-}
-
-/*
- * Free the package
- */
-static int
-freebsd_free(struct pkg *pkg)
-{
-	assert(pkg != NULL);
-
-	if (pkg->data)
-		freebsd_free_package(pkg->data);
-
-	return 0;
-}
-
-/*
- * Return a pointer to the next file in the archive `a'
+/**
+ * @brief Retrieves a pointer to the next file in an archive
+ * @param a A libarchive(3) archive object
+ * @return A the next file in the archive or NULL
  */
 static struct pkg_file *
 freebsd_get_next_entry(struct archive *a)
@@ -660,8 +742,10 @@ freebsd_get_next_entry(struct archive *a)
 	return NULL;
 }
 
-/*
- * Returns the package name from a +CONTENTS file
+/**
+ * @brief Retrieves the package name from a +CONTENTS file
+ * @param buffer A NULL terminated string containing the +CONTENTS file
+ * @return The name of the package the file is from
  */
 static char *
 freebsd_get_pkg_name(const char *buffer)
@@ -702,8 +786,9 @@ freebsd_get_pkg_name(const char *buffer)
 	return pkg_name;
 }
 
-/*
- * Frees the struct freebsd_package
+/**
+ * @brief Function to free the internal package data struct
+ * @return 0
  */
 static int
 freebsd_free_package(struct freebsd_package *f_pkg)
@@ -748,16 +833,21 @@ freebsd_free_package(struct freebsd_package *f_pkg)
 	return 0;
 }
 
-/*
+/**
+ * @brief Creates a string containing the command to run using printf
+ * like substitutions
+ *
+ * @verbatim
  * Using fmt, replace all instances of:
  *
  * %F   With the parameter "name"
  * %D   With the parameter "dir"
  * %B   Return the directory part ("base") of %D/%F
  * %f   Return the filename part of %D/%F
+ * @endverbatim
  *
- * Does not check for overflow - caution!
- *
+ * @bug Does not check for overflow - caution!
+ * @todo Move to the correct file
  */
 void
 freebsd_format_cmd(char *buf, int max, const char *fmt, const char *dir,
@@ -823,3 +913,8 @@ freebsd_format_cmd(char *buf, int max, const char *fmt, const char *dir,
 	}
 	*buf = '\0';
 }
+
+/**
+ * @}
+ */
+
