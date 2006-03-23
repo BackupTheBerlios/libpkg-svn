@@ -35,8 +35,23 @@
 #include "pkg_private.h"
 #include "pkg_db_private.h"
 
-/*
- * Opens a Package Database
+/**
+ * @defgroup PackageDBInternal Internal package database functions
+ * @ingroup PackageDB
+ * @brief Internal functions in the Package Database module
+ * 
+ * @{
+ */
+
+/**
+ * @brief Opens a Package Database and assigns the callbacks
+ * @param base the Base direcroty of the Package Database
+ * @param install_pkg The callback to be used by pkg_db_install_pkg()
+ * @param is_installed The callback to be used by pkg_db_is_installed()
+ * @param get_installed_match The callback to be used by
+ *     pkg_db_get_installed_match()
+ * @param get_package The callback to be used by pkg_db_get_package()
+ * @returns A pkg_db object or NULL
  */
 struct pkg_db*
 pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
@@ -90,8 +105,24 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	return db;
 }
 
-/*
- * Install a given package to the database
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageDB Package database functions
+ * @brief Package database handeling functions
+ *
+ * These are the functions to talk to a package database.
+ * The database is created by a system dependent constructor.
+ * eg. pkg_db_open_freebsd() on FreeBSD systems
+ *
+ * @{
+ */
+
+/**
+ * @brief Installs a package to the database
+ * @return 0 on success, -1 on error
  */
 int
 pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
@@ -99,8 +130,13 @@ pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
 	return pkg_db_install_pkg_action(db, pkg, NULL);
 }
 
-/*
- * Install a given package to the database with a given action
+/**
+ * @brief Installs a package to the database
+ * @param db The database to install to
+ * @param pkg The package to install
+ * @param action A callback that is used to inform the user the status
+ *     of the installation
+ * @return 0 if the package is installed, -1 otherwise
  */
 int
 pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
@@ -121,8 +157,9 @@ pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	return db->pkg_install(db, pkg, action);
 }
 
-/*
- * Check to se if a package is installed
+/**
+ * @brief Check to see if a package is installed
+ * @return 0 if the package is installed, -1 otherwise
  */
 int
 pkg_db_is_installed(struct pkg_db *db, struct pkg *pkg)
@@ -138,8 +175,9 @@ pkg_db_is_installed(struct pkg_db *db, struct pkg *pkg)
 	return db->pkg_is_installed(db, pkg);
 }
 
-/*
- * Get a NULL terminated array of installed packages
+/**
+ * @brief Retrieve a NULL terminated array of all installed packages
+ * @return A null-terminated array of packages or NULL
  */
 struct pkg **
 pkg_db_get_installed(struct pkg_db *db)
@@ -147,8 +185,14 @@ pkg_db_get_installed(struct pkg_db *db)
 	return pkg_db_get_installed_match(db, NULL, NULL);
 }
 
-/*
- * Get a NULL terminated array of installed packages that match accepts
+/**
+ * @brief Retrieve a NULL terminated array of installed packages that
+ *     match accepts
+ * @param db The database to get the installed packages from
+ * @param match A function that is passed each package and returns 0 if
+ *     the package is wanted in the array
+ * @param data Data to be passed to match
+ * @return A null-terminated array of packages or NULL
  */
 struct pkg **
 pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *data)
@@ -165,8 +209,9 @@ pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *d
 	return NULL;
 }
 
-/*
- * Gets the package with the given name
+/**
+ * @brief Retrieves the package with the given name
+ * @return The named package or NULL
  */
 struct pkg *
 pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
@@ -180,8 +225,9 @@ pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
 	return NULL;
 }
 
-/*
- * Frees the database
+/**
+ * @brief Frees the database
+ * @return 0 on success, -1 on error
  */
 int
 pkg_db_free(struct pkg_db *db)
@@ -198,9 +244,21 @@ pkg_db_free(struct pkg_db *db)
 	return 0;
 }
 
-/*
- * Matches all packages.
- * This is here because it is used with pkg_db_get_installed_match
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageDBMatch Package Matching functions
+ * @ingroup PackageDB
+ * @brief Functions to be passed to pkg_db_get_installed_match()
+ *
+ * @{
+ */
+
+/**
+ * @brief A function to be passed to match all packages
+ * @return 0
  */
 int
 pkg_match_all(struct pkg *pkg __unused, const void *data __unused)
@@ -208,11 +266,18 @@ pkg_match_all(struct pkg *pkg __unused, const void *data __unused)
 	return 0;
 }
 
-/*
- * Matches all packages by origin. The origin is a string pointed to by data
+/**
+ * @brief Matches all packages by origin.
+ * @param pkg The package to attempt to match
+ * @param origin The origin to find
+ * @return 0 if the package origin is the same as origin, otherwise non zero
  */
 int
-pkg_match_by_origin(struct pkg *pkg, const void *data)
+pkg_match_by_origin(struct pkg *pkg, const void *origin)
 {
-	return strcmp(pkg_get_origin(pkg), (const char *)data);
+	return strcmp(pkg_get_origin(pkg), (const char *)origin);
 }
+
+/**
+ * @}
+ */
