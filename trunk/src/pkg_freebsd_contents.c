@@ -40,7 +40,16 @@
 #include "pkg_private.h"
 #include "pkg_freebsd_private.h"
 
-const char *pkg_freebsd_contents_line_str[] = {
+/**
+ * @defgroup FreebsdContents FreeBSD +CONTENTS handeling
+ *
+ * @{
+ */
+
+/**
+ * @brief All possible line types in a +CONTENTS file
+ */
+static const char *pkg_freebsd_contents_line_str[] = {
 	"",
 	"@comment",
 	"@name",
@@ -55,7 +64,7 @@ const char *pkg_freebsd_contents_line_str[] = {
 	NULL
 };
 
-/*
+/**
  * Reads a FreeBSD +CONTENTS file create a struct pkg_freebsd_contents
  */
 struct pkg_freebsd_contents *
@@ -176,7 +185,7 @@ pkg_freebsd_contents_new(const char *contents)
 	return cont;
 }
 
-/*
+/**
  * Adds a line of type with the value of data the fiven contents file
  */
 int
@@ -220,7 +229,7 @@ pkg_freebsd_contents_add_line(struct pkg_freebsd_contents *contents, int type,
 	return 0;
 }
 
-/*
+/**
  * Adds a dependency to a +CONTENTS file
  */
 int
@@ -253,7 +262,7 @@ pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *contents,
 	return -1;
 }
 
-/*
+/**
  * Add's a file the the +CONTENTS file
  */
 int
@@ -284,7 +293,7 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 	return 0;
 }
 
-/*
+/**
  * Gets the given line from the contents file
  */
 struct pkg_freebsd_contents_line*
@@ -300,7 +309,7 @@ pkg_freebsd_contents_get_line(struct pkg_freebsd_contents *contents,
 	return &contents->lines[line];
 }
 
-/*
+/**
  * Frees a contents struct
  */
 int
@@ -320,3 +329,6 @@ pkg_freebsd_contents_free(struct pkg_freebsd_contents *contents)
 
 	return 0;
 }
+/**
+ * @}
+ */

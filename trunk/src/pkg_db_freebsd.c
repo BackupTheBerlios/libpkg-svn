@@ -52,7 +52,7 @@
  * State transition array for the head part of a +CONTENTS file.
  * p0 is the start state, p4 and p6 are the accepting states
  */
-static int pkg_states[7][12] = {
+static const int pkg_states[7][12] = {
 	{ -1,  1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, /* p0 */
 	{ -1, -1,  2, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, /* p1 */
 	{ -1,  3, -1,  4, -1, -1, -1, -1, -1, -1, -1, -1 }, /* p2 */
@@ -62,22 +62,31 @@ static int pkg_states[7][12] = {
 	{ -1, -1, -1, -1, -1,  6, -1, -1, -1, -1, -1, -1 }  /* p6 */
 };
 
-static int		  freebsd_install_pkg_action(struct pkg_db *,
+pkg_static int		  freebsd_install_pkg_action(struct pkg_db *,
 				struct pkg *, pkg_db_action *);
-static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
-static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
+pkg_static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
+pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, const void *);
-static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
+pkg_static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
 
 /* Internal */
-static struct pkg_file	*freebsd_build_contents(struct pkg_freebsd_contents *);
-static int		 freebsd_do_cwd(struct pkg_db *, struct pkg *,
+pkg_static struct pkg_file	*freebsd_build_contents(
+				struct pkg_freebsd_contents *);
+pkg_static int			 freebsd_do_cwd(struct pkg_db *, struct pkg *,
 				char *ndir);
-static int		 freebsd_check_contents(struct pkg_db *,
+pkg_static int			 freebsd_check_contents(struct pkg_db *,
 				struct pkg_freebsd_contents *);
 
-/*
- * Opens the FreeBSD Package Database
+/**
+ * @defgroup PackageDBFreebsd FreeBSD Package Database handeling
+ * @ingroup PackageDB
+ *
+ * @{
+ */
+
+/**
+ * @brief Opens the FreeBSD Package Database
+ * @return A package database that will install FreeBSD packages
  */
 struct pkg_db*
 pkg_db_open_freebsd(const char *base)
@@ -87,9 +96,28 @@ pkg_db_open_freebsd(const char *base)
 	    freebsd_get_package);
 }
 
-/*
- * Installs the package pkg to the database db
- * Calls action on each action. This is used for verbose support.
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageDBFreebsdCallback FreeBSD package database callbacks
+ * @ingroup PackageDBFreebsd
+ * @brief FreeBSD package database callback functions.
+ *
+ * @{
+ */
+
+/**
+ * @brief Callback for pkg_db_install_pkg_action()
+ * @param db The database to install to
+ * @param pkg The package to install
+ * @param pkg_action A function to call when an action takes place
+ * @todo Run mtree
+ * @todo Register the reverse dependencies
+ * @bug When the install fails part way through remove some files are left.
+ *     Remove these.
+ * @return 0 on success, -1 on error
  */
 static int
 freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
@@ -320,9 +348,9 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	return 0;
 }
 
-/*
- * Returns 0 if the package is installed
- *        -1 otherwise
+/**
+ * @brief Callback for pkg_db_is_installed()
+ * @returns 0 on of the package is installed, -1 otherwise
  */
 static int
 freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
@@ -362,8 +390,10 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 	return is_installed;
 }
 
-/*
- * Gets all installed packages
+/**
+ * @brief Callback for pkg_db_get_installed_match()
+ * @return A null-terminated array of packages that when passed to the match
+ *     function it returns 0. NULL on error
  */
 static struct pkg **
 freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *data)
@@ -417,8 +447,9 @@ freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *
 	return packages;
 }
 
-/*
- * Finds a package with the name from pkg_name
+/**
+ * @brief Callback for pkg_db_get_package()
+ * @return The named package or NULL
  */
 static struct pkg *
 freebsd_get_package(struct pkg_db *db, const char *pkg_name)
@@ -429,8 +460,22 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
 	return pkg_new_freebsd_installed(pkg_name, dir);
 }
 
-/*
- * Internal function to to the correct thing for an @cwd line
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageDBFreebsdInternal FreeBSD package database
+ *     internal functions
+ * @ingroup PackageDBFreebsd
+ * @brief Functions to help the FreeBSD package database callbacks
+ *
+ * @{
+ */
+
+/**
+ * @brief Internal function to to the correct thing for an @cwd line
+ * @return 0 if successful or -1 on error
  */
 static int
 freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir) {
@@ -468,8 +513,12 @@ freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir) {
 	return 0;
 }
 
-/*
- * Builds the new cotents file to be installed in /var/db/pkg/foo-1.2.3
+/**
+ * @brief Builds a new cotents file
+ * @param contents The contents data to build the file from
+ *
+ * The file can be installed in /var/db/pkg/foo-1.2,3
+ * @return The new contents file or NULL
  */
 static struct pkg_file *
 freebsd_build_contents(struct pkg_freebsd_contents *contents)
@@ -546,10 +595,9 @@ freebsd_build_contents(struct pkg_freebsd_contents *contents)
 	return pkg_file_new_from_buffer("+CONTENTS", used, buffer, NULL);
 }
 
-/*
- * Unlike most functions this return -1 on error.
- * It will return the number of lines to
- * skip to get to the first file.
+/**
+ * @brief Checks the start of a contents file
+ * @return The number of lines to skip to get to the first file or -1 on error
  */
 static int
 freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
@@ -589,3 +637,7 @@ freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
 	}
 	return i;
 }
+
+/**
+ * @}
+ */
