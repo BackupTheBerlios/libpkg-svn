@@ -37,8 +37,16 @@
 #include "pkg.h"
 #include "pkg_private.h"
 
-/*
- * Creates a new pkg_file from a file on the file system
+/**
+ * @defgroup PackageFile Safe file handeling functions
+ * @todo Create a hardlink pkg_file constructor
+ *
+ * @{
+ */
+
+/**
+ * @brief Creates a new pkg_file from a file on the file system
+ * @return A pkg_file object containing the file or NULL
  */
 struct pkg_file *
 pkg_file_new(const char *filename)
@@ -67,6 +75,10 @@ pkg_file_new(const char *filename)
 	return file;
 }
 
+/**
+ * @brief Creates a pkg_file to be a symlink
+ * @return A pkg_file object that when written to disk will be a symlink or NULL
+ */
 struct pkg_file *
 pkg_file_new_symlink(const char *filename, char *lnk,
 		const struct stat *sb)
@@ -77,8 +89,9 @@ pkg_file_new_symlink(const char *filename, char *lnk,
 	return pkg_file_new_from_buffer(filename, strlen(lnk), lnk, sb);
 }
 
-/*
- * Creates a new pkg_file from a buffer
+/**
+ * @brief Creates a new pkg_file from a buffer
+ * @return A pkg_file object containing the buffer or NULL
  */
 struct pkg_file *
 pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
@@ -117,8 +130,9 @@ pkg_file_new_from_buffer(const char *filename, uint64_t length, char *buffer,
 	return file;
 }
 
-/*
- * Frees a pkg_file
+/**
+ * @brief Frees a pkg_file
+ * @return 0 on success or -1 on error
  */
 int
 pkg_file_free(struct pkg_file *file)
@@ -144,8 +158,9 @@ pkg_file_free(struct pkg_file *file)
 	return 0;
 }
 
-/*
- * Writes a file to the filesystem
+/**
+ * @brief Writes a file to the filesystem
+ * @return 0 on siccess or -1 on errro
  */
 int
 pkg_file_write(struct pkg_file *file)
@@ -203,8 +218,9 @@ pkg_file_write(struct pkg_file *file)
 	return -1;
 }
 
-/*
- * Gets to contents of file
+/**
+ * @brief Retrieves the contents of a file
+ * @return A null-terminated string with the contents of file or NULL
  */
 char *
 pkg_file_get(struct pkg_file *file)
@@ -231,8 +247,16 @@ pkg_file_get(struct pkg_file *file)
 	return file->contents;
 }
 
+/**
+ * @brief Retrieves the name of a file
+ * @return A null-terminated string with the filename or NULL
+ */
 char *
 pkg_file_get_name(struct pkg_file *file)
 {
 	return file->filename;
 }
+
+/**
+ * @}
+ */
