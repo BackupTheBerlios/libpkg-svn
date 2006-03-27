@@ -34,8 +34,16 @@
 #include "pkg_private.h"
 #include "pkg_repo_private.h"
 
-/*
- * Returns a new package repo
+/**
+ * @defgroup PackageRepoInternal Internal package repository functions
+ * @ingroup PackageRepo
+ *
+ * @{
+ */
+
+/**
+ * @brief Creates a new package repository and associates callbacks to it.
+ * @return A new pkg_repo object or NULL
  */
 struct pkg_repo *
 pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
@@ -56,8 +64,19 @@ pkg_repo_new(pkg_repo_get_pkg_callback *pkg_get,
 	return repo;
 }
 
-/*
- * Gets a package from a repo
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageRepo Package repository functions
+ *
+ * @{
+ */
+
+/**
+ * @brief Retrieves a package from the repository
+ * @return The named package or NULL
  */
 struct pkg *
 pkg_repo_get_pkg(struct pkg_repo *repo, const char *pkg_name)
@@ -77,8 +96,9 @@ pkg_repo_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	return repo->pkg_get(repo, pkg_name);
 }
 
-/*
- * Frees the struct pkg_repo
+/**
+ * @brief Frees the struct pkg_repo
+ * @return 0 on success, -1 on error
  */
 int
 pkg_repo_free(struct pkg_repo *repo)
@@ -94,3 +114,7 @@ pkg_repo_free(struct pkg_repo *repo)
 
 	return 0;
 }
+
+/**
+ * @}
+ */

@@ -465,8 +465,7 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
  */
 
 /**
- * @defgroup PackageDBFreebsdInternal FreeBSD package database
- *     internal functions
+ * @defgroup PackageDBFreebsdInternal FreeBSD package database internal functions
  * @ingroup PackageDBFreebsd
  * @brief Functions to help the FreeBSD package database callbacks
  *
@@ -474,7 +473,7 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
  */
 
 /**
- * @brief Internal function to to the correct thing for an @cwd line
+ * @brief Internal function to to the correct thing for an \@cwd line
  * @return 0 if successful or -1 on error
  */
 static int
