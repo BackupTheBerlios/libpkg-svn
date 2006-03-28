@@ -42,9 +42,15 @@ __FBSDID("$FreeBSD$");
 #include "pkg.h"
 #include "pkg_private.h"
 
-/*
- * This is a simplified version of `mkdir -p path'
- * Is has been simplified to just take in a path to create
+/**
+ * @defgroup PackageUtil Miscellaneous utilities
+ *
+ * @{
+ */
+
+/**
+ * @brief A simplified version of `mkdir -p path'
+ * @return 0 on success, -1 on error
  */
 /* Based off src/bin/mkdir/mkdir.c 1.32 */
 int
@@ -95,8 +101,9 @@ pkg_dir_build(const char *path)
 	return (retval);
 }
 
-/*
- * Checks a file against a given md5 checksum
+/**
+ * @brief Checks a file against a given md5 checksum
+ * @return 0 if the file matches the checksum, or -1 otherwise
  */
 int
 pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
@@ -119,9 +126,12 @@ pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
 	return 0;
 }
 
-/*
- * Executes a program. It will use fmt as the
- * format to generate the execv string
+/**
+ * @brief Executes a program
+ * 
+ * It will use fmt as the format to generate the execv string.
+ * @todo Write
+ * @return the return value from the child process
  */
 int
 pkg_exec(const char *fmt, ...)
@@ -138,3 +148,7 @@ pkg_exec(const char *fmt, ...)
 
 	return 0;
 }
+
+/**
+ * @}
+ */
