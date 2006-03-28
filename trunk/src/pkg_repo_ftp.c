@@ -87,16 +87,27 @@ struct ftp_repo {
 int getosreldate(void);
 
 /* Callbacks */
-static struct pkg	*ftp_get_pkg(struct pkg_repo *, const char *);
-static int		 ftp_free(struct pkg_repo *);
+pkg_static struct pkg	*ftp_get_pkg(struct pkg_repo *, const char *);
+pkg_static int		 ftp_free(struct pkg_repo *);
 /* Internal */
-static FILE		*ftp_get_fd(const char *, struct ftp_repo *);
-static struct ftp_repo	*ftp_create_repo(const char *, const char *);
-/*static int		 pkg_in_All(const char *); */
-static int		 pkg_name_has_extension(const char *);
+pkg_static FILE		*ftp_get_fd(const char *, struct ftp_repo *);
+pkg_static struct ftp_repo	*ftp_create_repo(const char *, const char *);
+/*pkg_static int		 pkg_in_All(const char *); */
+pkg_static int		 pkg_name_has_extension(const char *);
 
-/*
- * A repo with files on a remote ftp server
+/**
+ * @defgroup PackageRepoFtp FTP package repository
+ * @ingroup PackageRepo
+ *
+ * @{
+ */
+
+/**
+ * @brief Creates a pkg_repo with the given sie and path
+ * @param site The ftp site to use. If NULL will use ftp.freebsd.org
+ * @param path The path to the top level of the packages.
+ *     If NULL will use the default path
+ * @return A pkg_repo object or NULL
  */
 struct pkg_repo *
 pkg_repo_new_ftp(const char *site, const char *path)
@@ -105,7 +116,6 @@ pkg_repo_new_ftp(const char *site, const char *path)
 
 	repo = pkg_repo_new(ftp_get_pkg, ftp_free);
 	if (!repo) {
-		/* pkg_null will contain the error string */
 		return NULL;
 	}
 	
@@ -118,8 +128,20 @@ pkg_repo_new_ftp(const char *site, const char *path)
 	return repo;
 }
 
-/*
- * Gets a package from a FTP site
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageRepoFtpCallback FTP package repository callbacks
+ * @ingroup PackageRepoFtp
+ *
+ * @{
+ */
+
+/**
+ * @brief Callback for pkg_repo_get_pkg()
+ * @return The requested package or NULL
  */
 static struct pkg *
 ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
@@ -147,8 +169,9 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	return pkg;
 }
 
-/*
- * Free the struct ftp_repo
+/**
+ * @brief Callback for pkg_repo_free()
+ * @return 0 always
  */
 static int
 ftp_free(struct pkg_repo *repo)
@@ -174,8 +197,20 @@ ftp_free(struct pkg_repo *repo)
 	return 0;
 }
 
-/*
- * Gets a FILE pointer for a given package name
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageRepoFtpInternal FTP package repository Internal functions
+ * @ingroup PackageRepoFtp
+ *
+ * @{
+ */
+
+/**
+ * @bried Retrieves a FILE pointer for a given package name
+ * @return A FILE pointer to get a package with fetch(3)
  */
 static FILE *
 ftp_get_fd(const char *pkg_name, struct ftp_repo *f_repo)
@@ -231,8 +266,10 @@ ftp_get_fd(const char *pkg_name, struct ftp_repo *f_repo)
 	return fd;
 }
 
-/*
- * Creates a struct ftp_repo pointer to go into repo->data
+/**
+ * @brief Creates a ftp_repo object for repo->data
+ * @todo Free the object at all failure points
+ * @return A ftp_repo object or NULL
  */
 static struct ftp_repo *
 ftp_create_repo(const char *site, const char *path)
@@ -262,7 +299,6 @@ ftp_create_repo(const char *site, const char *path)
 
 		reldate = getosreldate();
 		if(reldate > MAX_VERSION) {  /* bogus osreldate?? */
-			/* XXX create a static ftp_repo_free */
 			return NULL;
 		}
 
@@ -288,8 +324,10 @@ ftp_create_repo(const char *site, const char *path)
 	return f_repo;
 }
 
-/*
- * Find if a name has a known extension
+/**
+ * @brief Find if a name has a known extension
+ * @todo Return 0 and -1 like other functions
+ * @return 1 if name ends with ".t[bg]z", otherwise 0
  */
 static int
 pkg_name_has_extension(const char *name)
@@ -305,3 +343,7 @@ pkg_name_has_extension(const char *name)
 		return (1);
 	return (0);
 }
+
+/**
+ * @}
+ */

@@ -38,15 +38,23 @@
 #include "pkg_private.h"
 #include "pkg_repo_private.h"
 
-static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
+pkg_static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
 
 /**
- * The contructor.
- * Creates a package repo where the packages are stored on a local filesystem.
+ * @defgroup PackageRepoLocalFreebsd FreeBSD local files repository
+ * @ingroup PackageRepo
+ *
+ * @{
+ */
+
+/**
+ * @brief Creates a package repo where the packages are stored on a local
+ *     filesystem.
+ * 
  * If the package name contains a '/' it will assume it is a path and attempt
  * to open the package from there.
- * Otherwise it will search in '.' then /usr/ports/distfiles.
- * @return 
+ * Otherwise it will search in . then /usr/ports/distfiles.
+ * @return A new pkg_repo object or NULL
  */
 struct pkg_repo *
 pkg_repo_new_local_freebsd()
@@ -54,6 +62,22 @@ pkg_repo_new_local_freebsd()
 	return pkg_repo_new(file_get_pkg, NULL);
 }
 
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageRepoLocalFreebsdCallbacks FreeBSD local files repository callbacks
+ * @ingroup PackageRepoLocalFreebsd
+ *
+ * @{
+ */
+
+/**
+ * @brief Retrieves a package from either . or /usr/ports/packages/All/
+ * @todo Check if the file we opened is a package. If not try the next file.
+ * @return a package object or NULL
+ */
 static struct pkg *
 file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 {
@@ -90,3 +114,7 @@ file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 
 	return pkg;
 }
+
+/**
+ * @}
+ */

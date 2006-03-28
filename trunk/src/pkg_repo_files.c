@@ -38,22 +38,44 @@
 #include "pkg_private.h"
 #include "pkg_repo_private.h"
 
-static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
+pkg_static struct pkg *file_repo_get_pkg(struct pkg_repo *, const char *);
 
-/*
- * A repo where local files can be added to be installed
+/**
+ * @defgroup PackageRepoFiles Local file repository
+ * @ingroup PackageRepo
+ *
+ * @{
+ */
+
+/**
+ * @brief Creates a new package repository where local files can be added
+ * @return A new pkg_repo object
  */
 struct pkg_repo *
 pkg_repo_new_files()
 {
-	return pkg_repo_new(file_get_pkg, NULL);
+	return pkg_repo_new(file_repo_get_pkg, NULL);
 }
 
-/*
- * Gets a given package from the local filesystem
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageRepoFilesCallbacks Local file repository callbacks
+ * @ingroup PackageRepoFiles
+ *
+ * @{
+ */
+
+/**
+ * @brief Callback for pkg_repo_get_pkg()
+ * @param repo The repo creates with pkg_repo_new_files()
+ * @param pkg_name The file to create a package from
+ * @return A pkg object or NULL
  */
 static struct pkg *
-file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
+file_repo_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 {
 	struct pkg *pkg;
 	FILE *fd;
@@ -77,3 +99,7 @@ file_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 
 	return pkg;
 }
+
+/**
+ * @}
+ */
