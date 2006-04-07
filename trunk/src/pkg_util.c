@@ -138,15 +138,16 @@ pkg_exec(const char *fmt, ...)
 {
 	va_list ap;
 	char *str;
+	int ret;
 
 	va_start(ap, fmt);
 	vasprintf(&str, fmt, ap);
 	va_end(ap);
 
-	printf("exec: %s\n", str);
+	ret = system(str);
 	free(str);
 
-	return 0;
+	return ret;
 }
 
 /**
