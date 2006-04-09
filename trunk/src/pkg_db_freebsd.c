@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, Andrew Turner, All rights reserved.
+ * Copyright (C) 2005, 2006 Andrew Turner, All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -76,6 +76,8 @@ pkg_static int			 freebsd_do_cwd(struct pkg_db *, struct pkg *,
 				char *ndir);
 pkg_static int			 freebsd_check_contents(struct pkg_db *,
 				struct pkg_freebsd_contents *);
+pkg_static void			 freebsd_format_cmd(char *, int, const char *,
+				const char *, const char *);
 
 /**
  * @defgroup PackageDBFreebsd FreeBSD Package Database handeling
@@ -635,6 +637,86 @@ freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
 		return -1;
 	}
 	return i;
+}
+
+/**
+ * @brief Creates a string containing the command to run using printf
+ * like substitutions
+ *
+ * @verbatim
+ * Using fmt, replace all instances of:
+ *
+ * %F   With the parameter "name"
+ * %D   With the parameter "dir"
+ * %B   Return the directory part ("base") of %D/%F
+ * %f   Return the filename part of %D/%F
+ * @endverbatim
+ *
+ * @bug Does not check for overflow - caution!
+ */
+static void
+freebsd_format_cmd(char *buf, int max, const char *fmt, const char *dir,
+	const char *name)
+{
+	char *cp, scratch[FILENAME_MAX * 2];
+	int l;
+
+	assert(buf != NULL);
+	assert(max >= 0);
+	assert(fmt != NULL);
+	assert(dir != NULL);
+	assert(name != NULL);
+
+	while (*fmt && max > 0) {
+		if (*fmt == '%') {
+			switch (*++fmt) {
+				case 'F':
+					strncpy(buf, name, max);
+					l = strlen(name);
+					buf += l, max -= l;
+					break;
+
+				case 'D':
+					strncpy(buf, dir, max);
+					l = strlen(dir);
+					buf += l, max -= l;
+					break;
+
+				case 'B':
+					snprintf(scratch, FILENAME_MAX * 2,
+					    "%s/%s", dir, name);
+					cp = &scratch[strlen(scratch) - 1];
+					while (cp != scratch && *cp != '/')
+						--cp;
+					*cp = '\0';
+					strncpy(buf, scratch, max);
+					l = strlen(scratch);
+					buf += l, max -= l;
+					break;
+
+				case 'f':
+					snprintf(scratch, FILENAME_MAX * 2,
+					    "%s/%s", dir, name);
+					cp = &scratch[strlen(scratch) - 1];
+					while (cp != scratch && *(cp - 1) != '/')
+						--cp;
+					strncpy(buf, cp, max);
+					l = strlen(cp);
+					buf += l, max -= l;
+					break;
+
+				default:
+					*buf++ = *fmt;
+					--max;
+					break;
+			}
+			++fmt;
+		} else {
+			*buf++ = *fmt++;
+			--max;
+		}
+	}
+	*buf = '\0';
 }
 
 /**

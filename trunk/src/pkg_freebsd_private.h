@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, Andrew Turner, All rights reserved.
+ * Copyright (C) 2005, 2006 Andrew Turner, All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,9 +36,5 @@ struct pkg_freebsd_contents {
 	unsigned int	 line_size;
 	struct pkg_freebsd_contents_line *lines;
 };
-
-/* Formats a string to be executed */
-void	freebsd_format_cmd(char *, int, const char *, const char *,
-		const char *);
 
 #endif /* __LIBPKG_PKG_FREEBSD_PRIVATE_H__ */
