@@ -293,7 +293,6 @@ freebsd_get_origin(struct pkg *pkg)
 	fpkg = pkg->data;
 	assert(fpkg != NULL);
 	assert(fpkg->pkg_type != fpkg_unknown);
-	assert(fpkg->pkg_type != fpkg_from_file);
 	assert(fpkg->pkg_type != fpkg_from_empty);
 
 	/* Find the origin line and cache it */
@@ -700,6 +699,7 @@ static int
 freebsd_parse_contents(struct freebsd_package *fpkg)
 {
 	struct pkg_file *contents_file;
+	int i;
 	
 	assert(fpkg != NULL);
 
@@ -709,7 +709,13 @@ freebsd_parse_contents(struct freebsd_package *fpkg)
 	freebsd_open_control_files(fpkg);
 
 	contents_file = fpkg->control[0];
-	assert(strcmp("+CONTENTS", pkg_file_get_name(fpkg->control[0])) == 0);
+	for (i = 0; fpkg->control[i] != NULL; i++) {
+		if (strcmp("+CONTENTS",
+		    basename(pkg_file_get_name(fpkg->control[i]))) == 0) {
+			contents_file = fpkg->control[i];
+			break;
+		}
+	}
 	if (contents_file == NULL)
 		return -1;
 	fpkg->contents = pkg_freebsd_contents_new(pkg_file_get(contents_file));

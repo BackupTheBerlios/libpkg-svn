@@ -209,7 +209,7 @@ ftp_free(struct pkg_repo *repo)
  */
 
 /**
- * @bried Retrieves a FILE pointer for a given package name
+ * @brief Retrieves a FILE pointer for a given package name
  * @return A FILE pointer to get a package with fetch(3)
  */
 static FILE *
