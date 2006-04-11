@@ -63,7 +63,7 @@ static const int pkg_states[7][12] = {
 };
 
 pkg_static int		  freebsd_install_pkg_action(struct pkg_db *,
-				struct pkg *, pkg_db_action *);
+				struct pkg *, int, pkg_db_action *);
 pkg_static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
 pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, const void *);
@@ -73,9 +73,9 @@ pkg_static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);
 pkg_static struct pkg_file	*freebsd_build_contents(
 				struct pkg_freebsd_contents *);
 pkg_static int			 freebsd_do_cwd(struct pkg_db *, struct pkg *,
-				char *ndir);
+				char *, int);
 pkg_static int			 freebsd_check_contents(struct pkg_db *,
-				struct pkg_freebsd_contents *);
+				struct pkg_freebsd_contents *, int);
 pkg_static void			 freebsd_format_cmd(char *, int, const char *,
 				const char *, const char *);
 
@@ -115,6 +115,7 @@ pkg_db_open_freebsd(const char *base)
  * @param db The database to install to
  * @param pkg The package to install
  * @param pkg_action A function to call when an action takes place
+ * @param fake Should we actually install the package or just report what would have happened
  * @todo Run mtree
  * @todo Register the reverse dependencies
  * @bug When the install fails part way through remove some files are left.
@@ -122,7 +123,7 @@ pkg_db_open_freebsd(const char *base)
  * @return 0 on success, -1 on error
  */
 static int
-freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
+freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
     pkg_db_action *pkg_action)
 {
 	struct pkg_file	*contents_file;
@@ -164,7 +165,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 		return -1;
 	}
 
-	i = freebsd_check_contents(db, contents);
+	i = freebsd_check_contents(db, contents, fake);
 	if (i < 0) {
 		pkg_freebsd_contents_free(contents);
 		chdir(cwd);
@@ -189,25 +190,28 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 			break;
 		case PKG_LINE_CWD:
 			/* Change to the correct directory */
+			if (!fake) {
 			free(directory);
-			if (freebsd_do_cwd(db, pkg, contents->lines[line].data)
-			    != 0) {
+			if (freebsd_do_cwd(db, pkg, contents->lines[line].data,
+			    fake) != 0) {
 				chdir(cwd);
 				free(cwd);
 				free(prefix);
 				pkg_freebsd_contents_free(contents);
 				return -1;
 			}
+			directory = getcwd(NULL, 0);
+			}
 			if (pkg_action != NULL)
 				pkg_action(PKG_DB_PACKAGE, "CWD to %s",
 				    contents->lines[line].data);
-			directory = getcwd(NULL, 0);
 			break;
 		case PKG_LINE_EXEC: {
 			char cmd[FILENAME_MAX];
 			freebsd_format_cmd(cmd, FILENAME_MAX,
 			    contents->lines[line].data, directory, last_file);
-			pkg_exec(cmd);
+			if (!fake)
+				pkg_exec(cmd);
 			if (pkg_action != NULL)
 				pkg_action(PKG_DB_PACKAGE, "execute '%s'", cmd);
 			break;
@@ -285,15 +289,17 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 			}
 
 			/* Install the file */
-			ret = pkg_file_write(file);
-			if (ret != 0) {
-				chdir(cwd);
-				free(cwd);
-				free(directory);
-				free(prefix);
-				pkg_file_free(file);
-				pkg_freebsd_contents_free(contents);
-				return -1;
+			if (!fake) {
+				ret = pkg_file_write(file);
+				if (ret != 0) {
+					chdir(cwd);
+					free(cwd);
+					free(directory);
+					free(prefix);
+					pkg_file_free(file);
+					pkg_freebsd_contents_free(contents);
+					return -1;
+				}
 			}
 
 			/* Remember the name if there is an "@exec" line next */
@@ -317,15 +323,20 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	}
 
 	/* Create the new contents file */
-	contents_file = freebsd_build_contents(contents);
-	pkg_file_write(contents_file);
-	pkg_file_free(contents_file);
+	if (!fake) {
+		contents_file = freebsd_build_contents(contents);
+		pkg_file_write(contents_file);
+		pkg_file_free(contents_file);
+	}
 
 	if (pkg_action != NULL)
 		pkg_action(PKG_DB_INFO, "Running mtree for %s..",
 		    pkg_get_name(pkg));
-	/* XXX Run mtree: mtree -U -f +MTREE_DIRS -d -e -p $PREFIX >/dev/null */
-	pkg_exec("mtree -U -f +MTREE_DIRS -d -e -p %s >/dev/null", prefix);
+
+	if (!fake)
+		pkg_exec("mtree -U -f +MTREE_DIRS -d -e -p %s >/dev/null",
+		    prefix);
+
 	free(prefix);
 	
 	if (pkg_action != NULL)
@@ -333,14 +344,14 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 		    "Attempting to record package into /var/db/pkg/%s..",
 		    pkg_get_name(pkg));
 
-	/* XXX Register the reverse dependencies */
+	/** @todo Register the reverse dependencies */
 	if (pkg_action != NULL)
 		pkg_action(PKG_DB_INFO,
-		    "Package %s registered in /var/db/pkg/%s",
+		    "Package %s registered in " DB_LOCATION "/%s",
 		    pkg_get_name(pkg), pkg_get_name(pkg));
 
 	free(directory);
-	if (last_file)
+	if (last_file != NULL)
 		free(last_file);
 	chdir(cwd);
 	free(cwd);
@@ -479,7 +490,7 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
  * @return 0 if successful or -1 on error
  */
 static int
-freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir) {
+freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir, int fake) {
 	char *dir;
 
 	assert(db != NULL);
@@ -492,7 +503,13 @@ freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir) {
 	if (ndir[0] == '.' &&
 	    ndir[1] == '\0') {
 		assert(pkg != NULL); /* pkg is only needed to chdir to . */
-		asprintf(&dir, "%s/var/db/pkg/%s", db->db_base, pkg->pkg_name);
+
+		/* When faking it don't create the database dir */
+		if (fake)
+			return 0;
+
+		asprintf(&dir, "%s/var/db/pkg/%s", db->db_base,
+		    pkg_get_name(pkg));
 		if (!dir) {
 			return -1;
 		}
@@ -601,7 +618,8 @@ freebsd_build_contents(struct pkg_freebsd_contents *contents)
  * @return The number of lines to skip to get to the first file or -1 on error
  */
 static int
-freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
+freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents,
+		int fake)
 {
 	unsigned int i;
 	int state;
@@ -626,8 +644,8 @@ freebsd_check_contents(struct pkg_db *db, struct pkg_freebsd_contents *contents)
 		}
 		/* If the current line is @chdir... do it */
 		if (contents->lines[i].line_type == PKG_LINE_CWD) {
-			if (freebsd_do_cwd(db, NULL, contents->lines[i].data)
-			    != 0) {
+			if (freebsd_do_cwd(db, NULL, contents->lines[i].data,
+			    fake) != 0) {
 				return -1;
 			}
 		}

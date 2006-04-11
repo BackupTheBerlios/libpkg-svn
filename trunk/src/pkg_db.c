@@ -127,7 +127,7 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 int
 pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
 {
-	return pkg_db_install_pkg_action(db, pkg, NULL);
+	return pkg_db_install_pkg_action(db, pkg, 0, NULL);
 }
 
 /**
@@ -136,10 +136,11 @@ pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
  * @param pkg The package to install
  * @param action A callback that is used to inform the user the status
  *     of the installation
+ * @param fake If true we will only fetch the package and report what would have happened during the install
  * @return 0 if the package is installed, -1 otherwise
  */
 int
-pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
+pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
     pkg_db_action *action)
 {
 	if (!db) {
@@ -154,7 +155,7 @@ pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 		return -1;
 	}
 
-	return db->pkg_install(db, pkg, action);
+	return db->pkg_install(db, pkg, fake, action);
 }
 
 /**

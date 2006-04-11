@@ -49,7 +49,7 @@ typedef		  void pkg_db_action(int, const char *, ...);
 
 struct pkg_db	 *pkg_db_open_freebsd(const char *);
 int		  pkg_db_install_pkg(struct pkg_db *, struct pkg *);
-int		  pkg_db_install_pkg_action(struct pkg_db *, struct pkg *,
+int		  pkg_db_install_pkg_action(struct pkg_db *, struct pkg *, int,
 			pkg_db_action *);
 int		  pkg_db_is_installed(struct pkg_db *, struct pkg *);
 struct pkg	**pkg_db_get_installed(struct pkg_db *);
