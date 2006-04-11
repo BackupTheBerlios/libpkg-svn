@@ -171,6 +171,13 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 {
 	struct pkg *pkg;
 	struct freebsd_package *fpkg;
+	struct stat sb;
+
+	/* check the directory exists and is a directory */
+	if (lstat(pkg_db_dir, &sb) == -1)
+		return NULL;
+	if (!S_ISDIR(sb.st_mode))
+		return NULL;
 
 	pkg = pkg_new(pkg_name, freebsd_get_control_files,
 	    freebsd_get_control_file, NULL, freebsd_free);
@@ -704,11 +711,11 @@ freebsd_parse_contents(struct freebsd_package *fpkg)
 	assert(fpkg != NULL);
 
 	if (fpkg->contents != NULL)
-		return -1;
+		return 0;
 
 	freebsd_open_control_files(fpkg);
 
-	contents_file = fpkg->control[0];
+	contents_file = NULL;
 	for (i = 0; fpkg->control[i] != NULL; i++) {
 		if (strcmp("+CONTENTS",
 		    basename(pkg_file_get_name(fpkg->control[i]))) == 0) {
