@@ -31,11 +31,18 @@
 #include <string.h>
 #include <unistd.h>
 
+#define verbosity_flag		(1)
+#define keep_file_flag		(1<<1)
+#define no_run_flag		(1<<2)
+#define force_flag		(1<<3)
+#define no_run_script_flag	(1<<4)
+#define no_record_install_flag	(1<<5)
+
 struct pkg_add {
 	struct pkg_db	 *db;
 	struct pkg_repo	 *repo;
 	struct pkg	**pkgs;
-	int		  verbosity;
+	int		  flags;
 	char		  chroot[PATH_MAX];
 };
 
@@ -43,8 +50,7 @@ static char options[] = "hvIRfnrp:P:SMt:C:K";
 
 static void usage(void);
 static int pkg_add(struct pkg_add);
-static int install_package(struct pkg *, struct pkg_repo *, struct pkg_db *,
-		int);
+static int install_package(struct pkg *, struct pkg_repo *,struct pkg_db *,int);
 
 int
 main (int argc, char *argv[])
@@ -55,7 +61,7 @@ main (int argc, char *argv[])
 
 	add.db = NULL;
 	add.repo = NULL;
-	add.verbosity = 0;
+	add.flags = 0;
 	add.chroot[0] = '\0';
 	while ((ch = getopt(argc, argv, options)) != -1) {
 		switch(ch) {
@@ -64,24 +70,22 @@ main (int argc, char *argv[])
 			strlcpy(add.chroot, optarg, PATH_MAX);
 			break;
 		case 'f':
-			/* TODO */
-			errx(1, "Unsupported argument");
+			add.flags |= force_flag;
 			break;
 		case 'I':
-			/* TODO */
+			add.flags |= no_run_script_flag;
 			errx(1, "Unsupported argument");
 			break;
 		case 'K':
-			/* TODO */
+			/* Save the package file in . or ${PKGDIR} */
+			add.flags |= keep_file_flag;
 			errx(1, "Unsupported argument");
 			break;
 		case 'M':
 			errx(1, "Unsupported argument");
 			break;
 		case 'n':
-			/* TODO */
-			/* This dosn't seem to do anything in the base version */
-			errx(1, "Unsupported argument");
+			add.flags |= no_run_flag;
 			break;
 		case 'P':
 			errx(1, "Unsupported argument");
@@ -90,7 +94,7 @@ main (int argc, char *argv[])
 			errx(1, "Unsupported argument");
 			break;
 		case 'R':
-			/* TODO */
+			add.flags |= no_record_install_flag;
 			errx(1, "Unsupported argument");
 			break;
 		case 'r':
@@ -101,10 +105,10 @@ main (int argc, char *argv[])
 			errx(1, "Unsupported argument");
 			break;
 		case 't':
-			errx(1, "The -t argument is unneded as the staging area is unused");
+			errx(1, "The -t argument is unneeded as the staging area is unused");
 			break;
 		case 'v':
-			add.verbosity = 1;
+			add.flags |= verbosity_flag;
 			break;
 		case 'h':
 		case '?':
@@ -174,7 +178,7 @@ pkg_add(struct pkg_add add)
 			    pkg_get_name(add.pkgs[i]));
 			continue;
 		}
-		install_package(add.pkgs[i], add.repo, add.db, add.verbosity);
+		install_package(add.pkgs[i], add.repo, add.db, add.flags);
 	}
 	return 1;
 }
@@ -200,7 +204,8 @@ pkg_action(int level, const char *fmt, ...)
  * Recursivley install the required packages
  */
 static int
-install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db, int verbosity)
+install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
+		int flags)
 {
 	unsigned int i;
 	int ret;
@@ -231,18 +236,20 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db, int v
 		deps[i] = new_pkg;
 
 		/* Install the dependency */
-		if (install_package(deps[i], repo, db, verbosity) != 0) {
+		if (install_package(deps[i], repo, db, flags) != 0 &&
+		    (flags & force_flag) != force_flag) {
 			return -1;
 		}
 	}
 	pkg_list_free(deps);
 
-	if (verbosity) {
+	if ((flags & verbosity_flag) == verbosity_flag) {
 		printf("extract: Package name is %s\n", pkg_get_name(pkg));
-		ret = pkg_db_install_pkg_action(db, pkg, pkg_action);
-	} else {
+		ret = pkg_db_install_pkg_action(db, pkg,
+		    ((flags & no_run_flag) == no_run_flag), pkg_action);
+	} else if ((flags & no_run_flag) == 0) {
 		ret = pkg_db_install_pkg(db, pkg);
 	}
-	/* XXX Ass warning if ret != 0 */
+	/* XXX Add warning if ret != 0 */
 	return ret;
 }
