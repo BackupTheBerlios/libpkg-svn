@@ -56,6 +56,7 @@ pkg_static struct pkg_file	 *freebsd_get_control_file(struct pkg *,
 					const char *);
 pkg_static struct pkg_file	 *freebsd_get_next_file(struct pkg *);
 pkg_static struct pkg		**freebsd_get_deps(struct pkg *);
+pkg_static int			  freebsd_run_script(struct pkg *, pkg_script);
 pkg_static int			  freebsd_free(struct pkg *);
 
 /* Internal functions */
@@ -147,7 +148,8 @@ pkg_new_freebsd_from_file(FILE *fd)
 		return NULL;
 	}
 	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin);
-	pkg_add_callbacks_install(pkg, freebsd_get_next_file);
+	pkg_add_callbacks_install(pkg, freebsd_get_next_file,
+	    freebsd_run_script);
 	pkg->data = fpkg;
 
 	return pkg;
@@ -468,6 +470,74 @@ freebsd_get_deps(struct pkg *pkg)
 	}
 		
 	return pkgs;
+}
+
+/**
+ * @brief Callback for pkg_run_script()
+ * @return 0
+ */
+static int
+freebsd_run_script(struct pkg *pkg, pkg_script script)
+{
+	struct freebsd_package *fpkg;
+	struct pkg_file *script_file;
+	char arg[FILENAME_MAX];
+	char dir[FILENAME_MAX];
+	char *dir1, *cwd;
+	int ret;
+
+	assert(pkg != NULL);
+
+	fpkg = pkg->data;
+	assert(fpkg != NULL);
+	assert(fpkg->pkg_type != fpkg_unknown);
+	assert(fpkg->pkg_type != fpkg_from_installed);
+	assert(fpkg->pkg_type != fpkg_from_empty);
+
+	script_file = NULL;
+	arg[0] = '\0';
+	switch (script) {
+	case pkg_script_pre:
+		script_file = pkg_get_control_file(pkg, "+PRE-INSTALL");
+		if (script_file == NULL) {
+			script_file = pkg_get_control_file(pkg, "+INSTALL");
+			snprintf(arg, FILENAME_MAX, "PRE-INSTALL");
+		}
+		break;
+	case pkg_script_post:
+		script_file = pkg_get_control_file(pkg, "+POST-INSTALL");
+		if (script_file == NULL) {
+			script_file = pkg_get_control_file(pkg, "+INSTALL");
+			snprintf(arg, FILENAME_MAX, "POST-INSTALL");
+		}
+		break;
+	default:
+		return -1;
+	}
+	if (script_file == NULL)
+		return 0;
+
+	/** @todo make a tempdir, cd tempdir, extrace the file, execute it, cleanup tempdir */
+	/** @todo Add a lock around mkdtemp ad arc4random is not thread safe */
+	snprintf(dir, FILENAME_MAX, "/tmp/libpkg_XXXXXXX");
+	dir1 = mkdtemp(dir);
+
+	/* Change to the temp dir and back up the current dir to return here */
+	cwd = getcwd(NULL, 0);
+	chdir(dir1);
+
+	/* Extract the script */
+	pkg_file_write(script_file);
+	pkg_exec("chmod u+x %s", pkg_file_get_name(script_file));
+	chdir(cwd);
+	free(cwd);
+
+	/* Execute the script */
+	ret = pkg_exec("%s/%s %s %s", dir1, pkg_file_get_name(script_file),
+	    pkg_get_name(pkg), arg);
+
+	rmdir(dir1);
+	return ret;
 }
 
 /**

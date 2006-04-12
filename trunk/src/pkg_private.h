@@ -77,8 +77,10 @@ int			  pkg_add_callbacks_empty(struct pkg *,
 
 /* Callbacks used with installable packages. Used by pkg_repo */
 typedef struct pkg_file	 *pkg_get_next_file_callback(struct pkg *);
+typedef int		  pkg_run_script_callback(struct pkg *, pkg_script);
 int			  pkg_add_callbacks_install(struct pkg *,
-				pkg_get_next_file_callback *);
+				pkg_get_next_file_callback *,
+				pkg_run_script_callback *);
 
 struct pkg {
 	void	*data;
@@ -100,6 +102,7 @@ struct pkg {
 
 	/* Callbacks used with installing packages */
 	pkg_get_next_file_callback	*pkg_get_next_file;
+	pkg_run_script_callback		*pkg_run_script;
 };
 
 int pkg_dir_build(const char *);

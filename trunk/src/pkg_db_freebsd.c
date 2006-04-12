@@ -179,6 +179,9 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
 	prefix = strdup(directory);
 	last_file = NULL;
 
+	/** @todo pkg_action the pre script */
+	pkg_run_script(pkg, pkg_script_pre);
+
 	/* Read through the contents file and install the package */
 	for (; line < contents->line_count; line++) {
 		switch (contents->lines[line].line_type) {
@@ -338,7 +341,10 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
 		    prefix);
 
 	free(prefix);
-	
+
+	/** @todo pkg_action the post script */
+	pkg_run_script(pkg, pkg_script_post);
+
 	if (pkg_action != NULL)
 		pkg_action(PKG_DB_INFO,
 		    "Attempting to record package into /var/db/pkg/%s..",

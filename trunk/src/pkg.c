@@ -89,6 +89,7 @@ pkg_new(const char *pkg_name,
 	pkg->pkg_add_depend = NULL;
 	pkg->pkg_add_file = NULL;
 	pkg->pkg_get_next_file = NULL;
+	pkg->pkg_run_script = NULL;
 
 	/* The data is unknown so set to NULL */	
 	pkg->data = NULL;
@@ -142,17 +143,20 @@ pkg_add_callbacks_empty(struct pkg *pkg,
  * @brief Internal function to add callbacks that are used when a package is installed
  * @param pkg The package returned by pkg_new()
  * @param next_file A callback to be used by pkg_get_next_file()
+ * @param run_script A callback to be used by pkg_run_script()
  * @return 0 on success, -1 on error.
  * @return
  */
 int
 pkg_add_callbacks_install (struct pkg *pkg,
-		pkg_get_next_file_callback *next_file)
+		pkg_get_next_file_callback *next_file,
+		pkg_run_script_callback *run_script)
 {
 	if (pkg == NULL)
 		return -1;
 
 	pkg->pkg_get_next_file = next_file;
+	pkg->pkg_run_script = run_script;
 	return 0;
 }
 
@@ -325,6 +329,22 @@ pkg_get_version(struct pkg *pkg)
 		return pkg->pkg_get_version(pkg);
 
 	return NULL;
+}
+
+/**
+ * @brief Runs the named script from the package
+ * @return The return value of the script, or -1
+ */
+int
+pkg_run_script(struct pkg *pkg, pkg_script script)
+{
+	if (pkg == NULL)
+			return -1;
+
+	if (pkg->pkg_run_script == NULL)
+		return -1;
+
+	return pkg->pkg_run_script(pkg, script);
 }
 
 /**
