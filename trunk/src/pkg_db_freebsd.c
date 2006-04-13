@@ -63,7 +63,7 @@ static const int pkg_states[7][12] = {
 };
 
 pkg_static int		  freebsd_install_pkg_action(struct pkg_db *,
-				struct pkg *, int, pkg_db_action *);
+				struct pkg *, int, int, pkg_db_action *);
 pkg_static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
 pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, const void *);
@@ -123,8 +123,8 @@ pkg_db_open_freebsd(const char *base)
  * @return 0 on success, -1 on error
  */
 static int
-freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
-    pkg_db_action *pkg_action)
+freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg __unused,
+    int fake, pkg_db_action *pkg_action)
 {
 	struct pkg_file	*contents_file;
 	struct pkg_file **control;
@@ -194,16 +194,19 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
 		case PKG_LINE_CWD:
 			/* Change to the correct directory */
 			if (!fake) {
-			free(directory);
-			if (freebsd_do_cwd(db, pkg, contents->lines[line].data,
-			    fake) != 0) {
-				chdir(cwd);
-				free(cwd);
-				free(prefix);
-				pkg_freebsd_contents_free(contents);
-				return -1;
-			}
-			directory = getcwd(NULL, 0);
+				if (reg || (!reg &&
+				    strcmp(contents->lines[line].data,".")!=0)){
+					free(directory);
+					if (freebsd_do_cwd(db, pkg,
+					    contents->lines[line].data, fake) != 0) {
+						chdir(cwd);
+						free(cwd);
+						free(prefix);
+						pkg_freebsd_contents_free(contents);
+						return -1;
+					}
+					directory = getcwd(NULL, 0);
+				}
 			}
 			if (pkg_action != NULL)
 				pkg_action(PKG_DB_PACKAGE, "CWD to %s",
@@ -293,15 +296,18 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
 
 			/* Install the file */
 			if (!fake) {
-				ret = pkg_file_write(file);
-				if (ret != 0) {
-					chdir(cwd);
-					free(cwd);
-					free(directory);
-					free(prefix);
-					pkg_file_free(file);
-					pkg_freebsd_contents_free(contents);
-					return -1;
+				if (reg ||
+				    (!reg && pkg_file_get_name(file)[0] !='+')){
+					ret = pkg_file_write(file);
+					if (ret != 0) {
+						chdir(cwd);
+						free(cwd);
+						free(directory);
+						free(prefix);
+						pkg_file_free(file);
+						pkg_freebsd_contents_free(contents);
+						return -1;
+					}
 				}
 			}
 
@@ -325,12 +331,6 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
 		}
 	}
 
-	/* Create the new contents file */
-	if (!fake) {
-		contents_file = freebsd_build_contents(contents);
-		pkg_file_write(contents_file);
-		pkg_file_free(contents_file);
-	}
 
 	if (pkg_action != NULL)
 		pkg_action(PKG_DB_INFO, "Running mtree for %s..",
@@ -345,16 +345,24 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
 	/** @todo pkg_action the post script */
 	pkg_run_script(pkg, pkg_script_post);
 
-	if (pkg_action != NULL)
-		pkg_action(PKG_DB_INFO,
-		    "Attempting to record package into /var/db/pkg/%s..",
-		    pkg_get_name(pkg));
+	if (reg) {
+		if (pkg_action != NULL)
+			pkg_action(PKG_DB_INFO,
+			    "Attempting to record package into " DB_LOCATION
+			    "/%s..", pkg_get_name(pkg));
 
-	/** @todo Register the reverse dependencies */
-	if (pkg_action != NULL)
-		pkg_action(PKG_DB_INFO,
-		    "Package %s registered in " DB_LOCATION "/%s",
-		    pkg_get_name(pkg), pkg_get_name(pkg));
+		/* Create the new contents file */
+		if (!fake) {
+			contents_file = freebsd_build_contents(contents);
+			pkg_file_write(contents_file);
+			pkg_file_free(contents_file);
+		}
+		/** @todo Register the reverse dependencies */
+		if (pkg_action != NULL)
+			pkg_action(PKG_DB_INFO,
+			    "Package %s registered in " DB_LOCATION "/%s",
+			    pkg_get_name(pkg), pkg_get_name(pkg));
+	}
 
 	free(directory);
 	if (last_file != NULL)
@@ -392,11 +400,10 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 	/* Does the package repo directory exist */
 	if (stat(dir, &sb) == 0 && S_ISDIR(sb.st_mode) != 0) {
 		/* The passed package is installed */
-		is_installed = 0;
+		free(dir);
+		return 0;
 	}
 	free(dir);
-	if (is_installed == 0)
-		return 0;
 
 	/* Does the package have an origin and if so is that origin installed */
 	if (pkg_get_origin(pkg) != NULL) {

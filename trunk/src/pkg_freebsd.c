@@ -310,7 +310,8 @@ freebsd_get_origin(struct pkg *pkg)
 
 		/* Load the contents file */
 		freebsd_parse_contents(fpkg);
-		assert(fpkg->contents != NULL);
+		if (fpkg->contents == NULL)
+			return NULL;
 		assert(fpkg->contents->lines != NULL);
 
 		/* Find the line with the origin */

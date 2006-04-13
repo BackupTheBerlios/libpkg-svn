@@ -31,7 +31,7 @@
 #define __LIBPKG_PKG_DB_PRIVATE_H__
 
 typedef int	 pkg_db_install_pkg_callback(struct pkg_db *, struct pkg *, int,
-			pkg_db_action *);
+			int, pkg_db_action *);
 typedef int 	 pkg_db_is_installed_callback(struct pkg_db *, struct pkg *);
 typedef struct pkg	 *pkg_db_get_package_callback(struct pkg_db *,
 				const char *);

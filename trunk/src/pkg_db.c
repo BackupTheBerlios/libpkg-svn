@@ -125,22 +125,24 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
  * @return 0 on success, -1 on error
  */
 int
-pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg)
+pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg, int reg)
 {
-	return pkg_db_install_pkg_action(db, pkg, 0, NULL);
+	return pkg_db_install_pkg_action(db, pkg, reg, 0, NULL);
 }
 
 /**
  * @brief Installs a package to the database
  * @param db The database to install to
  * @param pkg The package to install
+ * @param reg If true register the package
+ * @param fake If true we will only fetch the package and report what would
+ *     have happened during the install
  * @param action A callback that is used to inform the user the status
  *     of the installation
- * @param fake If true we will only fetch the package and report what would have happened during the install
  * @return 0 if the package is installed, -1 otherwise
  */
 int
-pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
+pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg, int fake,
     pkg_db_action *action)
 {
 	if (!db) {
@@ -155,7 +157,7 @@ pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int fake,
 		return -1;
 	}
 
-	return db->pkg_install(db, pkg, fake, action);
+	return db->pkg_install(db, pkg, reg, fake, action);
 }
 
 /**
@@ -276,6 +278,9 @@ pkg_match_all(struct pkg *pkg __unused, const void *data __unused)
 int
 pkg_match_by_origin(struct pkg *pkg, const void *origin)
 {
+	if (pkg_get_origin(pkg) == NULL)
+		return -1;
+
 	return strcmp(pkg_get_origin(pkg), (const char *)origin);
 }
 
