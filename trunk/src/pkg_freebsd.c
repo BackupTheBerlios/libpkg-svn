@@ -512,13 +512,15 @@ freebsd_run_script(struct pkg *pkg, pkg_script script)
 			snprintf(arg, FILENAME_MAX, "POST-INSTALL");
 		}
 		break;
+	case pkg_script_mtree:
+		script_file = pkg_get_control_file(pkg, "+MTREE_DIRS");
+		break;
 	default:
 		return -1;
 	}
 	if (script_file == NULL)
 		return 0;
 
-	/** @todo make a tempdir, cd tempdir, extrace the file, execute it, cleanup tempdir */
 	/** @todo Add a lock around mkdtemp ad arc4random is not thread safe */
 	snprintf(dir, FILENAME_MAX, "/tmp/libpkg_XXXXXXX");
 	dir1 = mkdtemp(dir);
@@ -529,13 +531,21 @@ freebsd_run_script(struct pkg *pkg, pkg_script script)
 
 	/* Extract the script */
 	pkg_file_write(script_file);
-	pkg_exec("chmod u+x %s", pkg_file_get_name(script_file));
+	if (script == pkg_script_mtree) {
+		const char *prefix = pkg_get_prefix(pkg);
+		pkg_exec("mtree -U -f +MTREE_DIRS -d -e -p %s >/dev/null",
+		    (prefix != NULL ? prefix : "/usr/local"));
+		unlink("+MTREE_DIRS");
+	} else { 
+		pkg_exec("chmod u+x %s", pkg_file_get_name(script_file));
+
+		/* Execute the script */
+		ret = pkg_exec("%s/%s %s %s", dir1,
+		    pkg_file_get_name(script_file), pkg_get_name(pkg), arg);
+		unlink(pkg_file_get_name(script_file));
+	}
 	chdir(cwd);
 	free(cwd);
-
-	/* Execute the script */
-	ret = pkg_exec("%s/%s %s %s", dir1, pkg_file_get_name(script_file),
-	    pkg_get_name(pkg), arg);
 
 	rmdir(dir1);
 	return ret;

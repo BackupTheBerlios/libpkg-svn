@@ -91,7 +91,8 @@ pkg_new(const char *pkg_name,
 	pkg->pkg_get_next_file = NULL;
 	pkg->pkg_run_script = NULL;
 
-	/* The data is unknown so set to NULL */	
+	/* The data is unknown so set to NULL */
+	pkg->pkg_prefix = NULL;
 	pkg->data = NULL;
 
 	return pkg;
@@ -204,6 +205,50 @@ pkg_compare(const void *pkg_a, const void *pkg_b)
 {
 	return strcmp((*(struct pkg * const *)pkg_a)->pkg_name,
 	    (*(struct pkg * const *)pkg_b)->pkg_name);
+}
+
+/**
+ * @brief Sets the location to install the package to
+ * @param pkg The package to install
+ * @param prefix The location in the filesystem to install the package pkg to
+ * 
+ * If the prefix is set and malloc fails the old prefix is kept.
+ * Otherwise the prefix is set to the new prefix.
+ * @return 0 on success, -1 on error
+ */
+int
+pkg_set_prefix(struct pkg *pkg, const char *prefix)
+{
+	char *old_prefix;
+	if (pkg == NULL)
+		return -1;
+
+	if (prefix == NULL)
+		return -1;
+
+	old_prefix = pkg->pkg_prefix;
+	pkg->pkg_prefix = strdup(prefix);
+	if (pkg->pkg_prefix == NULL) {
+		pkg->pkg_prefix = old_prefix;
+		return -1;
+	}
+	if (old_prefix != NULL)
+		free(old_prefix);
+
+	return 0;
+}
+
+/**
+ * @brief Returns the prefix or NULL
+ * @return the prefix or NULL if it hasn't been set
+ */
+const char *
+pkg_get_prefix(struct pkg *pkg)
+{
+	if (pkg == NULL)
+		return NULL;
+
+	return pkg->pkg_prefix;
 }
 
 /**
@@ -413,10 +458,13 @@ pkg_free(struct pkg *pkg)
 		return -1;
 	}
 
-	if (pkg->pkg_name)
+	if (pkg->pkg_name != NULL)
 		free(pkg->pkg_name);
 
-	if (pkg->pkg_free)
+	if (pkg->pkg_prefix != NULL)
+		free(pkg->pkg_prefix);
+
+	if (pkg->pkg_free != NULL)
 		pkg->pkg_free(pkg);
 
 	free(pkg);

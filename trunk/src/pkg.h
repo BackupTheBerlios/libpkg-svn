@@ -63,7 +63,8 @@ struct pkg;
 typedef enum {
 	pkg_script_noop,
 	pkg_script_pre,
-	pkg_script_post
+	pkg_script_post,
+	pkg_script_mtree
 } pkg_script;
 
 struct pkg		 *pkg_new_empty(const char *);
@@ -71,6 +72,8 @@ struct pkg		 *pkg_new_freebsd_from_file(FILE *);
 struct pkg		 *pkg_new_freebsd_installed(const char *, const char *);
 struct pkg		 *pkg_new_freebsd_empty(const char *);
 int			  pkg_compare(const void *, const void *);
+int			  pkg_set_prefix(struct pkg *, const char *);
+const char		 *pkg_get_prefix(struct pkg *);
 struct pkg_file		**pkg_get_control_files(struct pkg *);
 struct pkg_file		 *pkg_get_control_file(struct pkg *, const char *);
 struct pkg		**pkg_get_dependencies(struct pkg *);

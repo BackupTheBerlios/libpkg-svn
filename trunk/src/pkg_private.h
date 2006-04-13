@@ -86,6 +86,7 @@ struct pkg {
 	void	*data;
 
 	char	*pkg_name;
+	char	*pkg_prefix;
 
 	/* Main callbacks */
 	pkg_get_control_files_callback	*pkg_get_control_files;
