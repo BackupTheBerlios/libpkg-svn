@@ -46,6 +46,14 @@ struct pkg_add {
 	char		  chroot[PATH_MAX];
 };
 
+/* A linked list of packages that have been installed */
+struct pkg_list {
+	const char *name;
+	struct pkg_list *next;
+};
+
+struct pkg_list *head = NULL;
+
 static char options[] = "hvIRfnrp:P:SMt:C:K";
 
 static void usage(void);
@@ -95,7 +103,6 @@ main (int argc, char *argv[])
 			break;
 		case 'R':
 			add.flags |= no_record_install_flag;
-			errx(1, "Unsupported argument");
 			break;
 		case 'r':
 			pkg_repo_free(add.repo);
@@ -210,12 +217,25 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 	unsigned int i;
 	int ret;
 	struct pkg **deps;
+	struct pkg_list *cur;
 
 	assert(pkg != NULL);
 	assert(repo != NULL);
 	assert(db != NULL);
 
-	/* Don't install packages twice */
+	/*
+	 * See if the package has been marked as installed in this run.
+	 * If it has don't bother attempting to install it again
+	 */
+	cur = head;
+	while (cur != NULL) {
+		if (strcmp(cur->name, pkg_get_name(pkg)) == 0) {
+			return 0;
+		}
+		cur = cur->next;
+	}
+	
+	/* Don't install a package that has been registered in the db */
 	if (pkg_db_is_installed(db, pkg) == 0) {
 		return 0;
 	}
@@ -246,9 +266,21 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 	if ((flags & verbosity_flag) == verbosity_flag) {
 		printf("extract: Package name is %s\n", pkg_get_name(pkg));
 		ret = pkg_db_install_pkg_action(db, pkg,
+		    ((flags & no_record_install_flag)!= no_record_install_flag),
 		    ((flags & no_run_flag) == no_run_flag), pkg_action);
 	} else if ((flags & no_run_flag) == 0) {
-		ret = pkg_db_install_pkg(db, pkg);
+		ret = pkg_db_install_pkg(db, pkg,
+		    ((flags & no_record_install_flag)!=no_record_install_flag));
+	}
+	/*
+	 * Insert the installed package in a linked
+	 * list to stop it being installed again.
+	 */
+	if (ret == 0) {
+		cur = malloc(sizeof(struct pkg_list));
+		cur->next = head;
+		cur->name = pkg_get_name(pkg);
+		head = cur;
 	}
 	/* XXX Add warning if ret != 0 */
 	return ret;
