@@ -1,0 +1,101 @@
+.\" Copyright (c) 2003 Tim Kientzle
+.\" Copyright (c) 2005, 2006 Andrew Turner
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $FreeBSD$
+.\"
+.Dd September 25, 2005
+.Dt libpkg 3
+.Os
+.Sh NAME
+.Nm pkg_db_open_freebsd ,
+.Nm pkg_db_install_pkg ,
+.Nm pkg_db_is_installed ,
+.Nm pkg_db_get_installed ,
+.Nm pkg_db_get_installed_match ,
+.Nm pkg_db_get_package ,
+.Nm pkg_db_free ,
+.Nm pkg_match_all ,
+.Nd functions for installing packages
+.Sh LIBRARY
+.Lb libpkg
+.Sh SYNOPSIS
+.In pkg_db.h
+.Ft struct pkg_db *
+.Fn pkg_db_open_freebsd "const char *base"
+.Ft int
+.Fn pkg_db_install_pkg "struct pkg_db *db" "struct pkg *pkg"
+.Ft int
+.Fn pkg_db_is_installed "struct pkg_db *db" "const char *package"
+.Ft struct pkg **
+.Fn pkg_db_get_installed "struct pkg_db *db"
+.Ft struct pkg **
+.Fn pkg_db_get_installed_match "struct pkg_db *db" "pkg_db_match *match" "void *data"
+.Ft struct pkg *
+.Fn pkg_db_get_package "struct pkg_db *db" "const char *pkg_name"
+.Ft int
+.Fn pkg_db_free "struct pkg_db *db"
+.Ft int
+.Fn pkg_match_all "struct pkg *pkg" "void *data"
+.Sh DESCRIPTION
+The Package Database is a location where packages can be
+installed to and retrieved from.
+.Bl -tag -compact -width indent
+.It Fn pkg_db_open_freebsd
+Creates a
+.Tn struct pkg_db
+with callbacks to install a FreeBSD package to the
+filesystem tree with it's root at
+.Vt base .
+.It Fn pkg_db_install_pkg
+Runs the package install callback to install a package.
+.It Fn pkg_db_is_installed
+Checks if the named package is installed. Returns 0 if it
+is installed, -1 otherwise.
+.It Fn pkg_db_get_installed
+Returns a NULL terminated array of all packages installed
+in the database
+.Vt db .
+.It Fn pkg_db_get_installed_match
+Returns a NULL terminated array of all packages that when
+passed to the function
+.Vt match
+returns 0.
+.It Fn pkg_db_get_package
+Returns a package with the name
+.Vt pkg_name
+from the database
+.Vt db .
+.It Fn pkg_db_free
+Frees the
+.Tn struct pkg_db .
+.It Fn pkg_match_all
+A helper function to be passed to
+.Fn pkg_db_get_installed_match
+to match all packages installed on the system.
+.El
+.Sh SEE ALSO
+.Xr libpkg 3 ,
+.Xr pkg 3 ,
+.Xr pkg_repo 3
