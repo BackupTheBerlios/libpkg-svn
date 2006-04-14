@@ -13,9 +13,6 @@ Pros:
 
 Problems:
     * It can only install packages not uninstall or create them.
-    * Can't get a list of installed packages.
-    * There is no dependency handling.
     * Dosn't follow style(9).
     * Not all possible lines in +CONTENTS are handled.
-    * @exec lines in +CONTENTS aren't executed.
     * A failed install will leave files with no package.
