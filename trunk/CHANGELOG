@@ -1,3 +1,97 @@
+2006-04-14
+ * Allow packages to be installed without registering the installation
+ * Use change 93 to implement the -R flag in pkg_add
+ * Store the names of installed packages in a linked list. This means the -R and -n runs will only attempt to install each package once
+ * Add pkg_(set|get)_prefix to set/get the installation prefix of a package
+ * Use pkg_set_prefix rather than a prefix variable in freebsd_install_pkg_action
+ * Add pkg_script_mtree and use if when installing package. This runs the mtree on the +MTREE_DIRS file
+ * In freebsd_run_script unlink(2) the script so rmdir(2) will remove the temp directory
+
+2006-04-12
+ * Implement execution of pre/post installation scripts
+
+2006-04-11
+ * Check if the package's database directory exists and is a directory before creating the pkg object
+ * Return the correct value in freebsd_parse_contents when it has already been called
+ * Set contents_file to NULL at the start to make thecheck after the for loop valid
+ * Allow package installation to be faked. This is useful for "pkg_add -nv bla"
+ * Make add.verbosity add.flags with a single bit for each flag
+ * Store the -f, -I, -K, -n, -R and -v arguments in add.flags
+ * Implement -n to use the faked installation opetion of pkg_db
+ * Update the list of ftp directories to FreeBSD HEAD
+
+2006-04-10
+ * Correct the spelling of brief
+ * In pkg_freebsd the first file in fpkg->control may not be the +CONTENTS. Search for the file
+
+2006-04-07
+ * Execute the contructed string by sending it to system(3)
+ * Rewrite the FreeBSD package backend. The new backend caches more data, is simpler and should be faster
+ * Move freebsd_format_cmd to pkg_db_freebsd.c as that is where it is being used
+
+2006-03-28
+ * Document the pkg_file object
+ * Document the pkg_repo object
+ * Fix the documentation on in the internal FreeBSD functions
+ * Document the pkg_repo objects
+ * Document the util functions
+
+2006-03-23
+ * Document the pkg_db object
+ * Document the FreeBSD pkg_db object and FreeBSD +CONTENTS handeling
+
+2006-03-21
+ * Add a define pkg_static. It is defined to static unless building documentation
+ * This is to get Doxygen to build the docs for callbacks and internal functions
+ * Document the FreeBSD package functions
+
+2006-03-20
+ * Document pkg.c in a way doxygen will be able to understand
+
+2006-03-16
+ * Add the start of a pkg_add replacement
+
+2006-03-14
+ * Add support for communication from the package database to the user
+ * Add pkg_execute to execute programs by using a va_list. This is not complete
+ * Save the prefix when installing packages
+ * Use pkg_exec and prefix when installing FreeBSD packages
+
+2006-02-23
+ * Make WARNS=6 compliant by making the data taken by freebsd_get_installed_match of type `const void *'
+ * Rename the link argument in pkg_file_new_symlink to lnk to not conflict with link(2)
+
+2006-02-22
+ * Check ftp_get_fd returns a valid pointer
+ * Make pkg_compare WARNS=6 complant
+ * Make src/Makefile easyer to read
+
+2006-02-20
+ * Silence a warning about NOMAN being depricated
+
+2006-02-08
+ * Add support to pkg_file for symlinks
+ * Create symlinks when the tarball contains them
+ * Add pkg_repo_local_freebsd to search for packages in . and /usr/ports/packages/All
+
+2006-02-07
+ * Add pkg_match_by_origin to match all packages with a given origin
+ * Update freebsd_is_installed to use pkg_match_by_origin to find if the package is installed
+
+2006-02-06
+ * Change pkg_db_is_installed to take a pkg object rather than a package name
+
+2006-02-04
+ * Make pkg_get_name, pkg_get_version and pkg_get_version return "const char *" rather than "char *"
+ * Catch up with using const char * in pkg_get_name, pkg_get_version and pkg_get_version
+ * Update README on building on Linux
+
+2006-02-03
+ * Fix _pkg_match_regex when there are multiple regex strings
+ * Reduce the amount of code by merging the MATCH_ALL, MATCH_REGEX and MATCH_EREGEX cases
+ * Add WITH_PROFILING make option to build a profiling binary
+ * Change the indentation in the Makefile
+
 2006-02-02
  * Update the manual pages.
  * Reorder functions to match the order in the manual pages
