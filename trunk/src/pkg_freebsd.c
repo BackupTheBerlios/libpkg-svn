@@ -515,6 +515,9 @@ freebsd_run_script(struct pkg *pkg, pkg_script script)
 	case pkg_script_mtree:
 		script_file = pkg_get_control_file(pkg, "+MTREE_DIRS");
 		break;
+	case pkg_script_require:
+		script_file = pkg_get_control_file(pkg, "+REQUIRE");
+		break;
 	default:
 		return -1;
 	}
@@ -531,19 +534,32 @@ freebsd_run_script(struct pkg *pkg, pkg_script script)
 
 	/* Extract the script */
 	pkg_file_write(script_file);
-	if (script == pkg_script_mtree) {
+	switch(script) {
+	case pkg_script_mtree:
+	{
 		const char *prefix = pkg_get_prefix(pkg);
 		pkg_exec("mtree -U -f +MTREE_DIRS -d -e -p %s >/dev/null",
 		    (prefix != NULL ? prefix : "/usr/local"));
-		unlink("+MTREE_DIRS");
-	} else { 
+		break;
+	}
+	case pkg_script_pre:
+	case pkg_script_post:
 		pkg_exec("chmod u+x %s", pkg_file_get_name(script_file));
 
 		/* Execute the script */
 		ret = pkg_exec("%s/%s %s %s", dir1,
 		    pkg_file_get_name(script_file), pkg_get_name(pkg), arg);
-		unlink(pkg_file_get_name(script_file));
+		break;
+	case pkg_script_require:
+		pkg_exec("chmod u+x %s", pkg_file_get_name(script_file));
+
+		ret = pkg_exec("%s/%s %s INSTALL", dir1,
+		    pkg_file_get_name(script_file), pkg_get_name(pkg));
+		break;
+	case pkg_script_noop:
+		break;
 	}
+	unlink(pkg_file_get_name(script_file));
 	chdir(cwd);
 	free(cwd);
 

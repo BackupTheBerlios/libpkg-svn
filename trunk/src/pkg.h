@@ -64,7 +64,8 @@ typedef enum {
 	pkg_script_noop,
 	pkg_script_pre,
 	pkg_script_post,
-	pkg_script_mtree
+	pkg_script_mtree,
+	pkg_script_require
 } pkg_script;
 
 struct pkg		 *pkg_new_empty(const char *);
