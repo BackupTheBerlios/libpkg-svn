@@ -70,6 +70,10 @@ pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 pkg_static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
 
 /* Internal */
+#ifdef NEW_DB
+pkg_static int			 freebsd_do_install(struct pkg_db *,
+				struct pkg *);
+#else
 pkg_static struct pkg_file	*freebsd_build_contents(
 				struct pkg_freebsd_contents *);
 pkg_static int			 freebsd_do_cwd(struct pkg_db *, struct pkg *,
@@ -78,6 +82,7 @@ pkg_static int			 freebsd_check_contents(struct pkg_db *,
 				struct pkg_freebsd_contents *, int);
 pkg_static void			 freebsd_format_cmd(char *, int, const char *,
 				const char *, const char *);
+#endif
 
 /**
  * @defgroup PackageDBFreebsd FreeBSD Package Database handeling
@@ -123,9 +128,10 @@ pkg_db_open_freebsd(const char *base)
  * @return 0 on success, -1 on error
  */
 static int
-freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg __unused,
+freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
     int fake, pkg_db_action *pkg_action)
 {
+#ifndef NEW_DB
 	struct pkg_file	*contents_file;
 	struct pkg_file **control;
 	struct pkg_freebsd_contents *contents;
@@ -133,15 +139,64 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg __unused,
 	char *directory, *last_file;
 	int i;
 	unsigned int pos, line;
+#endif
 
+	assert(db != NULL);
 	assert(pkg != NULL);
 
+#ifdef NEW_DB
+	/* Run +REQUIRE */
+	if (pkg_action != NULL)
+		pkg_action(PKG_DB_INFO, "Running pre-install for %s..",
+		    pkg_get_name(pkg));
+
+	if (!fake) {
+		/** @todo Check if the force flag is set */
+		if (pkg_run_script(pkg, pkg_script_require) != 0) {
+			return -1;
+		}
+	}
+
+	/* Run Pre-install */
+	if (pkg_action != NULL)
+		pkg_action(PKG_DB_INFO, "Running pre-install for %s..",
+		    pkg_get_name(pkg));
+
+	if (!fake)
+		pkg_run_script(pkg, pkg_script_pre);
+
+	/* Do the Install */
+	freebsd_do_install(db, pkg);
+
+	/* Extract the +MTREE */
+	if (pkg_action != NULL)
+		pkg_action(PKG_DB_INFO, "Running mtree for %s..",
+		    pkg_get_name(pkg));
+
+	if (!fake)
+		pkg_run_script(pkg, pkg_script_mtree);
+
+	/* Run post-install */
+	if (pkg_action != NULL)
+		pkg_action(PKG_DB_INFO, "Running post-install for %s..",
+		    pkg_get_name(pkg));
+
+	if (!fake)
+		pkg_run_script(pkg, pkg_script_post);
+
+	/* Record the package installation */
+	if (!fake && reg) {
+	}
+
+	/* Display contents of @display */
+#else
+	/* Get the control files from the package */
 	control = pkg_get_control_files(pkg);
 	if (!control) {
 		return -1;
 	}
 
-	/* Find the contents file in the control files */
+	/* Find the +CONTENTS file in the control files */
 	for (pos = 0; control[pos] != NULL; pos++)
 		if (!strcmp(control[pos]->filename, "+CONTENTS"))
 			break;
@@ -363,6 +418,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg __unused,
 
 	pkg_freebsd_contents_free(contents);
 
+#endif
 	return 0;
 }
 
@@ -489,6 +545,14 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
  * @{
  */
 
+#ifdef NEW_DB
+static int
+freebsd_do_install(struct pkg_db *db __unused, struct pkg *pkg __unused)
+{
+	return -1;
+}
+
+#else
 /**
  * @brief Internal function to to the correct thing for an \@cwd line
  * @return 0 if successful or -1 on error
@@ -740,6 +804,7 @@ freebsd_format_cmd(char *buf, int max, const char *fmt, const char *dir,
 	}
 	*buf = '\0';
 }
+#endif
 
 /**
  * @}
