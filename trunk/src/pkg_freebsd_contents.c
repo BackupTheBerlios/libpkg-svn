@@ -51,6 +51,7 @@
  */
 static const char *pkg_freebsd_contents_line_str[] = {
 	"",
+	"",
 	"@comment",
 	"@name",
 	"@cwd",
@@ -61,6 +62,7 @@ static const char *pkg_freebsd_contents_line_str[] = {
 	"@ignore",
 	"@dirrm",
 	"@mtree",
+	"@display",
 	NULL
 };
 
@@ -176,6 +178,8 @@ pkg_freebsd_contents_new(const char *contents)
 				cont->lines[pos].line_type = PKG_LINE_DIRRM;
 			} else if (!strcmp(cont->lines[pos].line, "@mtree")) {
 				cont->lines[pos].line_type = PKG_LINE_MTREE;
+			} else if (!strcmp(cont->lines[pos].line, "@display")) {
+				cont->lines[pos].line_type = PKG_LINE_DISPLAY;
 			} else {
 				cont->lines[pos].line_type = PKG_LINE_UNKNOWN;
 				fprintf(stderr, "Unknown line type %s\n",
