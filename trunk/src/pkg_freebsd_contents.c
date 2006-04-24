@@ -119,6 +119,7 @@ pkg_freebsd_contents_new(const char *contents)
 		cont->lines[0].line = cont->file;
 		pos = 1;
 		while (pos < cont->line_count) {
+			cont->lines[pos].data = NULL;
 			cont->lines[pos].line = strchr(cont->lines[pos-1].line, '\n');
 			if (cont->lines[pos].line) {
 				/* Terminate the last line */
@@ -153,6 +154,7 @@ pkg_freebsd_contents_new(const char *contents)
 			/* Get the correct line type for the line */
 			if (cont->lines[pos].line[0] != '@') {
 				cont->lines[pos].line_type = PKG_LINE_FILE;
+				assert(cont->lines[pos].data == NULL);
 			} else if (!strcmp(cont->lines[pos].line, "@comment")) {
 				cont->lines[pos].line_type = PKG_LINE_COMMENT;
 			} else if (!strcmp(cont->lines[pos].line, "@name")) {
@@ -218,6 +220,7 @@ pkg_freebsd_contents_add_line(struct pkg_freebsd_contents *contents, int type,
 	if (type == PKG_LINE_FILE) {
 		contents->lines[contents->line_count].line = strdup(data);
 		assert(contents->lines[contents->line_count].line != NULL);
+		assert(contents->lines[contents->line_count].data == NULL);
 	} else {
 		contents->lines[contents->line_count].line =
 		    strdup(pkg_freebsd_contents_line_str[type]);
