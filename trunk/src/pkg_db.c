@@ -105,6 +105,11 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	return db;
 }
 
+static void
+pkg_action_null(int level __unused, const char *fmt __unused, ...)
+{
+}
+
 /**
  * @}
  */
@@ -156,6 +161,9 @@ pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg, int fake,
 	if (!db->pkg_install) {
 		return -1;
 	}
+
+	if (action == NULL)
+		action = pkg_action_null;
 
 	return db->pkg_install(db, pkg, reg, fake, action);
 }

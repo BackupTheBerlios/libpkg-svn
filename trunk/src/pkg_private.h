@@ -31,6 +31,7 @@
 #define __LIBPKG_PKG_PRIVATE_H__
 
 #include <archive.h>
+#include "pkg_db.h"
 
 int archive_read_open_stream(struct archive *, FILE *, size_t);
 
@@ -76,11 +77,24 @@ int			  pkg_add_callbacks_empty(struct pkg *,
 				pkg_add_file_callback *);
 
 /* Callbacks used with installable packages. Used by pkg_repo */
+typedef int	  	  pkg_db_chdir(struct pkg *, pkg_db_action *, void *,
+				const char *);
+typedef int		  pkg_db_install_file(struct pkg *, pkg_db_action *,
+				void *, struct pkg_file *);
+typedef int		  pkg_db_exec(struct pkg *, pkg_db_action *, void *,
+				const char *);
+typedef int	  	  pkg_install_callback(struct pkg*, int,
+				pkg_db_action *, void *, pkg_db_chdir *,
+				pkg_db_install_file *, pkg_db_exec *);
 typedef struct pkg_file	 *pkg_get_next_file_callback(struct pkg *);
 typedef int		  pkg_run_script_callback(struct pkg *, pkg_script);
 int			  pkg_add_callbacks_install(struct pkg *,
+				pkg_install_callback *,
 				pkg_get_next_file_callback *,
 				pkg_run_script_callback *);
+int			  pkg_install(struct pkg *, int, pkg_db_action *,
+				void *, pkg_db_chdir *, pkg_db_install_file *,
+				pkg_db_exec *);
 
 struct pkg {
 	void	*data;
@@ -102,6 +116,7 @@ struct pkg {
 	pkg_add_file_callback		*pkg_add_file;
 
 	/* Callbacks used with installing packages */
+	pkg_install_callback		*pkg_install;
 	pkg_get_next_file_callback	*pkg_get_next_file;
 	pkg_run_script_callback		*pkg_run_script;
 };

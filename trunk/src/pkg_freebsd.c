@@ -55,6 +55,9 @@ pkg_static struct pkg_file	**freebsd_get_control_files(struct pkg *);
 pkg_static struct pkg_file	 *freebsd_get_control_file(struct pkg *,
 					const char *);
 pkg_static struct pkg_file	 *freebsd_get_next_file(struct pkg *);
+pkg_static int			  freebsd_install(struct pkg *, int,
+					pkg_db_action *, void *, pkg_db_chdir *,
+				       	pkg_db_install_file *, pkg_db_exec *);
 pkg_static struct pkg		**freebsd_get_deps(struct pkg *);
 pkg_static int			  freebsd_run_script(struct pkg *, pkg_script);
 pkg_static int			  freebsd_free(struct pkg *);
@@ -148,7 +151,7 @@ pkg_new_freebsd_from_file(FILE *fd)
 		return NULL;
 	}
 	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin);
-	pkg_add_callbacks_install(pkg, freebsd_get_next_file,
+	pkg_add_callbacks_install(pkg, freebsd_install, freebsd_get_next_file,
 	    freebsd_run_script);
 	pkg->data = fpkg;
 
@@ -404,15 +407,160 @@ freebsd_get_control_file(struct pkg *pkg, const char *filename)
 	return NULL;
 }
 
+static int
+freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
+		pkg_db_chdir *db_chdir, pkg_db_install_file *install_file,
+		pkg_db_exec *do_exec)
+{
+	int ret;
+	unsigned int pos;
+	struct pkg_file **control;
+	struct pkg_file *contents_file;
+	struct pkg_freebsd_contents *contents;
+
+	assert(pkg != NULL);
+	assert(pkg_action != NULL);
+	assert(data != NULL);
+	assert(db_chdir != NULL);
+	assert(install_file != NULL);
+
+	ret = -1;
+	contents = NULL;
+
+	/* Get the control files from the package */
+	control = pkg_get_control_files(pkg);
+	if (control == NULL) {
+		return -1;
+	}
+
+	/* Find the +CONTENTS file in the control files */
+	for (pos = 0; control[pos] != NULL; pos++)
+		if (!strcmp(control[pos]->filename, "+CONTENTS"))
+			break;
+	contents_file = control[pos];
+	if (contents_file == NULL) {
+		return -1;
+	}
+
+	contents = pkg_freebsd_contents_new(pkg_file_get(contents_file));
+	if (contents == NULL) {
+		return -1;
+	}
+
+	for (pos = 0; pos < contents->line_count; pos++) {
+		char ignore;
+
+		ignore = 0;
+		if (contents->lines[pos].line_type == PKG_LINE_IGNORE) {
+			ignore = ~0;
+			pos++;
+		}
+		switch (contents->lines[pos].line_type) {
+		case PKG_LINE_IGNORE:
+			/* Error in contents file */
+			ret = -1;
+			goto exit;
+		case PKG_LINE_COMMENT:
+		case PKG_LINE_UNEXEC:
+		case PKG_LINE_DIRRM:
+		case PKG_LINE_MTREE:
+		case PKG_LINE_PKGDEP:
+			break;
+		case PKG_LINE_NAME:
+			/* Check the name is the same as the packages name */
+			if (strcmp(pkg_get_name(pkg),
+			    contents->lines[pos].data) != 0) {
+				ret = -1;
+				goto exit;
+			}
+			break;
+		case PKG_LINE_CWD:
+		{
+			const char *dir;
+
+			dir = contents->lines[pos].data;
+			if (strcmp(dir, ".") == 0) {
+				if (reg)
+					db_chdir(pkg, pkg_action, data, dir);
+			} else {
+				db_chdir(pkg, pkg_action, data, dir);
+			}
+			break;
+		}
+		case PKG_LINE_FILE:
+		{
+			struct pkg_file *file;
+
+			file = pkg_get_next_file(pkg);
+			if (file == NULL)
+				file = pkg_get_control_file(pkg,
+				    contents->lines[pos].line);
+			if (file == NULL) {
+				/* File not found in the package */
+				ret = -1;
+				goto exit;
+			}
+
+			/* Check the file name is correct */
+			if (strcmp(contents->lines[pos].line,
+			    pkg_file_get_name(file)) != 0) {
+				ret = -1;
+				goto exit;
+			}
+
+			if (contents->lines[pos+1].line_type ==
+			    PKG_LINE_COMMENT) {
+				char *p;
+
+				p = strchr(contents->lines[pos+1].data, ':');
+				p++;
+				if (pkg_checksum_md5(file, p) == 0) {
+					/** @todo Install the file */
+					install_file(pkg, pkg_action, data,
+					    file);
+				} else {
+					ret = -1;
+					goto exit;
+				}
+				pos++;
+			}
+//			if (ignore)
+//				printf(" (Ignored)");
+			break;
+		}
+		case PKG_LINE_EXEC:
+		{
+			do_exec(pkg, pkg_action, data,
+			    contents->lines[pos].data);
+			break;
+		}
+
+		default:
+			printf("%s", contents->lines[pos].line);
+			if (contents->lines[pos].data != NULL)
+				printf(" %s", contents->lines[pos].data);
+			if (ignore)
+				printf(" (Ignored)");
+			putchar('\n');
+		}
+	}
+exit:
+	if (contents != NULL)
+		pkg_freebsd_contents_free(contents);
+
+	return ret;
+}
+
 /**
  * @brief Callback for pkg_get_next_file()
- * @todo Write
  * @return The next non-control pkg_file or NULL
  */
 static struct pkg_file *
 freebsd_get_next_file(struct pkg *pkg)
 {
 	struct freebsd_package *fpkg;
+	struct pkg_file *file;
+
 	assert(pkg != NULL);
 	fpkg = pkg->data;
 	assert(fpkg != NULL);
@@ -423,7 +571,15 @@ freebsd_get_next_file(struct pkg *pkg)
 		fpkg->next_file = NULL;
 		return pkg_file;
 	}
-	return freebsd_get_next_entry(fpkg->archive);
+	if (fpkg->archive == NULL)
+		return NULL;
+
+	file = freebsd_get_next_entry(fpkg->archive);
+	if (file == NULL) {
+		archive_read_finish(fpkg->archive);
+		fpkg->archive = NULL;
+	}
+	return file;
 }
 
 /**

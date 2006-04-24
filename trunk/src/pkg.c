@@ -90,6 +90,7 @@ pkg_new(const char *pkg_name,
 	pkg->pkg_add_file = NULL;
 	pkg->pkg_get_next_file = NULL;
 	pkg->pkg_run_script = NULL;
+	pkg->pkg_install = NULL;
 
 	/* The data is unknown so set to NULL */
 	pkg->pkg_prefix = NULL;
@@ -150,12 +151,14 @@ pkg_add_callbacks_empty(struct pkg *pkg,
  */
 int
 pkg_add_callbacks_install (struct pkg *pkg,
+		pkg_install_callback *install,
 		pkg_get_next_file_callback *next_file,
 		pkg_run_script_callback *run_script)
 {
 	if (pkg == NULL)
 		return -1;
 
+	pkg->pkg_install = install;
 	pkg->pkg_get_next_file = next_file;
 	pkg->pkg_run_script = run_script;
 	return 0;
@@ -423,6 +426,23 @@ pkg_add_file(struct pkg *pkg, struct pkg_file *file)
 
 	return -1;
 }
+
+int
+pkg_install(struct pkg *pkg, int reg, pkg_db_action * pkg_action, void *data,
+		pkg_db_chdir *db_chdir,	pkg_db_install_file *install_file,
+		pkg_db_exec *do_exec)
+{
+	if (pkg == NULL || data == NULL || db_chdir == NULL ||
+	    install_file == NULL || do_exec == NULL)
+		return -1;
+
+	if (pkg->pkg_install == NULL)
+		return -1;
+
+	return pkg->pkg_install(pkg, reg, pkg_action, data, db_chdir,
+	    install_file, do_exec);
+}
+
 
 /**
  * @brief Frees a NULL terminated array of packages
