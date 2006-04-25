@@ -160,6 +160,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
 	unsigned int pos, line;
 #else
 	struct pkg_install_data install_data;
+	char cwd[MAXPATHLEN];
 #endif
 
 	assert(db != NULL);
@@ -167,6 +168,9 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
 	assert(pkg_action != NULL);
 
 #ifdef NEW_DB
+	if (getwd(cwd) == NULL)
+		return -1;
+
 	pkg_action(PKG_DB_PACKAGE, "Package name is %s", pkg_get_name(pkg));
 
 	/* Run +REQUIRE */
@@ -209,6 +213,8 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
 		pkg_run_script(pkg, pkg_script_post);
 
 	/* Display contents of @display */
+
+	chdir(cwd);
 #else
 	/* Get the control files from the package */
 	control = pkg_get_control_files(pkg);
@@ -631,7 +637,7 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	    install_data->last_file);
 
 	pkg_action(PKG_DB_PACKAGE, "execute '%s'", the_cmd);
-	if (install_data->fake != 0)
+	if (!install_data->fake)
 		return pkg_exec(the_cmd);
 
 	return 0;
