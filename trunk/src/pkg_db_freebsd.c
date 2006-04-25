@@ -577,16 +577,16 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	if (strcmp(dir, ".") == 0) {
 		snprintf(install_data->directory, MAXPATHLEN,
 		    "%s" DB_LOCATION "/%s", db->db_base, pkg_get_name(pkg));
-		if (install_data->fake != 0)
-			pkg_dir_build(install_data->directory);
 	} else {
 		snprintf(install_data->directory, MAXPATHLEN, "%s/%s",
 		    db->db_base, dir);
 	}
 
 	pkg_action(PKG_DB_PACKAGE, "CWD to %s", install_data->directory);
-	if (install_data->fake != 0)
+	if (!install_data->fake) {
+		pkg_dir_build(install_data->directory);
 		return chdir(install_data->directory);
+	}
 
 	return 0;
 }
@@ -602,10 +602,15 @@ freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action __unused,
 	assert(file != NULL);
 
 	install_data = data;
+
 	snprintf(install_data->last_file, FILENAME_MAX, "%s",
 	    pkg_file_get_name(file));
-	printf("%s\n", pkg_file_get_name(file));
-	return -1;
+
+	pkg_action(PKG_DB_PACKAGE, "%s/%s", install_data->directory,
+	    pkg_file_get_name(file));
+	if (!install_data->fake)
+		return pkg_file_write(file);
+	return 0;
 }
 
 static int
