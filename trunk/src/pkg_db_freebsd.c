@@ -48,14 +48,12 @@
 
 #define DB_LOCATION	"/var/db/pkg"
 
-#ifdef NEW_DB
 struct pkg_install_data {
 	int fake;
 	struct pkg_db *db;
 	char last_file[FILENAME_MAX];
 	char directory[MAXPATHLEN];
 };
-#endif
 
 /*
  * State transition array for the head part of a +CONTENTS file.
@@ -78,8 +76,7 @@ pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, const void *);
 pkg_static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
 
-/* Internal */
-#ifdef NEW_DB
+/* pkg_install callbacks */
 pkg_static int	freebsd_do_chdir(struct pkg *, pkg_db_action *, void *,
 				const char *);
 pkg_static int	freebsd_install_file(struct pkg *, pkg_db_action *, void *,
@@ -88,18 +85,7 @@ pkg_static int	freebsd_do_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
 pkg_static int	freebsd_register(struct pkg *, pkg_db_action *, void *,
 				struct pkg_file **);
-#ifdef DEAD
-pkg_static int			 freebsd_do_install(struct pkg_db *,
-				struct pkg *, int, pkg_db_action *);
-#endif
-#else
-pkg_static struct pkg_file	*freebsd_build_contents(
-				struct pkg_freebsd_contents *);
-pkg_static int			 freebsd_do_cwd(struct pkg_db *, struct pkg *,
-				char *, int);
-pkg_static int			 freebsd_check_contents(struct pkg_db *,
-				struct pkg_freebsd_contents *, int);
-#endif
+/* Internal */
 pkg_static void			 freebsd_format_cmd(char *, int, const char *,
 				const char *, const char *);
 
@@ -150,24 +136,13 @@ static int
 freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
     int fake, pkg_db_action *pkg_action)
 {
-#ifndef NEW_DB
-	struct pkg_file	*contents_file;
-	struct pkg_file **control;
-	struct pkg_freebsd_contents *contents;
-	char *cwd;
-	char *directory, *last_file;
-	int i;
-	unsigned int pos, line;
-#else
 	struct pkg_install_data install_data;
 	char cwd[MAXPATHLEN];
-#endif
 
 	assert(db != NULL);
 	assert(pkg != NULL);
 	assert(pkg_action != NULL);
 
-#ifdef NEW_DB
 	if (getwd(cwd) == NULL)
 		return -1;
 
@@ -212,230 +187,9 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
 	if (!fake)
 		pkg_run_script(pkg, pkg_script_post);
 
-	/* Display contents of @display */
+	/** @todo Display contents of @display */
 
 	chdir(cwd);
-#else
-	/* Get the control files from the package */
-	control = pkg_get_control_files(pkg);
-	if (!control) {
-		return -1;
-	}
-
-	/* Find the +CONTENTS file in the control files */
-	for (pos = 0; control[pos] != NULL; pos++)
-		if (!strcmp(control[pos]->filename, "+CONTENTS"))
-			break;
-	contents_file = control[pos];
-	if (!contents_file) {
-		return -1;
-	}
-
-	contents = pkg_freebsd_contents_new(pkg_file_get(contents_file));
-	if (!contents) {
-		return -1;
-	}
-
-	pkg_action(PKG_DB_PACKAGE, "Package name is %s", pkg_get_name(pkg));
-
-	cwd = getcwd(NULL, 0);
-	if (!cwd) {
-		pkg_freebsd_contents_free(contents);
-		return -1;
-	}
-
-	i = freebsd_check_contents(db, contents, fake);
-	if (i < 0) {
-		pkg_freebsd_contents_free(contents);
-		chdir(cwd);
-		free(cwd);
-		return -1;
-	} else
-		line = i;
-
-	/* directory is used int the processing of +CONTENTS files */
-	directory = getcwd(NULL, 0);
-	pkg_set_prefix(pkg, directory);
-	last_file = NULL;
-
-	/** @todo pkg_action the pre script */
-	pkg_run_script(pkg, pkg_script_pre);
-
-	/* Read through the contents file and install the package */
-	for (; line < contents->line_count; line++) {
-		switch (contents->lines[line].line_type) {
-		case PKG_LINE_COMMENT:
-		case PKG_LINE_UNEXEC:
-		case PKG_LINE_DIRRM:
-		case PKG_LINE_MTREE:
-		case PKG_LINE_IGNORE:
-			break;
-		case PKG_LINE_CWD:
-			/* Change to the correct directory */
-			if (!fake) {
-				if (reg || (!reg &&
-				    strcmp(contents->lines[line].data,".")!=0)){
-					free(directory);
-					if (freebsd_do_cwd(db, pkg,
-					    contents->lines[line].data, fake) != 0) {
-						chdir(cwd);
-						free(cwd);
-						pkg_freebsd_contents_free(contents);
-						return -1;
-					}
-					directory = getcwd(NULL, 0);
-				}
-			}
-			pkg_action(PKG_DB_PACKAGE, "CWD to %s",
-			    contents->lines[line].data);
-			break;
-		case PKG_LINE_EXEC: {
-			char cmd[FILENAME_MAX];
-			freebsd_format_cmd(cmd, FILENAME_MAX,
-			    contents->lines[line].data, directory, last_file);
-			if (!fake)
-				pkg_exec(cmd);
-			pkg_action(PKG_DB_PACKAGE, "execute '%s'", cmd);
-			break;
-		}
-		case PKG_LINE_FILE: {
-			/* Install a file to the correct directory */
-
-			struct pkg_file *file;
-			char *contents_sum;
-			int ret;
-
-			/* Check the contents file is correctly formated */
-			if (contents->lines[line+1].line_type !=
-			    PKG_LINE_COMMENT) {
-				chdir(cwd);
-				free(cwd);
-				free(directory);
-				pkg_freebsd_contents_free(contents);
-				return -1;
-			} else if (strncmp("MD5:", contents->lines[line+1].data,
-			    4)) {
-				chdir(cwd);
-				free(cwd);
-				free(directory);
-				pkg_freebsd_contents_free(contents);
-				return -1;
-			}
-
-			/* Read the file to install */
-			if (contents->lines[line].line[0] == '+') {
-				/*
-				 * + Files are not fetched with
-				 * pkg_get_next_file
-				 */
-				for (pos = 0; control[pos] != NULL;
-				    pos++) {
-					if (!strcmp(control[pos]->filename,
-					    contents->lines[line].line))
-						break;
-				}
-				file = control[pos];
-			} else {
-				file = pkg_get_next_file(pkg);
-
-				/* Check the file name is correct */
-				if (strcmp(file->filename,
-				    contents->lines[line].line)) {
-					chdir(cwd);
-					free(cwd);
-					free(directory);
-					pkg_file_free(file);
-					pkg_freebsd_contents_free(contents);
-					return -1;
-				}
-				pkg_action(PKG_DB_PACKAGE, "%s/%s", directory,
-				    pkg_file_get_name(file));
-			}
-
-			contents_sum = strchr(contents->lines[line+1].data,
-			    ':');
-			contents_sum++;
-			if (S_ISREG(file->stat->st_mode) &&
-			    pkg_checksum_md5(file, contents_sum) != 0) {
-				chdir(cwd);
-				free(cwd);
-				free(directory);
-				pkg_file_free(file);
-				pkg_freebsd_contents_free(contents);
-				return -1;
-			}
-
-			/* Install the file */
-			if (!fake) {
-				if (reg ||
-				    (!reg && pkg_file_get_name(file)[0] !='+')){
-					ret = pkg_file_write(file);
-					if (ret != 0) {
-						chdir(cwd);
-						free(cwd);
-						free(directory);
-						pkg_file_free(file);
-						pkg_freebsd_contents_free(contents);
-						return -1;
-					}
-				}
-			}
-
-			/* Remember the name if there is an "@exec" line next */
-			if (last_file)
-				free(last_file);
-			last_file = strdup(file->filename);
-
-			if (contents->lines[line].line[0] != '+')
-				pkg_file_free(file);
-
-			line++;
-			break;
-		}
-		default:
-			fprintf(stderr, "ERROR: Incorrect line in "
-			    "+CONTENTS file \"%s %s\"\n",
-			    contents->lines[line].line,
-			    contents->lines[line].data);
-			break;
-		}
-	}
-
-
-	pkg_action(PKG_DB_INFO, "Running mtree for %s..", pkg_get_name(pkg));
-
-	if (!fake)
-		pkg_run_script(pkg, pkg_script_mtree);
-
-	/** @todo pkg_action the post script */
-	pkg_run_script(pkg, pkg_script_post);
-
-	if (reg) {
-		pkg_action(PKG_DB_INFO,
-		    "Attempting to record package into " DB_LOCATION "/%s..",
-		    pkg_get_name(pkg));
-
-		/* Create the new contents file */
-		if (!fake) {
-			contents_file = freebsd_build_contents(contents);
-			pkg_file_write(contents_file);
-			pkg_file_free(contents_file);
-		}
-		/** @todo Register the reverse dependencies */
-		pkg_action(PKG_DB_INFO,
-		    "Package %s registered in " DB_LOCATION "/%s",
-		    pkg_get_name(pkg), pkg_get_name(pkg));
-	}
-
-	free(directory);
-	if (last_file != NULL)
-		free(last_file);
-	chdir(cwd);
-	free(cwd);
-
-	pkg_freebsd_contents_free(contents);
-
-#endif
 	return 0;
 }
 
@@ -562,7 +316,6 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
  * @{
  */
 
-#ifdef NEW_DB
 static int
 freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		const char *dir)
@@ -692,135 +445,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	return -1;
 }
 
-#else
-/**
- * @brief Internal function to to the correct thing for an \@cwd line
- * @return 0 if successful or -1 on error
- */
-static int
-freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir, int fake) {
-	char *dir;
-
-	assert(db != NULL);
-	assert(ndir != NULL);
-
-	/*
-	 * If the dir is . it should really
-	 * be the package database dir
-	 */
-	if (ndir[0] == '.' &&
-	    ndir[1] == '\0') {
-		assert(pkg != NULL); /* pkg is only needed to chdir to . */
-
-		/* When faking it don't create the database dir */
-		if (fake)
-			return 0;
-
-		asprintf(&dir, "%s/var/db/pkg/%s", db->db_base,
-		    pkg_get_name(pkg));
-		if (!dir) {
-			return -1;
-		}
-		pkg_dir_build(dir);
-	} else {
-		/* Set dir to the correct location */
-		asprintf(&dir, "%s/%s", db->db_base, ndir);
-		if (!dir) {
-			return -1;
-		}
-	}
-	if (chdir(dir) == -1) {
-		free(dir);
-		return -1;
-	}
-
-	free(dir);
-
-	return 0;
-}
-
-/**
- * @brief Builds a new contents file
- * @param contents The contents data to build the file from
- *
- * The file can be installed in /var/db/pkg/foo-1.2,3
- * @return The new contents file or NULL
- */
-static struct pkg_file *
-freebsd_build_contents(struct pkg_freebsd_contents *contents)
-{
-	uint64_t size, used;
-	char *buffer, *ptr;
-	unsigned int i;
-
-	assert(contents != NULL);
-
-	used = 0;
-	size = 1024;
-	buffer = malloc(size);
-	ptr = buffer;
-	if (!buffer) {
-		return NULL;
-	}
-	for (i = 0; i < contents->line_count; i++) {
-		int line_len, data_len;
-
-		line_len = strlen(contents->lines[i].line);
-		data_len = 0;
-		if (contents->lines[i].line_type != PKG_LINE_FILE &&
-		    contents->lines[i].line_type != PKG_LINE_IGNORE) {
-			data_len = strlen(contents->lines[i].data);
-		}
-		/* if the line is @ignore we will ignore the 2 lines */
-		switch (contents->lines[i].line_type) {
-		case PKG_LINE_IGNORE:
-			i += 2;
-			break;
-		case PKG_LINE_CWD:
-			if (strcmp(contents->lines[i].data, ".")) {
-				if (used + line_len + data_len + 2 >= size) {
-					size += 1024;
-					buffer = realloc(buffer, size);
-					ptr = buffer + used;
-				}
-				sprintf(ptr, "%s %s\n",
-				    contents->lines[i].line,
-				    contents->lines[i].data);
-				used += line_len + data_len + 2;
-				ptr = buffer + used;
-			}
-		case PKG_LINE_MTREE:
-			break;
-		case PKG_LINE_FILE:
-			if (used + line_len + 1 >= size) {
-				size += 1024;
-				buffer = realloc(buffer, size);
-				ptr = buffer + used;
-			}
-			sprintf(ptr, "%s\n", contents->lines[i].line);
-			used += line_len + 1;
-			ptr = buffer + used;
-			break;
-		default:
-			if (used + line_len + data_len + 2 >= size) {
-				size += 1024;
-				buffer = realloc(buffer, size);
-				ptr = buffer + used;
-			}
-			sprintf(ptr, "%s %s\n", contents->lines[i].line,
-			    contents->lines[i].data);
-			used += line_len + data_len + 2;
-			ptr = buffer + used;
-			break;
-		}
-	}
-	/*
-	 * buffer now contains the data to write
-	 * to /var/db/pkg/foo-1.2.3/+CONTENTS
-	 */
-	return pkg_file_new_from_buffer("+CONTENTS", used, buffer, NULL);
-}
-
+#ifdef DEAD
 /**
  * @brief Checks the start of a contents file
  * @return The number of lines to skip to get to the first file or -1 on error
