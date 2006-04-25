@@ -57,7 +57,8 @@ pkg_static struct pkg_file	 *freebsd_get_control_file(struct pkg *,
 pkg_static struct pkg_file	 *freebsd_get_next_file(struct pkg *);
 pkg_static int			  freebsd_install(struct pkg *, int,
 					pkg_db_action *, void *, pkg_db_chdir *,
-				       	pkg_db_install_file *, pkg_db_exec *);
+				       	pkg_db_install_file *, pkg_db_exec *,
+					pkg_db_register *);
 pkg_static struct pkg		**freebsd_get_deps(struct pkg *);
 pkg_static int			  freebsd_run_script(struct pkg *, pkg_script);
 pkg_static int			  freebsd_free(struct pkg *);
@@ -69,6 +70,8 @@ pkg_static int			  freebsd_open_control_files(
 pkg_static struct pkg_file	 *freebsd_get_next_entry(struct archive *);
 pkg_static int			  freebsd_parse_contents(
 					struct freebsd_package *);
+pkg_static struct pkg_file	 *freebsd_build_contents(
+					struct pkg_freebsd_contents *);
 
 typedef enum {
 	fpkg_unknown,
@@ -410,7 +413,7 @@ freebsd_get_control_file(struct pkg *pkg, const char *filename)
 static int
 freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 		pkg_db_chdir *db_chdir, pkg_db_install_file *install_file,
-		pkg_db_exec *do_exec)
+		pkg_db_exec *do_exec, pkg_db_register *pkg_register)
 {
 	int ret;
 	unsigned int pos;
@@ -423,6 +426,7 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 	assert(data != NULL);
 	assert(db_chdir != NULL);
 	assert(install_file != NULL);
+	assert(pkg_register != NULL);
 
 	ret = -1;
 	contents = NULL;
@@ -515,17 +519,16 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 				p = strchr(contents->lines[pos+1].data, ':');
 				p++;
 				if (pkg_checksum_md5(file, p) == 0) {
-					/** @todo Install the file */
-					install_file(pkg, pkg_action, data,
-					    file);
+					if (!ignore) {
+						install_file(pkg, pkg_action,
+						    data, file);
+					}
 				} else {
 					ret = -1;
 					goto exit;
 				}
 				pos++;
 			}
-//			if (ignore)
-//				printf(" (Ignored)");
 			break;
 		}
 		case PKG_LINE_EXEC:
@@ -536,14 +539,20 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 		}
 
 		default:
-			printf("%s", contents->lines[pos].line);
-			if (contents->lines[pos].data != NULL)
-				printf(" %s", contents->lines[pos].data);
-			if (ignore)
-				printf(" (Ignored)");
-			putchar('\n');
+			warnx("ERROR: Incorrect line in +CONTENTS file "
+			    "\"%s %s\"\n", contents->lines[pos].line,
+			    contents->lines[pos].data);
 		}
 	}
+	/* Switch the +CONTENTS file with one without @ignore'd files */
+	for (pos = 0; control[pos] != NULL; pos++)
+		if (!strcmp(control[pos]->filename, "+CONTENTS"))
+			break;
+	pkg_file_free(control[pos]);
+	control[pos] = freebsd_build_contents(contents);
+
+	pkg_register(pkg, pkg_action, data, control);
+
 exit:
 	if (contents != NULL)
 		pkg_freebsd_contents_free(contents);
@@ -980,6 +989,88 @@ freebsd_parse_contents(struct freebsd_package *fpkg)
 		return -1;
 	fpkg->contents = pkg_freebsd_contents_new(pkg_file_get(contents_file));
 	return 0;
+}
+
+/**
+ * @brief Builds a new contents file
+ * @param contents The contents data to build the file from
+ *
+ * The file can be installed in /var/db/pkg/foo-1.2,3
+ * @return The new contents file or NULL
+ */
+static struct pkg_file *
+freebsd_build_contents(struct pkg_freebsd_contents *contents)
+{
+	uint64_t size, used;
+	char *buffer, *ptr;
+	unsigned int i;
+
+	assert(contents != NULL);
+
+	used = 0;
+	size = 1024;
+	buffer = malloc(size);
+	ptr = buffer;
+	if (!buffer) {
+		return NULL;
+	}
+	for (i = 0; i < contents->line_count; i++) {
+		int line_len, data_len;
+
+		line_len = strlen(contents->lines[i].line);
+		data_len = 0;
+		if (contents->lines[i].line_type != PKG_LINE_FILE &&
+		    contents->lines[i].line_type != PKG_LINE_IGNORE) {
+			data_len = strlen(contents->lines[i].data);
+		}
+		/* if the line is @ignore we will ignore the 2 lines */
+		switch (contents->lines[i].line_type) {
+		case PKG_LINE_IGNORE:
+			i += 2;
+			break;
+		case PKG_LINE_CWD:
+			if (strcmp(contents->lines[i].data, ".")) {
+				if (used + line_len + data_len + 2 >= size) {
+					size += 1024;
+					buffer = realloc(buffer, size);
+					ptr = buffer + used;
+				}
+				sprintf(ptr, "%s %s\n",
+				    contents->lines[i].line,
+				    contents->lines[i].data);
+				used += line_len + data_len + 2;
+				ptr = buffer + used;
+			}
+		case PKG_LINE_MTREE:
+			break;
+		case PKG_LINE_FILE:
+			if (used + line_len + 1 >= size) {
+				size += 1024;
+				buffer = realloc(buffer, size);
+				ptr = buffer + used;
+			}
+			sprintf(ptr, "%s\n", contents->lines[i].line);
+			used += line_len + 1;
+			ptr = buffer + used;
+			break;
+		default:
+			if (used + line_len + data_len + 2 >= size) {
+				size += 1024;
+				buffer = realloc(buffer, size);
+				ptr = buffer + used;
+			}
+			sprintf(ptr, "%s %s\n", contents->lines[i].line,
+			    contents->lines[i].data);
+			used += line_len + data_len + 2;
+			ptr = buffer + used;
+			break;
+		}
+	}
+	/*
+	 * buffer now contains the data to write
+	 * to /var/db/pkg/foo-1.2.3/+CONTENTS
+	 */
+	return pkg_file_new_from_buffer("+CONTENTS", used, buffer, NULL);
 }
 
 /**

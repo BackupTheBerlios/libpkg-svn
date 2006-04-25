@@ -39,8 +39,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <md5.h>
-
 #include "pkg.h"
 #include "pkg_db.h"
 #include "pkg_freebsd.h"
@@ -58,6 +56,7 @@ struct pkg_install_data {
 	char directory[MAXPATHLEN];
 };
 #endif
+
 /*
  * State transition array for the head part of a +CONTENTS file.
  * p0 is the start state, p4 and p6 are the accepting states
@@ -87,6 +86,8 @@ pkg_static int	freebsd_install_file(struct pkg *, pkg_db_action *, void *,
 				struct pkg_file *);
 pkg_static int	freebsd_do_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
+pkg_static int	freebsd_register(struct pkg *, pkg_db_action *, void *,
+				struct pkg_file **);
 #ifdef DEAD
 pkg_static int			 freebsd_do_install(struct pkg_db *,
 				struct pkg *, int, pkg_db_action *);
@@ -188,12 +189,11 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
 
 	/* Do the Install */
 	install_data.db = db;
-	install_data.fake = 0;
-	if (fake) {
-		install_data.fake = 1;
-	}
+	install_data.fake = fake;
+	install_data.last_file[0] = '\0';
+	install_data.directory[0] = '\0';
 	pkg_install(pkg, reg, pkg_action, &install_data, freebsd_do_chdir,
-	    freebsd_install_file, freebsd_do_exec);
+	    freebsd_install_file, freebsd_do_exec, freebsd_register);
 
 	/* Extract the +MTREE */
 	pkg_action(PKG_DB_INFO, "Running mtree for %s..", pkg_get_name(pkg));
@@ -207,10 +207,6 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
 
 	if (!fake)
 		pkg_run_script(pkg, pkg_script_post);
-
-	/* Record the package installation */
-	if (!fake && reg) {
-	}
 
 	/* Display contents of @display */
 #else
@@ -636,6 +632,37 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	return 0;
 }
 
+static int
+freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
+		struct pkg_file **control)
+{
+	unsigned int pos;
+	struct pkg_install_data *install_data;
+	struct pkg_db *db;
+
+	assert(pkg != NULL);
+	assert(pkg_action != NULL);
+	assert(data != NULL);
+	assert(control != NULL);
+
+	install_data = data;
+	assert(install_data->db);
+	db = install_data->db;
+
+	pkg_action(PKG_DB_INFO,
+	    "Attempting to record package into " DB_LOCATION "/%s..",
+	    pkg_get_name(pkg));
+	for (pos = 0; control[pos] != NULL; pos++) {
+		freebsd_install_file(pkg, pkg_action, data, control[pos]);
+	}
+
+	/** @todo Register reverse dependency */
+	
+	pkg_action(PKG_DB_INFO, "Package %s registered in %s" DB_LOCATION "/%s",
+	    pkg_get_name(pkg), db->db_base, pkg_get_name(pkg));
+	return -1;
+}
+
 #else
 /**
  * @brief Internal function to to the correct thing for an \@cwd line
@@ -684,7 +711,7 @@ freebsd_do_cwd(struct pkg_db *db, struct pkg *pkg, char *ndir, int fake) {
 }
 
 /**
- * @brief Builds a new cotents file
+ * @brief Builds a new contents file
  * @param contents The contents data to build the file from
  *
  * The file can be installed in /var/db/pkg/foo-1.2,3

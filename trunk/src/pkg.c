@@ -430,17 +430,17 @@ pkg_add_file(struct pkg *pkg, struct pkg_file *file)
 int
 pkg_install(struct pkg *pkg, int reg, pkg_db_action * pkg_action, void *data,
 		pkg_db_chdir *db_chdir,	pkg_db_install_file *install_file,
-		pkg_db_exec *do_exec)
+		pkg_db_exec *do_exec, pkg_db_register *pkg_register)
 {
 	if (pkg == NULL || data == NULL || db_chdir == NULL ||
-	    install_file == NULL || do_exec == NULL)
+	    install_file == NULL || do_exec == NULL || pkg_register == NULL)
 		return -1;
 
 	if (pkg->pkg_install == NULL)
 		return -1;
 
 	return pkg->pkg_install(pkg, reg, pkg_action, data, db_chdir,
-	    install_file, do_exec);
+	    install_file, do_exec, pkg_register);
 }
 
 
