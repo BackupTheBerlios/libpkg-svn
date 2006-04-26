@@ -208,6 +208,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	return pkg;
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 /**
  * @brief Creates an empty FreeBSD package to add files to
  * @param pkg_name The name of the package
@@ -235,6 +236,7 @@ pkg_freebsd_get_contents(struct pkg *pkg __unused)
 	assert(0);
 	return NULL;
 }
+#endif
 
 /**
  * @}
@@ -408,6 +410,10 @@ freebsd_get_control_file(struct pkg *pkg, const char *filename)
 	return NULL;
 }
 
+/**
+ * @brief Callback for pkg_install()
+ * @return 0 on success or -1 on error
+ */
 static int
 freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 		pkg_db_chdir *db_chdir, pkg_db_install_file *install_file,
@@ -808,6 +814,9 @@ freebsd_package_new()
 	return fpkg;
 }
 
+/**
+ * @brief Frees a file list
+ */
 #define FREE_CONTENTS(c) \
 	{ \
 		int i; \

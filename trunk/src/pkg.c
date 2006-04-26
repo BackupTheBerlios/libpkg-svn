@@ -51,7 +51,7 @@
  * @param control_file A callback to be used by pkg_get_control_file()
  * @param get_deps A callback to be used by pkg_get_dependencies()
  * @param free_pkg A call back to be used by pkg_free()
- * @return A new #pkg object, or NULL on error
+ * @return A new pkg object, or NULL on error
  */
 struct pkg *
 pkg_new(const char *pkg_name,
@@ -144,6 +144,7 @@ pkg_add_callbacks_empty(struct pkg *pkg,
 /**
  * @brief Internal function to add callbacks that are used when a package is installed
  * @param pkg The package returned by pkg_new()
+ * @param install A callback to be used by pkg_install()
  * @param next_file A callback to be used by pkg_get_next_file()
  * @param run_script A callback to be used by pkg_run_script()
  * @return 0 on success, -1 on error.
@@ -173,13 +174,14 @@ pkg_add_callbacks_install (struct pkg *pkg,
  * 
  * These are the publicly availiable package manipulation functions.
  *
- * Most functions take a pointer to struct #pkg as the first argument.
+ * Most functions take a pointer to struct pkg as the first argument.
  * This is the package that is currently being worked on.
  * @{
  */
 
 /**
  * @brief Creates an empty package with no callbacks
+ * @param pkg_name The name of the package
  *
  * This is the simplest package constructor.
  * It is used to create a package with just a name associated with it.
@@ -212,7 +214,7 @@ pkg_compare(const void *pkg_a, const void *pkg_b)
 
 /**
  * @brief Sets the location to install the package to
- * @param pkg The package to install
+ * @param pkg The package
  * @param prefix The location in the filesystem to install the package pkg to
  * 
  * If the prefix is set and malloc fails the old prefix is kept.
@@ -243,6 +245,7 @@ pkg_set_prefix(struct pkg *pkg, const char *prefix)
 
 /**
  * @brief Returns the prefix or NULL
+ * @param pkg The package
  * @return the prefix or NULL if it hasn't been set
  */
 const char *
@@ -256,6 +259,7 @@ pkg_get_prefix(struct pkg *pkg)
 
 /**
  * @brief Gets the control files from a given package
+ * @param pkg The package
  * 
  * @return A null-terminated array of pkg_file's contining the packages control files
  */
@@ -275,6 +279,7 @@ pkg_get_control_files(struct pkg *pkg)
 
 /**
  * @brief Gets a given control file from a package
+ * @param pkg The package
  * @param pkg_name The name of the file to return
  * @return The control file with the name pkg_name
  */
@@ -292,6 +297,7 @@ pkg_get_control_file(struct pkg *pkg, const char *pkg_name)
 
 /**
  * @brief Gets all the dependencies for a given package
+ * @param pkg The package
  *
  * This retrieves an array of packages that the named package depends on.
  * @return A NULL terminated array of packages or NULL;
@@ -309,6 +315,7 @@ pkg_get_dependencies(struct pkg *pkg)
 
 /**
  * @brief Gets the name of a package
+ * @param pkg The package
  *
  * @return a sting containing the package name. Do not free this.
  */
@@ -322,6 +329,7 @@ pkg_get_name(struct pkg *pkg)
 
 /**
  * @brief Gets the next file in a package.
+ * @param pkg The package
  *
  * Ths is used during the instillation of a package to iterate over
  * all files to be installed in a package
@@ -343,6 +351,7 @@ pkg_get_next_file(struct pkg *pkg)
 
 /**
  * @brief Gets a packages origin
+ * @param pkg The package
  *
  * This is used to get the package origin from packages that record it.
  * Not all package formats have an origin.
@@ -362,6 +371,7 @@ pkg_get_origin(struct pkg *pkg)
 
 /**
  * @brief Get the package format version
+ * @param pkg The package
  *
  * This retrieves a free form string containing the package format's version.
  * It is intended to be shown to the user rather than be processed.
@@ -381,6 +391,8 @@ pkg_get_version(struct pkg *pkg)
 
 /**
  * @brief Runs the named script from the package
+ * @param pkg The package
+ * @param script The script to run
  * @return The return value of the script, or -1
  */
 int
@@ -397,6 +409,8 @@ pkg_run_script(struct pkg *pkg, pkg_script script)
 
 /**
  * @brief Adds a dependency to a given package
+ * @param pkg The package
+ * @param depend The package to depend on
  * @return 0 on success, -1 on error.
  */
 int
@@ -413,6 +427,8 @@ pkg_add_dependency(struct pkg *pkg, struct pkg *depend)
 
 /**
  * @brief Adds a file to a given package
+ * @param pkg The package
+ * @param file The file to add to the package
  * @return 0 on success, -1 on error.
  */
 int
@@ -427,6 +443,26 @@ pkg_add_file(struct pkg *pkg, struct pkg_file *file)
 	return -1;
 }
 
+/**
+ * @brief Installs a package using the given callbacks
+ * @param pkg The package to install
+ * @param reg If true the package will be registered
+ * @param pkg_action A callback to display a message to the user
+ * @param data A pointer to pass to pkg_db_* callbacks
+ * @param db_chdir A callback to change to a new directory
+ * @param install_file A callback to install a file in a database
+ * @param do_exec A callback to execute a script
+ * @param pkg_register A callback to register a package
+ *
+ * pkg_install() is an internal function to the library.
+ * It is designed to seperate the knowledge of packages and
+ * package databases apart.
+ * The package database now only knows how to install the
+ * parts of a package it is given, not the internals of a
+ * given package.
+ * 
+ * @return 0 on success or -1 or error
+ */
 int
 pkg_install(struct pkg *pkg, int reg, pkg_db_action * pkg_action, void *data,
 		pkg_db_chdir *db_chdir,	pkg_db_install_file *install_file,
@@ -446,6 +482,7 @@ pkg_install(struct pkg *pkg, int reg, pkg_db_action * pkg_action, void *data,
 
 /**
  * @brief Frees a NULL terminated array of packages
+ * @param pkgs A NULL terminated array of pkg objects
  *
  * This is to be used to free the arrays generated by
  * pkg_get_dependencies()
@@ -469,6 +506,7 @@ pkg_list_free(struct pkg **pkgs)
 
 /**
  * @brief Frees a given package
+ * @param pkg The package to free
  * @return 0 on success, -1 on error.
  */
 int

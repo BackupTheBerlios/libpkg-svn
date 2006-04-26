@@ -124,6 +124,7 @@ pkg_db_open_freebsd(const char *base)
  * @brief Callback for pkg_db_install_pkg_action()
  * @param db The database to install to
  * @param pkg The package to install
+ * @param reg If true register the package in the database
  * @param pkg_action A function to call when an action takes place
  * @param fake Should we actually install the package or just report what would have happened
  * @todo Run mtree
@@ -187,7 +188,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
 	if (!fake)
 		pkg_run_script(pkg, pkg_script_post);
 
-	/** @todo Display contents of @display */
+	/** @todo Display contents of \@display */
 
 	chdir(cwd);
 	return 0;
@@ -316,6 +317,11 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
  * @{
  */
 
+/**
+ * @brief The db_chdir callback of pkg_install() for the FreeBSD package
+ *     database
+ * @return 0 on success or -1 on error
+ */
 static int
 freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		const char *dir)
@@ -350,6 +356,11 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	return 0;
 }
 
+/**
+ * @brief The install_file callback of pkg_install() for the FreeBSD package
+ *     database
+ * @return 0 on success or -1 on error
+ */
 static int
 freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action __unused,
 		void *data, struct pkg_file *file)
@@ -372,6 +383,11 @@ freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action __unused,
 	return 0;
 }
 
+/**
+ * @brief The do_chdir callback of pkg_install() for the FreeBSD package
+ *     database
+ * @return 0 on success or -1 on error
+ */
 static int
 freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		const char *cmd)
@@ -396,6 +412,11 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	return 0;
 }
 
+/**
+ * @brief The pkg_register callback of pkg_install() for the FreeBSD package
+ *     database
+ * @return 0 on success or -1 on error
+ */
 static int
 freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		struct pkg_file **control)
