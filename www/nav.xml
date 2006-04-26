@@ -2,4 +2,5 @@
 <nav>
  <page><title>Home</title><file>index</file></page>
  <page><title>Downloads</title><file>downloads</file></page>
+ <page><title>Documentation</title><file>doc/trunk/html/index</file></page>
 </nav>
