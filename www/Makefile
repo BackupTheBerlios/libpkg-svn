@@ -16,4 +16,4 @@ index.html: index.xml page.xsl
 downloads.html: downloads.xml page.xsl
 	xsltproc downloads.xml > downloads.html
 
-index.xsl: nav.xml
+page.xsl: nav.xml
