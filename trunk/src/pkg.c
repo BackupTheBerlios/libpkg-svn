@@ -34,8 +34,8 @@
 #include "pkg_private.h"
 
 /**
- * @defgroup pkg_internal Internal package functions
- * @ingroup pkg
+ * @defgroup PackageInternal Internal package functions
+ * @ingroup Package
  * @brief Internal functions in the package module
  *
  * None of the callbacks for any given package format need to be specified.
@@ -170,7 +170,7 @@ pkg_add_callbacks_install (struct pkg *pkg,
  */
 
 /**
- * @defgroup pkg Package manipulation Functions
+ * @defgroup Package Package manipulation Functions
  * 
  * These are the publicly availiable package manipulation functions.
  *

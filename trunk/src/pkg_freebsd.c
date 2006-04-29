@@ -92,7 +92,7 @@ struct freebsd_package {
 
 /**
  * @defgroup FreebsdPackage FreeBSD Package
- * @ingroup pkg
+ * @ingroup Package
  *
  * @{
  */

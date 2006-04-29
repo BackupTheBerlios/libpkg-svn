@@ -55,8 +55,18 @@ char		*pkg_file_get(struct pkg_file *);
 char 		*pkg_file_get_name(struct pkg_file *);
 int		 pkg_file_free(struct pkg_file *);
 
+/**
+ * @addtogroup Package
+ *
+ * @{
+ */
+
 /*
  * The package handling functions
+ */
+
+/**
+ * @struct pkg pkg.h <pkg.h>
  */
 struct pkg;
 
@@ -87,5 +97,9 @@ int			  pkg_add_dependency(struct pkg *, struct pkg *);
 int			  pkg_add_file(struct pkg *, struct pkg_file *);
 int			  pkg_list_free(struct pkg **);
 int			  pkg_free(struct pkg *);
+
+/**
+ * @}
+ */
 
 #endif /* __LIBPKG_PKG_H__ */
