@@ -37,7 +37,7 @@
 struct pkg_repo;
 
 struct pkg_repo	*pkg_repo_new_files(void);
-struct pkg_repo	*pkg_repo_new_ftp(const char *, const char *);
+struct pkg_repo	*pkg_repo_new_ftp(const char *, const char *, const char *);
 struct pkg_repo	*pkg_repo_new_local_freebsd(void);
 struct pkg	*pkg_repo_get_pkg(struct pkg_repo *, const char *);
 int		 pkg_repo_free(struct pkg_repo *);

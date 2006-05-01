@@ -45,7 +45,7 @@
 #include "pkg_repo_private.h"
 
 #define MAX_VERSION 9999999
-static struct {
+static const struct {
         int lowver;     /* Lowest version number to match */
         int hiver;      /* Highest version number to match */
         const char *directory;  /* Directory it lives in */
@@ -82,7 +82,8 @@ static struct {
 struct ftp_repo {
 	char	*site;
 	char	*path;
-	FILE	*fd;
+	int	 cache;
+	char	 cache_dir[MAXPATHLEN];
 };
 
 int getosreldate(void);
@@ -92,7 +93,8 @@ pkg_static struct pkg	*ftp_get_pkg(struct pkg_repo *, const char *);
 pkg_static int		 ftp_free(struct pkg_repo *);
 /* Internal */
 pkg_static FILE		*ftp_get_fd(const char *, struct ftp_repo *);
-pkg_static struct ftp_repo	*ftp_create_repo(const char *, const char *);
+pkg_static struct ftp_repo	*ftp_create_repo(const char *, const char *,
+					const char *);
 /*pkg_static int		 pkg_in_All(const char *); */
 pkg_static int		 pkg_name_has_extension(const char *);
 
@@ -106,12 +108,13 @@ pkg_static int		 pkg_name_has_extension(const char *);
 /**
  * @brief Creates a pkg_repo with the given sie and path
  * @param site The ftp site to use. If NULL will use ftp.freebsd.org
- * @param path The path to the top level of the packages.
+ * @param path The path to the top level of the packages
+ * @param cached_dir The directory to save a copy of each package file in or NULL
  *     If NULL will use the default path
  * @return A pkg_repo object or NULL
  */
 struct pkg_repo *
-pkg_repo_new_ftp(const char *site, const char *path)
+pkg_repo_new_ftp(const char *site, const char *path, const char *cache_dir)
 {
 	struct pkg_repo *repo;
 
@@ -120,7 +123,7 @@ pkg_repo_new_ftp(const char *site, const char *path)
 		return NULL;
 	}
 	
-	repo->data = ftp_create_repo(site, path);
+	repo->data = ftp_create_repo(site, path, cache_dir);
 	if (!repo->data) {
 		ftp_free(repo);
 		return NULL;
@@ -147,7 +150,7 @@ pkg_repo_new_ftp(const char *site, const char *path)
 static struct pkg *
 ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 {
-	FILE *fd;
+	FILE *fd, *fd2;
 	struct pkg *pkg;
 	struct ftp_repo *f_repo;
 
@@ -160,7 +163,15 @@ ftp_get_pkg(struct pkg_repo *repo, const char *pkg_name)
 	fd = ftp_get_fd(pkg_name, f_repo);
 	if (fd == NULL)
 		return NULL;
-	
+
+	if (f_repo->cache) {
+		char cache_file[FILENAME_MAX];
+
+		fd2 = fd;
+		snprintf(cache_file, FILENAME_MAX, "%s/%s.tbz",
+		    f_repo->cache_dir, pkg_name);
+		fd = pkg_cached_file(fd2, cache_file);
+	}	
 	pkg = pkg_new_freebsd_from_file(fd);
 	if (!pkg) {
 		fclose(fd);
@@ -273,7 +284,7 @@ ftp_get_fd(const char *pkg_name, struct ftp_repo *f_repo)
  * @return A ftp_repo object or NULL
  */
 static struct ftp_repo *
-ftp_create_repo(const char *site, const char *path)
+ftp_create_repo(const char *site, const char *path, const char *cache_dir)
 {
 	struct ftp_repo *f_repo;
 
@@ -320,6 +331,12 @@ ftp_create_repo(const char *site, const char *path)
 
 	if (!f_repo->path) {
 		return NULL;
+	}
+
+	f_repo->cache = 0;
+	if (cache_dir != NULL) {
+		f_repo->cache = 1;
+		snprintf(f_repo->cache_dir, MAXPATHLEN, "%s", cache_dir);
 	}
 
 	return f_repo;
