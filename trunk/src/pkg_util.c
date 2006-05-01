@@ -36,12 +36,17 @@ __FBSDID("$FreeBSD$");
 #include <errno.h>
 #include <md5.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "pkg.h"
 #include "pkg_private.h"
 
+static int	 pkg_cached_readfn(void *, char *, int);
+static int	 pkg_cached_closefn(void *);
+
+FILE		*pkg_cached_file(FILE *, const char *);
 /**
  * @defgroup PackageUtil Miscellaneous utilities
  *
@@ -148,6 +153,66 @@ pkg_exec(const char *fmt, ...)
 	free(str);
 
 	return ret;
+}
+
+struct cached_read {
+	FILE *fd;
+	FILE *cache;
+};
+
+static int
+pkg_cached_readfn(void *c, char *buf, int len)
+{
+	struct cached_read *cr;
+	int ret, left, count;
+	char *b;
+
+	cr = c;
+
+	/* Check we are not at the end of the input file */
+	if (feof(cr->fd))
+		return 0;
+
+	ret = fread(buf, 1, len, cr->fd);
+
+	if (ret == -1)
+		return ret;
+
+	/* Write the entire buffer to the file */
+	left = ret;
+	b = buf;
+	while (left > 0) {
+		count = fwrite(b, 1, left, cr->cache);
+		b += count;
+		left -= count;
+	}
+	return ret;
+}
+
+static int
+pkg_cached_closefn(void *c)
+{
+	struct cached_read *cr;
+
+	cr  = c;
+	fclose(cr->cache);
+	free(cr);
+	return 0;
+}
+
+FILE *
+pkg_cached_file(FILE *fd, const char *file)
+{
+	struct cached_read *cr;
+	
+	cr = malloc(sizeof(struct cached_read));
+	if (cr == NULL)
+		return NULL;
+
+	cr->fd = fd;
+	/* Create the file and write to it when caching */
+	cr->cache = fopen(file, "w");
+	return funopen(cr, pkg_cached_readfn, NULL, NULL, pkg_cached_closefn);
 }
 
 /**
