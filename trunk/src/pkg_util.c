@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD$");
 static int	 pkg_cached_readfn(void *, char *, int);
 static int	 pkg_cached_closefn(void *);
 
-FILE		*pkg_cached_file(FILE *, const char *);
 /**
  * @defgroup PackageUtil Miscellaneous utilities
  *
@@ -195,6 +194,7 @@ pkg_cached_closefn(void *c)
 	struct cached_read *cr;
 
 	cr  = c;
+	fclose(cr->fd);
 	fclose(cr->cache);
 	free(cr);
 	return 0;
