@@ -758,8 +758,13 @@ freebsd_free(struct pkg *pkg)
 			}
 			free(fpkg->control);
 		}
+		if (fpkg->fd != NULL)
+			fclose(fpkg->fd);
 		if (fpkg->archive != NULL)
 			archive_read_finish(fpkg->archive);
+		if (fpkg->contents != NULL)
+			pkg_freebsd_contents_free(fpkg->contents);
+
 
 		free(fpkg);
 	}
