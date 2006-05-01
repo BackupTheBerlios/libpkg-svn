@@ -66,6 +66,7 @@ main (int argc, char *argv[])
 	char ch;
 	struct pkg_add add;
 	int ret, i;
+	int remote = 0;
 
 	add.db = NULL;
 	add.repo = NULL;
@@ -87,7 +88,6 @@ main (int argc, char *argv[])
 		case 'K':
 			/* Save the package file in . or ${PKGDIR} */
 			add.flags |= keep_file_flag;
-			errx(1, "Unsupported argument");
 			break;
 		case 'M':
 			errx(1, "Unsupported argument");
@@ -106,7 +106,7 @@ main (int argc, char *argv[])
 			break;
 		case 'r':
 			pkg_repo_free(add.repo);
-			add.repo = pkg_repo_new_ftp(NULL, NULL);
+			remote = 1;
 			break;
 		case 'S':
 			errx(1, "Unsupported argument");
@@ -127,6 +127,12 @@ main (int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
+	if (remote != 0) {
+		if ((add.flags & keep_file_flag) == keep_file_flag)
+			add.repo = pkg_repo_new_ftp(NULL, NULL, NULL);
+		else
+			add.repo = pkg_repo_new_ftp(NULL, NULL, ".");
+	}
 	/* There are no packages to install. just quit now */
 	if (argc == 0) {
 		pkg_repo_free(add.repo);
@@ -155,6 +161,9 @@ main (int argc, char *argv[])
 
 	/* Perform the installation */
 	ret = pkg_add(add);
+	for (i=0; add.pkgs[i] != NULL; i++) {
+		pkg_free(add.pkgs[i]);
+	}
 	free(add.pkgs);
 	pkg_db_free(add.db);
 	pkg_repo_free(add.repo);
@@ -250,7 +259,8 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		if (new_pkg == NULL) {
 			warnx("could not find package %s",
 			    pkg_get_name(deps[i]));
-			continue;
+			pkg_list_free(deps);
+			return -1;
 		}
 		pkg_free(deps[i]);
 		deps[i] = new_pkg;
@@ -258,11 +268,13 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		/* Install the dependency */
 		if (install_package(deps[i], repo, db, flags) != 0 &&
 		    (flags & force_flag) != force_flag) {
+			pkg_list_free(deps);
 			return -1;
 		}
 	}
 	pkg_list_free(deps);
 
+	ret = -1;
 	if ((flags & verbosity_flag) == verbosity_flag) {
 		printf("extract: Package name is %s\n", pkg_get_name(pkg));
 		ret = pkg_db_install_pkg_action(db, pkg,
