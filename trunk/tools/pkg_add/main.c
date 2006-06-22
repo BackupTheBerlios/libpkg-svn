@@ -217,7 +217,7 @@ pkg_action(int level, const char *fmt, ...)
 }
 
 /*
- * Recursivley install the required packages
+ * Recursively install the required packages
  */
 static int
 install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
@@ -275,7 +275,9 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 	pkg_list_free(deps);
 
 	ret = -1;
+	/* Install the package */
 	if ((flags & verbosity_flag) == verbosity_flag) {
+		/* Install with a verbose output */
 		printf("extract: Package name is %s\n", pkg_get_name(pkg));
 		ret = pkg_db_install_pkg_action(db, pkg,
 		    ((flags & no_record_install_flag)!= no_record_install_flag),
