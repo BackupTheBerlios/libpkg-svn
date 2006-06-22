@@ -2,6 +2,8 @@ PROG	 = pkg_info
 
 SRCS	 = main.c match.c show.c
 
+DEBUG_FLAGS?=-ggdb
+
 CFLAGS	+= -I${.CURDIR}/../../src
 .if defined(WITH_PROFILE)
 CFLAGS	+= -pg
