@@ -44,16 +44,31 @@
 /*
  * Object to hold files in
  */
-struct pkg_file;
+struct pkgfile;
 
-struct pkg_file	*pkg_file_new(const char *);
-struct pkg_file	*pkg_file_new_symlink(const char *, char *,const struct stat *);
-struct pkg_file	*pkg_file_new_from_buffer(const char *, uint64_t, char *,
-			const struct stat *);
-int		 pkg_file_write(struct pkg_file *);
-char		*pkg_file_get(struct pkg_file *);
-char 		*pkg_file_get_name(struct pkg_file *);
-int		 pkg_file_free(struct pkg_file *);
+typedef enum {
+	pkgfile_none,
+	pkgfile_regular,
+	pkgfile_hardlink,
+	pkgfile_symlink,
+	pkgfile_dir
+} pkgfile_type;
+
+struct pkgfile	*pkgfile_new_from_disk(const char *, int);
+struct pkgfile	*pkgfile_new_regular(const char *, const char *, uint64_t);
+struct pkgfile	*pkgfile_new_symlink(const char *, const char *);
+struct pkgfile	*pkgfile_new_hardlink(const char *, const char *);
+struct pkgfile	*pkgfile_new_directory(const char *);
+struct pkgfile	*pkgfile_new_from_buffer(const char *, const char *,
+			pkgfile_type);
+const char	*pkgfile_get_name(struct pkgfile *);
+uint64_t	 pkgfile_get_size(struct pkgfile *);
+char		*pkgfile_get_data(struct pkgfile *, uint64_t);
+char		*pkgfile_get_data_all(struct pkgfile *);
+int		 pkgfile_seek(struct pkgfile *, uint64_t, int);
+int		 pkgfile_set_stat(struct pkgfile *, const struct stat *);
+int		 pkgfile_write(struct pkgfile *);
+int		 pkgfile_free(struct pkgfile *);
 
 /**
  * @addtogroup Package
@@ -85,16 +100,16 @@ struct pkg		 *pkg_new_freebsd_empty(const char *);
 int			  pkg_compare(const void *, const void *);
 int			  pkg_set_prefix(struct pkg *, const char *);
 const char		 *pkg_get_prefix(struct pkg *);
-struct pkg_file		**pkg_get_control_files(struct pkg *);
-struct pkg_file		 *pkg_get_control_file(struct pkg *, const char *);
+struct pkgfile		**pkg_get_control_files(struct pkg *);
+struct pkgfile		 *pkg_get_control_file(struct pkg *, const char *);
 struct pkg		**pkg_get_dependencies(struct pkg *);
 const const char	 *pkg_get_name(struct pkg *);
-struct pkg_file		 *pkg_get_next_file(struct pkg *);
+struct pkgfile		 *pkg_get_next_file(struct pkg *);
 const const char	 *pkg_get_origin(struct pkg *);
 const const char	 *pkg_get_version(struct pkg *);
 int			  pkg_run_script(struct pkg *, pkg_script);
 int			  pkg_add_dependency(struct pkg *, struct pkg *);
-int			  pkg_add_file(struct pkg *, struct pkg_file *);
+int			  pkg_add_file(struct pkg *, struct pkgfile *);
 int			  pkg_list_free(struct pkg **);
 int			  pkg_free(struct pkg *);
 

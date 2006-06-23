@@ -35,12 +35,13 @@
 
 int archive_read_open_stream(struct archive *, FILE *, size_t);
 
-struct pkg_file {
-	char		*filename;
-	uint64_t	 len;
-	char		*contents;
-	struct stat	*stat;
+struct pkgfile {
+	char		*name;
+	pkgfile_type	 type;
 	FILE		*fd;
+	char		*data;
+	uint64_t	 length;
+	struct stat	*stat;
 };
 
 /*
@@ -49,8 +50,8 @@ struct pkg_file {
 
 /* Main callbacks used in most packages */
 typedef struct pkg	**pkg_get_dependencies_callback(struct pkg *);
-typedef struct pkg_file	**pkg_get_control_files_callback(struct pkg *);
-typedef struct pkg_file  *pkg_get_control_file_callback(struct pkg *,
+typedef struct pkgfile	**pkg_get_control_files_callback(struct pkg *);
+typedef struct pkgfile  *pkg_get_control_file_callback(struct pkg *,
 				const char *);
 typedef int		  pkg_free_callback(struct pkg *);
 
@@ -71,7 +72,7 @@ int			  pkg_add_callbacks_data(struct pkg *,
 typedef int		  pkg_add_dependency_callback(struct pkg *,
 				struct pkg *);
 typedef int		  pkg_add_file_callback(struct pkg *,
-				struct pkg_file *);
+				struct pkgfile *);
 int			  pkg_add_callbacks_empty(struct pkg *,
 				pkg_add_dependency_callback *,
 				pkg_add_file_callback *);
@@ -80,16 +81,16 @@ int			  pkg_add_callbacks_empty(struct pkg *,
 typedef int	  	  pkg_db_chdir(struct pkg *, pkg_db_action *, void *,
 				const char *);
 typedef int		  pkg_db_install_file(struct pkg *, pkg_db_action *,
-				void *, struct pkg_file *);
+				void *, struct pkgfile *);
 typedef int		  pkg_db_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
 typedef int		  pkg_db_register(struct pkg *, pkg_db_action *, void *,
-				struct pkg_file **);
+				struct pkgfile **);
 typedef int	  	  pkg_install_callback(struct pkg*, int,
 				pkg_db_action *, void *, pkg_db_chdir *,
 				pkg_db_install_file *, pkg_db_exec *,
 				pkg_db_register *);
-typedef struct pkg_file	 *pkg_get_next_file_callback(struct pkg *);
+typedef struct pkgfile	 *pkg_get_next_file_callback(struct pkg *);
 typedef int		  pkg_run_script_callback(struct pkg *, pkg_script);
 int			  pkg_add_callbacks_install(struct pkg *,
 				pkg_install_callback *,
@@ -125,7 +126,7 @@ struct pkg {
 };
 
 int pkg_dir_build(const char *);
-int pkg_checksum_md5(struct pkg_file *, char *);
+int pkg_checksum_md5(struct pkgfile *, char *);
 int pkg_exec(const char *, ...);
 FILE *pkg_cached_file(FILE *, const char *);
 

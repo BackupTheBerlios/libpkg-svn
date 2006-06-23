@@ -70,7 +70,7 @@ static const char *pkg_freebsd_contents_line_str[] = {
  * Reads a FreeBSD +CONTENTS file create a struct pkg_freebsd_contents
  */
 struct pkg_freebsd_contents *
-pkg_freebsd_contents_new(const char *contents)
+pkg_freebsd_contents_new(const char *contents, uint64_t length)
 {
 	struct pkg_freebsd_contents *cont;
 	unsigned int pos;
@@ -94,7 +94,7 @@ pkg_freebsd_contents_new(const char *contents)
 
 		pos = 0;
 		cont->line_count = 0;
-		while (cont->file[pos] != '\0') {
+		while (pos != length) {
 			if (cont->file[pos] == '\n')
 				cont->line_count++;
 			pos++;
@@ -274,7 +274,7 @@ pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *contents,
  */
 int
 pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
-		struct pkg_file *file)
+		struct pkgfile *file)
 {
 	char md5[33], tmp[37];
 	char *data;
@@ -283,14 +283,14 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 		return -1;
 
 	if (pkg_freebsd_contents_add_line(contents, PKG_LINE_FILE,
-	    file->filename) != 0) {
+	    pkgfile_get_name(file)) != 0) {
 		return -1;
 	}
 
-	data = pkg_file_get(file);
+	data = pkgfile_get_data_all(file);
 	if (!data)
 		return -1;
-	MD5Data(data, file->len, md5);
+	MD5Data(data, pkgfile_get_size(file), md5);
 	snprintf(tmp, 37, "MD5:%s", md5);
 	if (pkg_freebsd_contents_add_line(contents, PKG_LINE_COMMENT, tmp)
 	    != 0) {

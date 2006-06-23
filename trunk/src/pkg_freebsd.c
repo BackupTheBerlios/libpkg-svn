@@ -39,6 +39,7 @@
 #include <archive_entry.h>
 #include <dirent.h>
 #include <err.h>
+#include <errno.h>
 #include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,12 +50,12 @@ pkg_static const char		 *freebsd_get_origin(struct pkg *);
 #ifdef NOT_YET
 pkg_static int			  freebsd_add_depend(struct pkg *,struct pkg *);
 pkg_static int			  freebsd_add_file(struct pkg *,
-					struct pkg_file *);
+					struct pkgfile *);
 #endif
-pkg_static struct pkg_file	**freebsd_get_control_files(struct pkg *);
-pkg_static struct pkg_file	 *freebsd_get_control_file(struct pkg *,
+pkg_static struct pkgfile	**freebsd_get_control_files(struct pkg *);
+pkg_static struct pkgfile	 *freebsd_get_control_file(struct pkg *,
 					const char *);
-pkg_static struct pkg_file	 *freebsd_get_next_file(struct pkg *);
+pkg_static struct pkgfile	 *freebsd_get_next_file(struct pkg *);
 pkg_static int			  freebsd_install(struct pkg *, int,
 					pkg_db_action *, void *, pkg_db_chdir *,
 				       	pkg_db_install_file *, pkg_db_exec *,
@@ -67,7 +68,7 @@ pkg_static int			  freebsd_free(struct pkg *);
 pkg_static struct freebsd_package *freebsd_package_new(void);
 pkg_static int			  freebsd_open_control_files(
 					struct freebsd_package *);
-pkg_static struct pkg_file	 *freebsd_get_next_entry(struct archive *);
+pkg_static struct pkgfile	 *freebsd_get_next_entry(struct archive *);
 pkg_static int			  freebsd_parse_contents(
 					struct freebsd_package *);
 
@@ -84,9 +85,9 @@ struct freebsd_package {
 	char *db_dir;
 	const char *version;
 	const char *origin;
-	struct pkg_file **control;
+	struct pkgfile **control;
 	struct pkg_freebsd_contents *contents;
-	struct pkg_file *next_file;
+	struct pkgfile *next_file;
 	freebsd_type pkg_type;
 };
 
@@ -356,7 +357,7 @@ freebsd_add_depend(struct pkg *pkg __unused, struct pkg *depend __unused)
  * @return -1
  */
 static int
-freebsd_add_file(struct pkg *pkg __unused, struct pkg_file *file __unused)
+freebsd_add_file(struct pkg *pkg __unused, struct pkgfile *file __unused)
 {
 	assert(0);
 	return -1;
@@ -365,9 +366,9 @@ freebsd_add_file(struct pkg *pkg __unused, struct pkg_file *file __unused)
 
 /**
  * @brief Callback for pkg_get_control_files()
- * @return An array of pkg_file or NULL
+ * @return An array of pkgfile or NULL
  */
-static struct pkg_file **
+static struct pkgfile **
 freebsd_get_control_files(struct pkg *pkg)
 {
 	struct freebsd_package *fpkg;
@@ -386,9 +387,9 @@ freebsd_get_control_files(struct pkg *pkg)
 
 /**
  * @brief for pkg_get_control_file()
- * @return The named pkg_file or NULL
+ * @return The named pkgfile or NULL
  */
-static struct pkg_file *
+static struct pkgfile *
 freebsd_get_control_file(struct pkg *pkg, const char *filename)
 {
 	struct freebsd_package *fpkg;
@@ -404,9 +405,11 @@ freebsd_get_control_file(struct pkg *pkg, const char *filename)
 	if (fpkg->control == NULL)
 		return NULL;
 
-	for (pos = 0; fpkg->control[pos] != NULL; pos++)
-		if (strcmp(basename(fpkg->control[pos]->filename), filename)==0)
+	for (pos = 0; fpkg->control[pos] != NULL; pos++) {
+		const char *pkg_filename = pkgfile_get_name(fpkg->control[pos]);
+		if (strcmp(basename(pkg_filename), filename)==0)
 			return fpkg->control[pos];
+	}
 	return NULL;
 }
 
@@ -421,9 +424,10 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 {
 	int ret;
 	unsigned int pos;
-	struct pkg_file **control;
-	struct pkg_file *contents_file;
+	struct pkgfile **control;
+	struct pkgfile *contents_file;
 	struct pkg_freebsd_contents *contents;
+	char *file_data;
 
 	assert(pkg != NULL);
 	assert(pkg_action != NULL);
@@ -442,15 +446,20 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 	}
 
 	/* Find the +CONTENTS file in the control files */
-	for (pos = 0; control[pos] != NULL; pos++)
-		if (!strcmp(control[pos]->filename, "+CONTENTS"))
+	for (pos = 0; control[pos] != NULL; pos++) {
+		const char *pkg_filename = pkgfile_get_name(control[pos]);
+		if (!strcmp(pkg_filename, "+CONTENTS"))
 			break;
+	}
 	contents_file = control[pos];
 	if (contents_file == NULL) {
 		return -1;
 	}
 
-	contents = pkg_freebsd_contents_new(pkg_file_get(contents_file));
+	file_data = pkgfile_get_data_all(contents_file);
+	contents = pkg_freebsd_contents_new(file_data,
+	    pkgfile_get_size(contents_file));
+	free(file_data);
 	if (contents == NULL) {
 		return -1;
 	}
@@ -498,7 +507,7 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 		}
 		case PKG_LINE_FILE:
 		{
-			struct pkg_file *file;
+			struct pkgfile *file;
 
 			file = pkg_get_next_file(pkg);
 			if (file == NULL)
@@ -512,7 +521,7 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 
 			/* Check the file name is correct */
 			if (strcmp(contents->lines[pos].line,
-			    pkg_file_get_name(file)) != 0) {
+			    pkgfile_get_name(file)) != 0) {
 				ret = -1;
 				goto exit;
 			}
@@ -561,13 +570,13 @@ exit:
 
 /**
  * @brief Callback for pkg_get_next_file()
- * @return The next non-control pkg_file or NULL
+ * @return The next non-control pkgfile or NULL
  */
-static struct pkg_file *
+static struct pkgfile *
 freebsd_get_next_file(struct pkg *pkg)
 {
 	struct freebsd_package *fpkg;
-	struct pkg_file *file;
+	struct pkgfile *file;
 
 	assert(pkg != NULL);
 	fpkg = pkg->data;
@@ -575,9 +584,9 @@ freebsd_get_next_file(struct pkg *pkg)
 	assert(fpkg->pkg_type == fpkg_from_file);
 
 	if (fpkg->next_file) {
-		struct pkg_file *pkg_file = fpkg->next_file;
+		struct pkgfile *pkgfile = fpkg->next_file;
 		fpkg->next_file = NULL;
-		return pkg_file;
+		return pkgfile;
 	}
 	if (fpkg->archive == NULL)
 		return NULL;
@@ -615,7 +624,7 @@ freebsd_get_deps(struct pkg *pkg)
 	freebsd_open_control_files(fpkg);
 	assert(fpkg->control != NULL);
 
-	assert(strcmp("+CONTENTS", pkg_file_get_name(fpkg->control[0])) == 0);
+	assert(strcmp("+CONTENTS", pkgfile_get_name(fpkg->control[0])) == 0);
 
 	pkg_count = 0;
 	pkg_size = sizeof(struct pkg *);
@@ -646,10 +655,10 @@ static int
 freebsd_run_script(struct pkg *pkg, pkg_script script)
 {
 	struct freebsd_package *fpkg;
-	struct pkg_file *script_file;
+	struct pkgfile *script_file;
 	char arg[FILENAME_MAX];
 	char dir[FILENAME_MAX];
-	char *dir1, *cwd;
+	char *cwd;
 	int ret;
 
 	assert(pkg != NULL);
@@ -678,6 +687,7 @@ freebsd_run_script(struct pkg *pkg, pkg_script script)
 		}
 		break;
 	case pkg_script_mtree:
+		assert(script_file == NULL);
 		script_file = pkg_get_control_file(pkg, "+MTREE_DIRS");
 		break;
 	case pkg_script_require:
@@ -689,16 +699,16 @@ freebsd_run_script(struct pkg *pkg, pkg_script script)
 	if (script_file == NULL)
 		return 0;
 
-	/** @todo Add a lock around mkdtemp ad arc4random is not thread safe */
+	/** @todo Add a lock around mkdtemp as arc4random is not thread safe */
 	snprintf(dir, FILENAME_MAX, "/tmp/libpkg_XXXXXXX");
-	dir1 = mkdtemp(dir);
+	mkdtemp(dir);
 
 	/* Change to the temp dir and back up the current dir to return here */
 	cwd = getcwd(NULL, 0);
-	chdir(dir1);
+	chdir(dir);
 
 	/* Extract the script */
-	pkg_file_write(script_file);
+	pkgfile_write(script_file);
 	switch(script) {
 	case pkg_script_mtree:
 	{
@@ -709,26 +719,26 @@ freebsd_run_script(struct pkg *pkg, pkg_script script)
 	}
 	case pkg_script_pre:
 	case pkg_script_post:
-		pkg_exec("chmod u+x %s", pkg_file_get_name(script_file));
+		pkg_exec("chmod u+x %s", pkgfile_get_name(script_file));
 
 		/* Execute the script */
-		ret = pkg_exec("%s/%s %s %s", dir1,
-		    pkg_file_get_name(script_file), pkg_get_name(pkg), arg);
+		ret = pkg_exec("%s/%s %s %s", dir,
+		    pkgfile_get_name(script_file), pkg_get_name(pkg), arg);
 		break;
 	case pkg_script_require:
-		pkg_exec("chmod u+x %s", pkg_file_get_name(script_file));
+		pkg_exec("chmod u+x %s", pkgfile_get_name(script_file));
 
-		ret = pkg_exec("%s/%s %s INSTALL", dir1,
-		    pkg_file_get_name(script_file), pkg_get_name(pkg));
+		ret = pkg_exec("%s/%s %s INSTALL", dir,
+		    pkgfile_get_name(script_file), pkg_get_name(pkg));
 		break;
 	case pkg_script_noop:
 		break;
 	}
-	unlink(pkg_file_get_name(script_file));
+	unlink(pkgfile_get_name(script_file));
 	chdir(cwd);
 	free(cwd);
 
-	rmdir(dir1);
+	rmdir(dir);
 	return ret;
 }
 
@@ -748,13 +758,13 @@ freebsd_free(struct pkg *pkg)
 			free(fpkg->db_dir);
 
 		if (fpkg->next_file != NULL)
-			pkg_file_free(fpkg->next_file);
+			pkgfile_free(fpkg->next_file);
 
 		if (fpkg->control != NULL) {
 			int cur;
 
 			for (cur = 0; fpkg->control[cur] != NULL; cur++) {
-				pkg_file_free(fpkg->control[cur]);
+				pkgfile_free(fpkg->control[cur]);
 			}
 			free(fpkg->control);
 		}
@@ -826,7 +836,7 @@ freebsd_package_new()
 	{ \
 		int i; \
 		for (i=0; c[i] != NULL; i++) { \
-			pkg_file_free(c[i]); \
+			pkgfile_free(c[i]); \
 		} \
 		free(c); \
 	}
@@ -840,13 +850,13 @@ int
 freebsd_open_control_files(struct freebsd_package *fpkg)
 {
 	unsigned int control_size, control_count;
-	struct pkg_file *pkg_file;
+	struct pkgfile *pkgfile;
 
 /** @todo Check the return of realloc */
-#define addFile(pkg_file) \
-	control_size += sizeof(struct pkg_file **); \
+#define addFile(pkgfile) \
+	control_size += sizeof(struct pkgfile **); \
 	fpkg->control = realloc(fpkg->control, control_size); \
-	fpkg->control[control_count] = pkg_file; \
+	fpkg->control[control_count] = pkgfile; \
 	control_count++; \
 	fpkg->control[control_count] = NULL;
 	
@@ -863,7 +873,7 @@ freebsd_open_control_files(struct freebsd_package *fpkg)
 	}
 
 	/* Setup the store to hold all the files */
-	control_size = sizeof(struct pkg_file **);
+	control_size = sizeof(struct pkgfile **);
 	fpkg->control = malloc(control_size);
 	fpkg->control[0] = NULL;
 	control_count = 0;
@@ -899,8 +909,8 @@ freebsd_open_control_files(struct freebsd_package *fpkg)
 				FREE_CONTENTS(fpkg->control);
 				return -1;
 			}
-			pkg_file = pkg_file_new(file);
-			addFile(pkg_file);
+			pkgfile = pkgfile_new_from_disk(file, 1);
+			addFile(pkgfile);
 			free(file);
 		}
 		closedir(d);
@@ -908,12 +918,12 @@ freebsd_open_control_files(struct freebsd_package *fpkg)
 		return 0;
 	} else if (fpkg->pkg_type == fpkg_from_file) {
 		assert(fpkg->archive != NULL);
-		pkg_file = freebsd_get_next_entry(fpkg->archive);
-		while (pkg_file_get_name(pkg_file)[0] == '+') {
-			addFile(pkg_file);
-			pkg_file = freebsd_get_next_entry(fpkg->archive);
+		pkgfile = freebsd_get_next_entry(fpkg->archive);
+		while (pkgfile_get_name(pkgfile)[0] == '+') {
+			addFile(pkgfile);
+			pkgfile = freebsd_get_next_entry(fpkg->archive);
 		}
-		fpkg->next_file = pkg_file;
+		fpkg->next_file = pkgfile;
 		return 0;
 	}
 	assert(0);
@@ -925,13 +935,14 @@ freebsd_open_control_files(struct freebsd_package *fpkg)
  * @param a A libarchive(3) archive object
  * @return A the next file in the archive or NULL
  */
-static struct pkg_file *
+static struct pkgfile *
 freebsd_get_next_entry(struct archive *a)
 {
 	uint64_t length;
 	char *str;
 	struct archive_entry *entry;
 	const struct stat *sb;
+	struct pkgfile *file;
 
 	assert(a != NULL);
 
@@ -943,6 +954,7 @@ freebsd_get_next_entry(struct archive *a)
 	/* Get the needed struct stat from the archive */
 	sb = archive_entry_stat(entry);
 
+	file = NULL;
 	if (S_ISREG(sb->st_mode)) {
 		/* Allocate enough space for the file and copy it to the string */
 		length = archive_entry_size(entry);
@@ -953,19 +965,25 @@ freebsd_get_next_entry(struct archive *a)
 		archive_read_data_into_buffer(a, str, length);
 		str[length] = '\0';
 
-		/* Create the pkg_file and return it */
-		return pkg_file_new_from_buffer(archive_entry_pathname(entry),
-			length, str, sb);
+		/* Create the pkgfile and return it */
+		file = pkgfile_new_regular(archive_entry_pathname(entry), str,
+		    length);
 	} else if (S_ISLNK(sb->st_mode)) {
 		str = strdup(archive_entry_symlink(entry));
 		if (!str)
 			return NULL;
 
-		return pkg_file_new_symlink(archive_entry_pathname(entry),
-		    str, sb);
+		file = pkgfile_new_symlink(archive_entry_pathname(entry), str);
+		
 	}
-	errx(1, "File is not regular or symbolic link");
-	return NULL;
+	if (file == NULL)
+		errx(1, "File is not regular or symbolic link");
+
+	/**
+	 * @todo Uncomment when pkgfile_set_stat is written
+	 */
+	/* pkgfile_set_stat(file, sb); */
+	return file;
 }
 
 /**
@@ -975,7 +993,8 @@ freebsd_get_next_entry(struct archive *a)
 static int
 freebsd_parse_contents(struct freebsd_package *fpkg)
 {
-	struct pkg_file *contents_file;
+	char *file_data;
+	struct pkgfile *contents_file;
 	int i;
 	
 	assert(fpkg != NULL);
@@ -988,14 +1007,18 @@ freebsd_parse_contents(struct freebsd_package *fpkg)
 	contents_file = NULL;
 	for (i = 0; fpkg->control[i] != NULL; i++) {
 		if (strcmp("+CONTENTS",
-		    basename(pkg_file_get_name(fpkg->control[i]))) == 0) {
+		    basename(pkgfile_get_name(fpkg->control[i]))) == 0) {
 			contents_file = fpkg->control[i];
 			break;
 		}
 	}
 	if (contents_file == NULL)
 		return -1;
-	fpkg->contents = pkg_freebsd_contents_new(pkg_file_get(contents_file));
+
+	file_data = pkgfile_get_data_all(contents_file);
+	fpkg->contents = pkg_freebsd_contents_new(file_data,
+	    pkgfile_get_size(contents_file));
+	free(file_data);
 	return 0;
 }
 

@@ -58,13 +58,13 @@ extern const char *pkg_freebsd_contents_line_str[];
 
 struct pkg_freebsd_contents *pkg_freebsd_get_contents(struct pkg *);
 
-struct pkg_freebsd_contents *pkg_freebsd_contents_new(const char *);
+struct pkg_freebsd_contents *pkg_freebsd_contents_new(const char *, uint64_t);
 int	 pkg_freebsd_contents_add_line(struct pkg_freebsd_contents *, int,
 	    const char *);
 int	 pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *,
 	    struct pkg *);
 int	 pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *,
-	    struct pkg_file *);
+	    struct pkgfile *);
 struct pkg_freebsd_contents_line *pkg_freebsd_contents_get_line
 					(struct pkg_freebsd_contents *,
 					 unsigned int);

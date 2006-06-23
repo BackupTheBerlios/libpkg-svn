@@ -80,11 +80,11 @@ pkg_static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);
 pkg_static int	freebsd_do_chdir(struct pkg *, pkg_db_action *, void *,
 				const char *);
 pkg_static int	freebsd_install_file(struct pkg *, pkg_db_action *, void *,
-				struct pkg_file *);
+				struct pkgfile *);
 pkg_static int	freebsd_do_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
 pkg_static int	freebsd_register(struct pkg *, pkg_db_action *, void *,
-				struct pkg_file **);
+				struct pkgfile **);
 /* Internal */
 pkg_static void			 freebsd_format_cmd(char *, int, const char *,
 				const char *, const char *);
@@ -363,7 +363,7 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  */
 static int
 freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action __unused,
-		void *data, struct pkg_file *file)
+		void *data, struct pkgfile *file)
 {
 	struct pkg_install_data *install_data;
 
@@ -374,12 +374,12 @@ freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action __unused,
 	install_data = data;
 
 	snprintf(install_data->last_file, FILENAME_MAX, "%s",
-	    pkg_file_get_name(file));
+	    pkgfile_get_name(file));
 
 	pkg_action(PKG_DB_PACKAGE, "%s/%s", install_data->directory,
-	    pkg_file_get_name(file));
+	    pkgfile_get_name(file));
 	if (!install_data->fake)
-		return pkg_file_write(file);
+		return pkgfile_write(file);
 	return 0;
 }
 
@@ -419,7 +419,7 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  */
 static int
 freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
-		struct pkg_file **control)
+		struct pkgfile **control)
 {
 	unsigned int pos;
 	struct pkg_install_data *install_data;
@@ -452,7 +452,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		snprintf(required_by, FILENAME_MAX, "%s" DB_LOCATION
 		    "/%s/+REQUIRED_BY", db->db_base, pkg_get_name(deps[pos]));
 
-		/** @todo Make pkg_file work to properly to create the file */
+		/** @todo Make pkgfile work to properly to create the file */
 		fd = fopen(required_by, "a");
 		name = pkg_get_name(pkg);
 		fwrite(name, strlen(name), 1, fd);

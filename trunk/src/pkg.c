@@ -261,9 +261,9 @@ pkg_get_prefix(struct pkg *pkg)
  * @brief Gets the control files from a given package
  * @param pkg The package
  * 
- * @return A null-terminated array of pkg_file's contining the packages control files
+ * @return A null-terminated array of pkgfile's contining the packages control files
  */
-struct pkg_file **
+struct pkgfile **
 pkg_get_control_files(struct pkg *pkg)
 {
 	if (!pkg) {
@@ -283,7 +283,7 @@ pkg_get_control_files(struct pkg *pkg)
  * @param pkg_name The name of the file to return
  * @return The control file with the name pkg_name
  */
-struct pkg_file *
+struct pkgfile *
 pkg_get_control_file(struct pkg *pkg, const char *pkg_name)
 {
 	if (!pkg || !pkg_name)
@@ -335,7 +335,7 @@ pkg_get_name(struct pkg *pkg)
  * all files to be installed in a package
  * @return the next non-control file in the package or NULL when done.
  */
-struct pkg_file *
+struct pkgfile *
 pkg_get_next_file(struct pkg *pkg)
 {
 	if (!pkg) {
@@ -432,7 +432,7 @@ pkg_add_dependency(struct pkg *pkg, struct pkg *depend)
  * @return 0 on success, -1 on error.
  */
 int
-pkg_add_file(struct pkg *pkg, struct pkg_file *file)
+pkg_add_file(struct pkg *pkg, struct pkgfile *file)
 {
 	if (!pkg || !file)
 		return -1;

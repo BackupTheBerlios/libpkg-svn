@@ -21,15 +21,16 @@
 
 #include "pkg_info.h"
 
+#include <assert.h>
+#include <err.h>
 #include <pkg_db.h>
 #include <pkg_freebsd.h>
-#include <err.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 static void	show_cksum(struct pkg *, const char *, int);
-static void	show_file(struct pkg_file *, const char *, int);
+static void	show_file(struct pkgfile *, const char *, int);
 static void	show_fmtrev(struct pkg *, const char *, int);
 static void	show_index(struct pkg *);
 static void	show_origin(struct pkg *, const char *, int);
@@ -52,14 +53,16 @@ show(struct pkg_db *db __unused, struct pkg *pkg, int flags, int quiet)
 		printf("Information for %s:\n\n", pkg_get_name(pkg));
 	}
 	if (flags & SHOW_COMMENT) {
-		struct pkg_file *file;
+		struct pkgfile *file;
 		file = pkg_get_control_file(pkg, COMMENT_FNAME);
+		assert(file != NULL);
 		show_file(file, "Comment:\n", quiet);
 	}
 #define ifexist_show(filename, title) \
 	{ \
-		struct pkg_file *file; \
+		struct pkgfile *file; \
 		file = pkg_get_control_file(pkg, filename); \
+		assert(file != NULL); \
 		if (file != NULL) \
 			show_file(file, title ":\n", quiet); \
 	}
@@ -69,18 +72,21 @@ show(struct pkg_db *db __unused, struct pkg *pkg, int flags, int quiet)
 		show_plist(pkg, "Depends on:\n", quiet, PKG_LINE_PKGDEP);
 	}
 	if ((flags & SHOW_REQBY)) {
-		struct pkg_file *file;
+		struct pkgfile *file;
 		char *contents;
 
 		file = pkg_get_control_file(pkg, REQUIRED_BY_FNAME);
-		contents = pkg_file_get(file);
-		if (contents != NULL && contents[0] != '\0')
-			show_file(file, "Required by:\n", quiet);
+		if (file != NULL) {
+			contents = pkgfile_get_data_all(file);
+			if (contents != NULL && contents[0] != '\0')
+				show_file(file, "Required by:\n", quiet);
+		}
 	}
 	if (flags & SHOW_DESC) {
-		struct pkg_file *file;
+		struct pkgfile *file;
 
 		file = pkg_get_control_file(pkg, DESC_FNAME);
+		assert(file != NULL);
 		show_file(file, "Description:\n", quiet);
 	}
 	if ((flags & SHOW_DISPLAY)) {
@@ -146,15 +152,16 @@ show_cksum(struct pkg *pkg __unused, const char *title, int quiet)
 }
 
 static void
-show_file(struct pkg_file *file, const char *title, int quiet)
+show_file(struct pkgfile *file, const char *title, int quiet)
 {
+	assert(file != NULL);
 	if (!quiet)
 		printf("%s", title);
 	if (file == NULL) {
 		printf("ERROR: show_file: Can't open '%s' for reading!\n",
-		    pkg_file_get_name(file));
+		    pkgfile_get_name(file));
 	} else {
-		printf("%s", pkg_file_get(file));
+		printf("%s", pkgfile_get_data_all(file));
 	}
 	putchar('\n');
 	
@@ -183,19 +190,25 @@ show_index(struct pkg *pkg)
 {
 	/* This assumes a terminal width of 80 characters */
 	int len, pos;
-	struct pkg_file *comment;
+	struct pkgfile *comment;
 	len = printf("%s ", pkg_get_name(pkg));
 	for (pos = len; pos < 19; pos++, len++) {
 		putchar(' ');
 	}
+	assert(pkg != NULL);
 	comment = pkg_get_control_file(pkg, "+COMMENT");
+	assert(comment != NULL);
 	if (comment != NULL && len < 80) {
+		/** @todo Rewrite */
 		char desc[60], *ptr;
 		/*
 		 * Copy the comment to a buffer
 		 * so it is 80 characters wide
 		 */
-		strlcpy(desc, pkg_file_get(comment), (unsigned int)80-len);
+		ptr = pkgfile_get_data(comment, 80-len);
+		assert(ptr != NULL);
+		strlcpy(desc, ptr, (unsigned int)80-len);
+		free(ptr);
 		ptr = strchr(desc, '\n');
 		if (ptr)
 			ptr[0] = '\0';

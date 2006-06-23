@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD$");
 #include "pkg_private.h"
 
 static int	 pkg_cached_readfn(void *, char *, int);
+static fpos_t	 pkg_cached_seekfn(void *, fpos_t, int);
 static int	 pkg_cached_closefn(void *);
 
 /**
@@ -110,9 +111,10 @@ pkg_dir_build(const char *path)
  * @return 0 if the file matches the checksum, or -1 otherwise
  */
 int
-pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
+pkg_checksum_md5(struct pkgfile *file, char *chk_sum)
 {
 	char sum[33];
+	char *file_data;
 
 	if (!file) {
 		return -1;
@@ -123,7 +125,9 @@ pkg_checksum_md5(struct pkg_file *file, char *chk_sum)
 	}
 
 	/* Perform a checksum on the file to install */
-	MD5Data(pkg_file_get(file), file->len, sum);
+	file_data = pkgfile_get_data_all(file);
+	MD5Data(file_data, pkgfile_get_size(file), sum);
+	free(file_data);
 	if (strcmp(sum, chk_sum)) {
 		return -1;
 	}
@@ -188,6 +192,15 @@ pkg_cached_readfn(void *c, char *buf, int len)
 	return ret;
 }
 
+static fpos_t
+pkg_cached_seekfn(void *c, fpos_t pos, int whence)
+{
+	struct cached_read *cr;
+
+	cr  = c;
+	return fseek(cr->fd, pos, whence);
+}
+
 static int
 pkg_cached_closefn(void *c)
 {
@@ -212,7 +225,8 @@ pkg_cached_file(FILE *fd, const char *file)
 	cr->fd = fd;
 	/* Create the file and write to it when caching */
 	cr->cache = fopen(file, "w");
-	return funopen(cr, pkg_cached_readfn, NULL, NULL, pkg_cached_closefn);
+	return funopen(cr, pkg_cached_readfn, NULL, pkg_cached_seekfn,
+	    pkg_cached_closefn);
 }
 
 /**
