@@ -70,6 +70,7 @@ pkgfile_new(const char *filename, pkgfile_type type)
 	file->fd = NULL;
 	file->data = NULL;
 	file->length = 0;
+	file->mode = 0;
 
 	return file;
 }
@@ -369,6 +370,22 @@ pkgfile_seek(struct pkgfile *file, uint64_t position, int whence)
 }
 
 /**
+ * @brief Sets the given file's mode
+ * @param Tile The file to set the mode on
+ * @param The mode to set. 0 will unset it
+ * @return 0 o success or -1 on error
+ */
+int
+pkgfile_set_mode(struct pkgfile *file, mode_t mode)
+{
+	if (file == NULL)
+		return -1;
+
+	file->mode = mode & ALLPERMS;
+	return 0;
+}
+
+/**
  * @brief Writes a pkgfile to disk
  * @return 0 on success or -1 on error
  */
@@ -439,6 +456,10 @@ pkgfile_write(struct pkgfile *file)
 					break;
 				}
 			}
+
+			if (file->mode != 0)
+				fchmod(fileno(fd), file->mode);
+
 			fclose(fd);
 		}
 		break;

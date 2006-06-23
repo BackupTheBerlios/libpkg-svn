@@ -35,13 +35,14 @@
 
 int archive_read_open_stream(struct archive *, FILE *, size_t);
 
+/** @todo Reorder the struct to remove alignment gaps */
 struct pkgfile {
 	char		*name;
 	pkgfile_type	 type;
 	FILE		*fd;
 	char		*data;
 	uint64_t	 length;
-	struct stat	*stat;
+	mode_t		 mode;
 };
 
 /*

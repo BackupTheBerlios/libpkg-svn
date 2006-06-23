@@ -979,10 +979,7 @@ freebsd_get_next_entry(struct archive *a)
 	if (file == NULL)
 		errx(1, "File is not regular or symbolic link");
 
-	/**
-	 * @todo Uncomment when pkgfile_set_stat is written
-	 */
-	/* pkgfile_set_stat(file, sb); */
+	pkgfile_set_mode(file, sb->st_mode);
 	return file;
 }
 

@@ -66,7 +66,7 @@ uint64_t	 pkgfile_get_size(struct pkgfile *);
 char		*pkgfile_get_data(struct pkgfile *, uint64_t);
 char		*pkgfile_get_data_all(struct pkgfile *);
 int		 pkgfile_seek(struct pkgfile *, uint64_t, int);
-int		 pkgfile_set_stat(struct pkgfile *, const struct stat *);
+int		 pkgfile_set_mode(struct pkgfile *, mode_t);
 int		 pkgfile_write(struct pkgfile *);
 int		 pkgfile_free(struct pkgfile *);
 
