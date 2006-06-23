@@ -9,7 +9,7 @@ SRCS		+= pkg.c pkg_freebsd.c
 SRCS		+= pkg_freebsd_contents.c
 
 # Package files
-SRCS		+= pkg_file.c
+SRCS		+= pkgfile.c
 
 # Package Database
 SRCS		+= pkg_db.c pkg_db_freebsd.c
