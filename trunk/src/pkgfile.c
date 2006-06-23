@@ -445,7 +445,7 @@ pkgfile_write(struct pkgfile *file)
 	case pkgfile_hardlink:
 		break;
 	case pkgfile_symlink:
-		if (symlink(file->name, file->data) != 0)
+		if (symlink(file->data, file->name) != 0)
 			return -1;
 		break;
 	case pkgfile_dir:
