@@ -75,7 +75,8 @@ struct pkg_info {
 	int	  flags;
 };
 
-struct pkg	**match_regex(struct pkg_db *, char **, int);
+struct pkg	**match_regex(struct pkg_db *, const char **, int);
+struct pkg	**match_glob(struct pkg_db *, const char **, int);
 int		  pkg_info(struct pkg_info);
 void		  show(struct pkg_db *, struct pkg *, int, int);
 

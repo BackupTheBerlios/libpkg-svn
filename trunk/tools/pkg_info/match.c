@@ -21,6 +21,7 @@
 
 #include "pkg_info.h"
 #include <assert.h>
+#include <fnmatch.h>
 #include <pkg.h>
 #include <regex.h>
 #include <stdlib.h>
@@ -31,7 +32,13 @@ struct regex_or {
 	regex_t *rex;
 };
 
+struct glob_or {
+	unsigned int count;
+	const char **patterns;
+};
+
 static int _pkg_match_regex(struct pkg *, const void *);
+static int _pkg_match_glob(struct pkg *, const void *);
 
 static int
 _pkg_match_regex(struct pkg *pkg, const void *data)
@@ -50,11 +57,29 @@ _pkg_match_regex(struct pkg *pkg, const void *data)
 	return -1;
 }
 
+static int
+_pkg_match_glob(struct pkg *pkg, const void *data)
+{
+	unsigned int i;
+	const struct glob_or *the_glob;
+	
+	assert(pkg != NULL);
+	assert(data != NULL);
+
+	the_glob = data;
+	for(i=0; i < the_glob->count; i++) {
+		/* This should use the csh_match from FreeBSD pkg_info */
+		if (fnmatch(the_glob->patterns[i], pkg_get_name(pkg), 0) == 0)
+			return 0;
+	}
+	return -1;
+}
+
 /*
- * Returnes a sorted NULL terminates array of packages matching one of regex
+ * Returns a sorted NULL terminated array of packages matching one of regex
  */
 struct pkg **
-match_regex(struct pkg_db *db, char **regex, int type __unused)
+match_regex(struct pkg_db *db, const char **regex, int type)
 {
 	struct regex_or rex;
 	unsigned int i;
@@ -79,6 +104,27 @@ match_regex(struct pkg_db *db, char **regex, int type __unused)
 		regfree(&rex.rex[i]);
 	}
 	free(rex.rex);
+
+	return pkgs;
+}
+
+/*
+ * Returns a sorted NULL terminated array of packages matching a glob
+ */
+struct pkg **
+match_glob(struct pkg_db *db, const char **patterns, int type __unused)
+{
+	struct glob_or the_glob;
+	struct pkg **pkgs;
+
+	/* Count the number of regex's */
+	for (the_glob.count = 0; patterns[the_glob.count] != NULL;
+	     the_glob.count++)
+		continue;
+
+	the_glob.patterns = patterns;
+
+	pkgs = pkg_db_get_installed_match(db, _pkg_match_glob, &the_glob);
 
 	return pkgs;
 }

@@ -204,14 +204,23 @@ pkg_info(struct pkg_info info)
 
 	switch(info.match_type) {
 	case MATCH_ALL:
+	case MATCH_GLOB:
+	case MATCH_NGLOB:
 	case MATCH_REGEX:
 	case MATCH_EREGEX:
 		/* Display all packages installed */
 		if (info.match_type == MATCH_ALL)
 			pkgs = pkg_db_get_installed(info.db);
-		else
-			pkgs = match_regex(info.db, info.pkgs,
+		else if (info.match_type == MATCH_REGEX ||
+		         info.match_type == MATCH_EREGEX)
+			pkgs = match_regex(info.db, (const char**)info.pkgs,
 			    (info.match_type == MATCH_EREGEX));
+		else if (info.match_type == MATCH_GLOB ||
+		         info.match_type == MATCH_NGLOB)
+			pkgs = match_glob(info.db, (const char**)info.pkgs,
+			    (info.match_type == MATCH_GLOB));
+		else
+			errx(1, "ERROR: Inconsistancy in pkg_info");
 
 		/* Sort the packages and display them */
 		if (pkgs == NULL) {
@@ -225,10 +234,6 @@ pkg_info(struct pkg_info info)
 			show(info.db, pkgs[cur], info.flags, info.quiet);
 		}
 		retval = 0;
-		break;
-	case MATCH_GLOB:
-	case MATCH_NGLOB:
-		errx(1, "Unsupported match type (use -x or -X)");
 		break;
 	case MATCH_EXACT:
 		/* Only match the exact names given */
