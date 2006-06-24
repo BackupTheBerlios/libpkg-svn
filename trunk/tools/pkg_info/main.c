@@ -43,6 +43,7 @@ main(int argc, char **argv)
 	info.pkgs = NULL;
 	info.quiet = 0;
 	info.origin = NULL;
+	info.check_package = NULL;
 
 	if (argc == 1) {
 		info.match_type = MATCH_ALL;
@@ -68,7 +69,7 @@ main(int argc, char **argv)
 				info.flags |= SHOW_DISPLAY;
 				break;
 			case 'e':
-				errx(1, "Unsupported argument");
+				info.check_package = optarg;
 				break;
 			case 'E':
 				info.flags |= SHOW_PKGNAME;
@@ -203,6 +204,15 @@ pkg_info(struct pkg_info info)
 	retval = 1;
 	pkgs = NULL;
 
+	if (info.check_package != NULL) {
+		struct pkg *pkg;
+		pkg = pkg_db_get_package(info.db, info.check_package);
+		if (pkg != NULL) {
+			pkg_free(pkg);
+			return 0;
+		}
+		return 1;
+	}
 	if (info.origin != NULL) {
 		unsigned int pos;
 		pkgs = pkg_db_get_installed_match(info.db, pkg_match_by_origin,
