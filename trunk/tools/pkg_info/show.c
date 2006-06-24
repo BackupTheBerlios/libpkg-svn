@@ -31,6 +31,7 @@
 
 static void	show_cksum(struct pkg *, const char *, int);
 static void	show_file(struct pkgfile *, const char *, int);
+static void	show_files(struct pkg *, const char *, int);
 static void	show_fmtrev(struct pkg *, const char *, int);
 static void	show_index(struct pkg *);
 static void	show_origin(struct pkg *, const char *, int);
@@ -117,7 +118,7 @@ show(struct pkg_db *db __unused, struct pkg *pkg, int flags, int quiet)
 		show_plist(pkg, "Prefix(s):\n", quiet, PKG_LINE_CWD);
 	}
 	if (flags & SHOW_FILES) {
-	//    show_files("Files:\n", &plist);
+		show_files(pkg, "Files:\n", quiet);
 	}
 	if ((flags & SHOW_SIZE) &&
 	    pkg_db_is_installed(db, pkg) == 0) {
@@ -165,6 +166,21 @@ show_file(struct pkgfile *file, const char *title, int quiet)
 	}
 	putchar('\n');
 	
+}
+
+static void
+show_files(struct pkg *pkg __unused, const char *title, int quiet)
+{
+	struct pkgfile *file;
+	assert(pkg != NULL);
+	if (!quiet)
+		printf("%s\n", title);
+	file = pkg_get_next_file(pkg);
+	while (file != NULL) {
+		printf("%s\n", pkgfile_get_name(file));
+		pkgfile_free(file);
+		file = pkg_get_next_file(pkg);
+	}
 }
 
 static void

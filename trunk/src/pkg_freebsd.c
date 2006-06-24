@@ -88,6 +88,8 @@ struct freebsd_package {
 	struct pkgfile **control;
 	struct pkg_freebsd_contents *contents;
 	struct pkgfile *next_file;
+	unsigned int line;
+	char *curdir;
 	freebsd_type pkg_type;
 };
 
@@ -191,6 +193,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	if (pkg == NULL)
 		return NULL;
 	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin);
+	pkg_add_callbacks_install(pkg, NULL, freebsd_get_next_file, NULL);
 
 	fpkg = freebsd_package_new();
 	if (fpkg == NULL) {
@@ -581,20 +584,40 @@ freebsd_get_next_file(struct pkg *pkg)
 	assert(pkg != NULL);
 	fpkg = pkg->data;
 	assert(fpkg != NULL);
-	assert(fpkg->pkg_type == fpkg_from_file);
 
-	if (fpkg->next_file) {
-		struct pkgfile *pkgfile = fpkg->next_file;
+	file = NULL;
+	if (fpkg->next_file != NULL) {
+		file = fpkg->next_file;
 		fpkg->next_file = NULL;
-		return pkgfile;
-	}
-	if (fpkg->archive == NULL)
-		return NULL;
+	} else if (fpkg->archive == NULL)  {
+		freebsd_parse_contents(fpkg);
+		while (fpkg->line < fpkg->contents->line_count) {
+			if (fpkg->contents->lines[fpkg->line].line_type ==
+			    PKG_LINE_CWD) {
+				if (fpkg->curdir != NULL)
+					free(fpkg->curdir);
+				fpkg->curdir = strdup(
+				    fpkg->contents->lines[fpkg->line].data);
+			}
+			if (fpkg->contents->lines[fpkg->line].line_type == PKG_LINE_FILE) {
+				char the_file[FILENAME_MAX + 1];
 
-	file = freebsd_get_next_entry(fpkg->archive);
-	if (file == NULL) {
-		archive_read_finish(fpkg->archive);
-		fpkg->archive = NULL;
+				snprintf(the_file, FILENAME_MAX, "%s/%s",
+				    fpkg->curdir,
+				    fpkg->contents->lines[fpkg->line].line);
+				file = pkgfile_new_from_disk(the_file, 1);
+				fpkg->line++;
+				return file;
+			}
+			fpkg->line++;
+		}
+		return NULL;
+	} else {
+		file = freebsd_get_next_entry(fpkg->archive);
+		if (file == NULL) {
+			archive_read_finish(fpkg->archive);
+			fpkg->archive = NULL;
+		}
 	}
 	return file;
 }
@@ -775,6 +798,8 @@ freebsd_free(struct pkg *pkg)
 		if (fpkg->contents != NULL)
 			pkg_freebsd_contents_free(fpkg->contents);
 
+		if (fpkg->curdir != NULL)
+			free(fpkg->curdir);
 
 		free(fpkg);
 	}
@@ -824,6 +849,8 @@ freebsd_package_new()
 	fpkg->origin = NULL;
 	fpkg->version = NULL;
 	fpkg->next_file = NULL;
+	fpkg->line = 0;
+	fpkg->curdir = NULL;
 	fpkg->pkg_type = fpkg_unknown;
 
 	return fpkg;
