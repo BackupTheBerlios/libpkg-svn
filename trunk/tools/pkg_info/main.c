@@ -177,8 +177,10 @@ main(int argc, char **argv)
 	if (!info.db)
 		return 1;
 	ret = pkg_info(info);
-	if (info.pkgs)
+	if (info.pkgs != NULL)
 		free(info.pkgs);
+	if (info.origin != NULL)
+		free(info.origin);
 	pkg_db_free(info.db);
 	return ret;
 }
@@ -210,7 +212,8 @@ pkg_info(struct pkg_info info)
 		pkgs = pkg_db_get_installed_match(info.db, pkg_match_by_origin,
 		    (const void *)info.origin);
 		if (info.quiet == 0)
-			printf("The following installed package(s) has devel/t1lib origin:\n");
+			printf("The following installed package(s) has %s "
+			    "origin:\n", info.origin);
 		for (pos = 0; pkgs[pos] != NULL; pos++) {
 			printf("%s\n", pkg_get_name(pkgs[pos]));
 		}
