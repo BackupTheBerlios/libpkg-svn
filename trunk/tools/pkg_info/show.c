@@ -39,7 +39,7 @@ static void	show_plist(struct pkg *, const char *, int, int);
 static void	show_size(struct pkg *, const char *, int quiet);
 
 void
-show(struct pkg_db *db __unused, struct pkg *pkg, int flags, int quiet)
+show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet)
 {
 	if (flags & SHOW_PKGNAME) {
 		printf("%s\n", pkg_get_name(pkg));
@@ -167,7 +167,7 @@ show_file(struct pkgfile *file, const char *title, int quiet)
 }
 
 static void
-show_files(struct pkg *pkg __unused, const char *title, int quiet)
+show_files(struct pkg *pkg, const char *title, int quiet)
 {
 	struct pkgfile *file;
 	assert(pkg != NULL);
