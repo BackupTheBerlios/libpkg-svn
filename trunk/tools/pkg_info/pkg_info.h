@@ -73,6 +73,7 @@ struct pkg_info {
 	int	  quiet;
 	match_t	  match_type;
 	int	  flags;
+	int	  use_blocksize;
 	const char *check_package;
 	const char *origin;
 	const char *seperator;
@@ -81,6 +82,7 @@ struct pkg_info {
 struct pkg	**match_regex(struct pkg_db *, const char **, int);
 struct pkg	**match_glob(struct pkg_db *, const char **, int);
 int		  pkg_info(struct pkg_info);
-void		  show(struct pkg_db *, struct pkg *, int, int, const char *);
+void		  show(struct pkg_db *, struct pkg *, int, int, const char *,
+		       int);
 
 #endif /* __PKG_INFO_H__ */

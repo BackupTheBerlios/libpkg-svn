@@ -21,13 +21,17 @@
 
 #include "pkg_info.h"
 
+#include <sys/param.h>
+
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
 #include <pkg_db.h>
 #include <pkg_freebsd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 
 static void	show_cksum(struct pkg *, const char *, const char *, int);
 static void	show_file(struct pkgfile *, const char *, const char *, int);
@@ -36,11 +40,12 @@ static void	show_fmtrev(struct pkg *, const char *, const char *, int);
 static void	show_index(struct pkg *);
 static void	show_origin(struct pkg *, const char *, const char *, int);
 static void	show_plist(struct pkg *, const char *, const char *, int, int);
-static void	show_size(struct pkg *, const char *, const char *, int quiet);
+static void	show_size(struct pkg *, const char *, const char *, int quiet,
+			int);
 
 void
 show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet,
-    const char *seperator)
+    const char *seperator, int use_blocksize __unused)
 {
 	if (flags & SHOW_PKGNAME) {
 		printf("%s\n", pkg_get_name(pkg));
@@ -123,7 +128,8 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet,
 	}
 	if ((flags & SHOW_SIZE) &&
 	    pkg_db_is_installed(db, pkg) == 0) {
-		show_size(pkg, seperator, "Package Size:\n", quiet);
+		show_size(pkg, seperator, "Package Size:\n", quiet,
+		    use_blocksize);
 	}
 	if ((flags & SHOW_CKSUM) &&
 	    pkg_db_is_installed(db, pkg) == 0) {
@@ -346,12 +352,32 @@ show_plist(struct pkg *pkg, const char *seperator, const char *title, int quiet,
 }
 
 static void
-show_size(struct pkg *pkg __unused, const char *seperator, const char *title,
-    int quiet)
+show_size(struct pkg *pkg, const char *seperator, const char *title,
+    int quiet, int use_blocksize)
 {
+	uint64_t size = 0;
+	long block_size;
+	int headerlen; /* Used only with getbsize(3) */
+	char *descr;
+	struct pkgfile *file;
+
 	if (!quiet)
 		printf("%s%s", seperator, title);
 
-	/* XXX */
-	errx(1, "%s: Unimplemented", __func__);
+	descr = getbsize(&headerlen, &block_size);
+	
+	/* XXX When getting files and size we should only run through the files once */
+	file = pkg_get_next_file(pkg);
+	while (file != NULL) {
+		size += pkgfile_get_size(file);
+		pkgfile_free(file);
+		file = pkg_get_next_file(pkg);
+	}
+	if (!quiet)
+		printf("%" PRIu64 "\t(%s)\n", howmany(size, block_size), descr);
+	else
+		if (use_blocksize)
+			printf("%" PRIu64 "\n", howmany(size, block_size));
+		else
+			printf("%" PRIu64 "\n", size);
 }

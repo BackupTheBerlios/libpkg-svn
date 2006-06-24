@@ -45,6 +45,7 @@ main(int argc, char **argv)
 	info.origin = NULL;
 	info.check_package = NULL;
 	info.seperator = "";
+	info.use_blocksize = 0;
 
 	if (argc == 1) {
 		info.match_type = MATCH_ALL;
@@ -58,7 +59,7 @@ main(int argc, char **argv)
 				info.match_type = MATCH_ALL;
 				break;
 			case 'b':
-				errx(1, "Unsupported argument");
+				info.use_blocksize = 1;
 				break;
 			case 'c':
 				info.flags |= SHOW_COMMENT; 
@@ -257,7 +258,7 @@ pkg_info(struct pkg_info info)
 		qsort(pkgs, cur, sizeof(struct pkg *), pkg_compare);
 		for (cur = 0; pkgs[cur] != NULL; cur++) {
 			show(info.db, pkgs[cur], info.flags, info.quiet,
-			    info.seperator);
+			    info.seperator, info.use_blocksize);
 		}
 		retval = 0;
 		break;
@@ -271,7 +272,7 @@ pkg_info(struct pkg_info info)
 			pkg = pkg_db_get_package(info.db, info.pkgs[cur]);
 			if (pkg != NULL)
 				show(info.db, pkg, info.flags, info.quiet,
-				    info.seperator);
+				    info.seperator, info.use_blocksize);
 			else {
 				warnx("pkg_info: can't find package '%s' "
 				    "installed or in a file!", info.pkgs[cur]);
