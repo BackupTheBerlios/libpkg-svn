@@ -139,7 +139,7 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet,
 		    quiet);
 	}
 	if (!quiet) {
-		puts("");
+		puts(seperator);
 	}
 }
 
@@ -166,8 +166,17 @@ show_file(struct pkgfile *file, const char *seperator, const char *title,
 		printf("ERROR: show_file: Can't open '%s' for reading!\n",
 		    pkgfile_get_name(file));
 	} else {
-		printf("%s", pkgfile_get_data_all(file));
+		char *str;
+		uint64_t length, pos;
+
+		length = pkgfile_get_size(file);
+		str = pkgfile_get_data_all(file);
+		for (pos = 0; pos < length; pos++) {
+			putchar(str[pos]);
+		}
+		free(str);
 	}
+	putchar('\n');
 	putchar('\n');
 	
 }
