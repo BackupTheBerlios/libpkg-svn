@@ -123,12 +123,10 @@ show(struct pkg_db *db __unused, struct pkg *pkg, int flags, int quiet)
 	if ((flags & SHOW_SIZE) &&
 	    pkg_db_is_installed(db, pkg) == 0) {
 		show_size(pkg, "Package Size:\n", quiet);
-	//    show_size("Package Size:\n", &plist);
 	}
 	if ((flags & SHOW_CKSUM) &&
 	    pkg_db_is_installed(db, pkg) == 0) {
 		show_cksum(pkg, "Mismatched Checksums:\n", quiet);
-	//    show_cksum("Mismatched Checksums:\n", &plist);
 	}
 	if (flags & SHOW_ORIGIN) {
 		show_origin(pkg, "Origin:\n", quiet);
