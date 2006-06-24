@@ -76,12 +76,10 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet,
 	}
 	if ((flags & SHOW_REQBY)) {
 		struct pkgfile *file;
-		char *contents;
 
 		file = pkg_get_control_file(pkg, REQUIRED_BY_FNAME);
 		if (file != NULL) {
-			contents = pkgfile_get_data_all(file);
-			if (contents != NULL && contents[0] != '\0')
+			if (pkgfile_get_size(file) > 0)
 				show_file(file, seperator, "Required by:\n",
 				    quiet);
 		}
