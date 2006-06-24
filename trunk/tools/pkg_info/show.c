@@ -29,17 +29,18 @@
 #include <string.h>
 #include <unistd.h>
 
-static void	show_cksum(struct pkg *, const char *, int);
-static void	show_file(struct pkgfile *, const char *, int);
-static void	show_files(struct pkg *, const char *, int);
-static void	show_fmtrev(struct pkg *, const char *, int);
+static void	show_cksum(struct pkg *, const char *, const char *, int);
+static void	show_file(struct pkgfile *, const char *, const char *, int);
+static void	show_files(struct pkg *, const char *, const char *, int);
+static void	show_fmtrev(struct pkg *, const char *, const char *, int);
 static void	show_index(struct pkg *);
-static void	show_origin(struct pkg *, const char *, int);
-static void	show_plist(struct pkg *, const char *, int, int);
-static void	show_size(struct pkg *, const char *, int quiet);
+static void	show_origin(struct pkg *, const char *, const char *, int);
+static void	show_plist(struct pkg *, const char *, const char *, int, int);
+static void	show_size(struct pkg *, const char *, const char *, int quiet);
 
 void
-show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet)
+show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet,
+    const char *seperator)
 {
 	if (flags & SHOW_PKGNAME) {
 		printf("%s\n", pkg_get_name(pkg));
@@ -57,7 +58,7 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet)
 		struct pkgfile *file;
 		file = pkg_get_control_file(pkg, COMMENT_FNAME);
 		assert(file != NULL);
-		show_file(file, "Comment:\n", quiet);
+		show_file(file, seperator, "Comment:\n", quiet);
 	}
 #define ifexist_show(filename, title) \
 	{ \
@@ -65,12 +66,13 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet)
 		file = pkg_get_control_file(pkg, filename); \
 		assert(file != NULL); \
 		if (file != NULL) \
-			show_file(file, title ":\n", quiet); \
+			show_file(file, seperator, title ":\n", quiet); \
 	}
 
 	/* XXX Abstract all this out to the appropriate object */
 	if (flags & SHOW_DEPEND) {
-		show_plist(pkg, "Depends on:\n", quiet, PKG_LINE_PKGDEP);
+		show_plist(pkg, seperator, "Depends on:\n", quiet,
+		    PKG_LINE_PKGDEP);
 	}
 	if ((flags & SHOW_REQBY)) {
 		struct pkgfile *file;
@@ -80,7 +82,8 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet)
 		if (file != NULL) {
 			contents = pkgfile_get_data_all(file);
 			if (contents != NULL && contents[0] != '\0')
-				show_file(file, "Required by:\n", quiet);
+				show_file(file, seperator, "Required by:\n",
+				    quiet);
 		}
 	}
 	if (flags & SHOW_DESC) {
@@ -88,13 +91,13 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet)
 
 		file = pkg_get_control_file(pkg, DESC_FNAME);
 		assert(file != NULL);
-		show_file(file, "Description:\n", quiet);
+		show_file(file, seperator, "Description:\n", quiet);
 	}
 	if ((flags & SHOW_DISPLAY)) {
 		ifexist_show(DISPLAY_FNAME, "Install notice");
 	}
 	if (flags & SHOW_PLIST) {
-		show_plist(pkg, "Packing list:\n", quiet, 0);
+		show_plist(pkg, seperator, "Packing list:\n", quiet, 0);
 	}
 	if (flags & SHOW_REQUIRE) {
 		ifexist_show(REQUIRE_FNAME, "Requirements script");
@@ -115,24 +118,25 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet)
 		ifexist_show(MTREE_FNAME, "mtree file");
 	}
 	if (flags & SHOW_PREFIX) {
-		show_plist(pkg, "Prefix(s):\n", quiet, PKG_LINE_CWD);
+		show_plist(pkg, seperator, "Prefix(s):\n", quiet, PKG_LINE_CWD);
 	}
 	if (flags & SHOW_FILES) {
-		show_files(pkg, "Files:\n", quiet);
+		show_files(pkg, seperator, "Files:\n", quiet);
 	}
 	if ((flags & SHOW_SIZE) &&
 	    pkg_db_is_installed(db, pkg) == 0) {
-		show_size(pkg, "Package Size:\n", quiet);
+		show_size(pkg, seperator, "Package Size:\n", quiet);
 	}
 	if ((flags & SHOW_CKSUM) &&
 	    pkg_db_is_installed(db, pkg) == 0) {
-		show_cksum(pkg, "Mismatched Checksums:\n", quiet);
+		show_cksum(pkg, seperator, "Mismatched Checksums:\n", quiet);
 	}
 	if (flags & SHOW_ORIGIN) {
-		show_origin(pkg, "Origin:\n", quiet);
+		show_origin(pkg, seperator, "Origin:\n", quiet);
 	}
 	if (flags & SHOW_FMTREV) {
-		show_fmtrev(pkg, "Packing list format revision:\n", quiet);
+		show_fmtrev(pkg, seperator, "Packing list format revision:\n",
+		    quiet);
 	}
 	if (!quiet) {
 		puts("");
@@ -141,21 +145,23 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet)
 
 /* Show files that don't match the recorded checksum */
 static void
-show_cksum(struct pkg *pkg __unused, const char *title, int quiet)
+show_cksum(struct pkg *pkg __unused, const char *seperator, const char *title,
+    int quiet)
 {
 	if (!quiet)
-		printf("%s", title);
+		printf("%s%s", seperator, title);
 
 	/* XXX */
 	errx(1, "%s: Unimplemented", __func__);
 }
 
 static void
-show_file(struct pkgfile *file, const char *title, int quiet)
+show_file(struct pkgfile *file, const char *seperator, const char *title,
+    int quiet)
 {
 	assert(file != NULL);
 	if (!quiet)
-		printf("%s", title);
+		printf("%s%s", seperator, title);
 	if (file == NULL) {
 		printf("ERROR: show_file: Can't open '%s' for reading!\n",
 		    pkgfile_get_name(file));
@@ -167,12 +173,12 @@ show_file(struct pkgfile *file, const char *title, int quiet)
 }
 
 static void
-show_files(struct pkg *pkg, const char *title, int quiet)
+show_files(struct pkg *pkg, const char *seperator, const char *title, int quiet)
 {
 	struct pkgfile *file;
 	assert(pkg != NULL);
 	if (!quiet)
-		printf("%s\n", title);
+		printf("%s%s", seperator, title);
 	file = pkg_get_next_file(pkg);
 	while (file != NULL) {
 		printf("%s\n", pkgfile_get_name(file));
@@ -182,11 +188,12 @@ show_files(struct pkg *pkg, const char *title, int quiet)
 }
 
 static void
-show_fmtrev(struct pkg* pkg, const char *title, int quiet)
+show_fmtrev(struct pkg* pkg, const char *seperator, const char *title,
+    int quiet)
 {
 	const char *version;
 	if (!quiet)
-		printf("%s", title);
+		printf("%s%s", seperator, title);
 
 	version = pkg_get_version(pkg);
 	if (version == NULL)
@@ -232,15 +239,17 @@ show_index(struct pkg *pkg)
 }
 
 static void
-show_origin(struct pkg *pkg, const char *title, int quiet)
+show_origin(struct pkg *pkg, const char *seperator, const char *title,
+    int quiet)
 {
 	if (!quiet)
-		printf("%s", title);
+		printf("%s%s", seperator, title);
 	printf("%s\n", pkg_get_origin(pkg));
 }
 
 static void
-show_plist(struct pkg *pkg, const char *title, int quiet, int type)
+show_plist(struct pkg *pkg, const char *seperator, const char *title, int quiet,
+    int type)
 {
 	struct pkg_freebsd_contents *contents;
 	struct pkg_freebsd_contents_line *line;
@@ -248,7 +257,7 @@ show_plist(struct pkg *pkg, const char *title, int quiet, int type)
 	char *prefix = NULL;
 
 	if (!quiet)
-		printf("%s", title);
+		printf("%s%s", seperator, title);
 	contents = pkg_freebsd_get_contents(pkg);
 
 	i = 0;
@@ -330,10 +339,11 @@ show_plist(struct pkg *pkg, const char *title, int quiet, int type)
 }
 
 static void
-show_size(struct pkg *pkg __unused, const char *title, int quiet)
+show_size(struct pkg *pkg __unused, const char *seperator, const char *title,
+    int quiet)
 {
 	if (!quiet)
-		printf("%s", title);
+		printf("%s%s", seperator, title);
 
 	/* XXX */
 	errx(1, "%s: Unimplemented", __func__);
