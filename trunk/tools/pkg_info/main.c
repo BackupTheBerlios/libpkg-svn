@@ -107,9 +107,7 @@ main(int argc, char **argv)
 				info.flags |= SHOW_ORIGIN;
 				break;
 			case 'O':
-				info.origin = strdup(optarg);
-				if (info.origin == NULL)
-					err(2, NULL);
+				info.origin = optarg;
 				break;
 			case 'p':
 				info.flags |= SHOW_PREFIX;
@@ -179,8 +177,6 @@ main(int argc, char **argv)
 	ret = pkg_info(info);
 	if (info.pkgs != NULL)
 		free(info.pkgs);
-	if (info.origin != NULL)
-		free(info.origin);
 	pkg_db_free(info.db);
 	return ret;
 }
