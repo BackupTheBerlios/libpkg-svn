@@ -85,11 +85,13 @@ pkg_freebsd_contents_new(const char *contents, uint64_t length)
 		cont->line_size = 0;
 		cont->lines = NULL;
 	} else {
-		cont->file = strdup(contents);
+		cont->file = malloc(length + 1);
 		if (!cont->file) {
 			free(cont);
 			return NULL;
 		}
+		memcpy(cont->file, contents, length);
+		cont->file[length] = '\0';
 		cont->lines = NULL;
 
 		pos = 0;
