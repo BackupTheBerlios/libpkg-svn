@@ -42,6 +42,7 @@ main(int argc, char **argv)
 	info.flags = 0;
 	info.pkgs = NULL;
 	info.quiet = 0;
+	info.origin = NULL;
 
 	if (argc == 1) {
 		info.match_type = MATCH_ALL;
@@ -106,7 +107,9 @@ main(int argc, char **argv)
 				info.flags |= SHOW_ORIGIN;
 				break;
 			case 'O':
-				errx(1, "Unsupported argument");
+				info.origin = strdup(optarg);
+				if (info.origin == NULL)
+					err(2, NULL);
 				break;
 			case 'p':
 				info.flags |= SHOW_PREFIX;
@@ -202,6 +205,18 @@ pkg_info(struct pkg_info info)
 	retval = 1;
 	pkgs = NULL;
 
+	if (info.origin != NULL) {
+		unsigned int pos;
+		pkgs = pkg_db_get_installed_match(info.db, pkg_match_by_origin,
+		    (const void *)info.origin);
+		if (info.quiet == 0)
+			printf("The following installed package(s) has devel/t1lib origin:\n");
+		for (pos = 0; pkgs[pos] != NULL; pos++) {
+			printf("%s\n", pkg_get_name(pkgs[pos]));
+		}
+		return 0;
+	}
+	
 	switch(info.match_type) {
 	case MATCH_ALL:
 	case MATCH_GLOB:

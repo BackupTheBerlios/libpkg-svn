@@ -73,6 +73,7 @@ struct pkg_info {
 	int	  quiet;
 	match_t	  match_type;
 	int	  flags;
+	char	 *origin;
 };
 
 struct pkg	**match_regex(struct pkg_db *, const char **, int);
