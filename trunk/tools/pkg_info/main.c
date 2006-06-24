@@ -79,7 +79,7 @@ main(int argc, char **argv)
 				info.flags |= SHOW_CKSUM;
 				break;
 			case 'G':
-				errx(1, "Unsupported argument");
+				info.match_type = MATCH_EXACT;
 				break;
 			case 'i':
 				info.flags |= SHOW_INSTALL;
@@ -240,8 +240,11 @@ pkg_info(struct pkg_info info)
 			pkg = pkg_db_get_package(info.db, info.pkgs[cur]);
 			if (pkg != NULL)
 				show(info.db, pkg, info.flags, info.quiet);
-			else
+			else {
+				warnx("pkg_info: can't find package '%s' "
+				    "installed or in a file!", info.pkgs[cur]);
 				retval = 1;
+			}
 		}
 		break;
 	}
