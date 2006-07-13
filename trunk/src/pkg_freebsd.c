@@ -614,6 +614,8 @@ freebsd_get_next_file(struct pkg *pkg)
 				    fpkg->curdir,
 				    fpkg->contents->lines[fpkg->line].line);
 				file = pkgfile_new_from_disk(the_file, 1);
+				if (file == NULL)
+					return NULL;
 				fpkg->line++;
 
 				/* Add the recorded md5 to the file */
