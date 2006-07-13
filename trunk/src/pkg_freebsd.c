@@ -228,19 +228,26 @@ pkg_new_freebsd_empty(const char *pkg_name __unused)
 	assert(0);
 	return NULL;
 }
+#endif
 
 /**
  * @brief Gets the contents struct from a package
- * @todo Write
+ *
+ * This will go away before 0.2
  * @return The contents struct
  */
 struct pkg_freebsd_contents *
 pkg_freebsd_get_contents(struct pkg *pkg __unused)
 {
-	assert(0);
-	return NULL;
+	struct freebsd_package *fpkg;
+
+	if (pkg == NULL || pkg->data == NULL)
+		return NULL;
+	fpkg = pkg->data;
+	freebsd_open_control_files(fpkg);
+
+	return fpkg->contents;
 }
-#endif
 
 /**
  * @}
@@ -599,7 +606,8 @@ freebsd_get_next_file(struct pkg *pkg)
 				fpkg->curdir = strdup(
 				    fpkg->contents->lines[fpkg->line].data);
 			}
-			if (fpkg->contents->lines[fpkg->line].line_type == PKG_LINE_FILE) {
+			if (fpkg->contents->lines[fpkg->line].line_type ==
+			    PKG_LINE_FILE) {
 				char the_file[FILENAME_MAX + 1];
 
 				snprintf(the_file, FILENAME_MAX, "%s/%s",
@@ -607,10 +615,20 @@ freebsd_get_next_file(struct pkg *pkg)
 				    fpkg->contents->lines[fpkg->line].line);
 				file = pkgfile_new_from_disk(the_file, 1);
 				fpkg->line++;
+
+				/* Add the recorded md5 to the file */
+				if (fpkg->contents->lines[fpkg->line].line_type
+				  == PKG_LINE_COMMENT) {
+					strncpy(file->md5,
+					    fpkg->contents->lines[fpkg->line].data + 4,
+					    32);
+					file->md5[33] = '\0';
+				}
 				return file;
 			}
 			fpkg->line++;
 		}
+		fpkg->line = 0;
 		return NULL;
 	} else {
 		file = freebsd_get_next_entry(fpkg->archive);

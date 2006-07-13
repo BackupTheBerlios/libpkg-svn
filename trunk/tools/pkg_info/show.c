@@ -69,7 +69,6 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet,
 	{ \
 		struct pkgfile *file; \
 		file = pkg_get_control_file(pkg, filename); \
-		assert(file != NULL); \
 		if (file != NULL) \
 			show_file(file, seperator, title ":\n", quiet); \
 	}
@@ -149,14 +148,20 @@ show(struct pkg_db *db, struct pkg *pkg, int flags, int quiet,
 
 /* Show files that don't match the recorded checksum */
 static void
-show_cksum(struct pkg *pkg __unused, const char *seperator, const char *title,
-    int quiet)
+show_cksum(struct pkg *pkg, const char *seperator, const char *title, int quiet)
 {
+	struct pkgfile *file;
+
 	if (!quiet)
 		printf("%s%s", seperator, title);
 
-	/* XXX */
-	errx(1, "%s: Unimplemented", __func__);
+	file = pkg_get_next_file(pkg);
+	while (file != NULL) {
+		if (pkgfile_compare_checksum_md5(file) == 1)
+			printf("%s\n", pkgfile_get_name(file));
+		pkgfile_free(file);
+		file = pkg_get_next_file(pkg);
+	}
 }
 
 static void

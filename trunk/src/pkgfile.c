@@ -27,10 +27,14 @@
  *
  */
 
+#include <sys/types.h>
+#include <sys/mman.h>
+
 #include <assert.h>
 #include <errno.h>
 #include <libgen.h>
 #include <limits.h>
+#include <md5.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,6 +75,7 @@ pkgfile_new(const char *filename, pkgfile_type type)
 	file->data = NULL;
 	file->length = 0;
 	file->mode = 0;
+	file->md5[0] = '\0';
 
 	return file;
 }
@@ -342,6 +347,48 @@ pkgfile_get_data_all(struct pkgfile *file)
 
 	size = pkgfile_get_size(file);
 	return pkgfile_get_data(file, size);
+}
+
+/**
+ * @brief Compares a file's MD5 checksum with the version on disk
+ * @return 1 if the recorded checksum is different to the disk checksum
+ * @return 0 if the recorded checksum is the same as the disk checksum
+ * @return -1 if there is a problem with the file object
+ */
+int
+pkgfile_compare_checksum_md5(struct pkgfile *file)
+{
+	if (file == NULL || file->md5[0] == '\0')
+		return -1;
+
+	assert(file->type != pkgfile_none);
+	assert(file->type != pkgfile_hardlink);
+	assert(file->type != pkgfile_symlink);
+	assert(file->type != pkgfile_dir);
+
+	switch (file->type) {
+		case pkgfile_none:
+		case pkgfile_hardlink:
+		case pkgfile_symlink:
+		case pkgfile_dir:
+			break;
+		case pkgfile_regular:
+		{
+			char checksum[33];
+
+			if (file->name == NULL)
+				return -1;
+
+			MD5File(file->name, checksum);
+
+			if (strncmp(checksum, file->md5, 32) == 0)
+				return 0;
+
+			printf("%s\n%s\n\n", checksum, file->name);
+			return 1;
+		}
+	}
+	return -1;
 }
 
 /**

@@ -43,6 +43,7 @@ struct pkgfile {
 	char		*data;
 	uint64_t	 length;
 	mode_t		 mode;
+	char		 md5[33];
 };
 
 /*
