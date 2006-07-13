@@ -60,5 +60,6 @@ int		  pkg_db_free(struct pkg_db *);
 
 int		  pkg_match_all(struct pkg *, const void *);
 int		  pkg_match_by_origin(struct pkg *, const void *);
+int		  pkg_match_by_file(struct pkg *, const void *);
 
 #endif /* __LIBPKG_PKG_DB_H__ */

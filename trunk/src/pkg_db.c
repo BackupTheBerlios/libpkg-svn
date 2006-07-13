@@ -293,5 +293,28 @@ pkg_match_by_origin(struct pkg *pkg, const void *origin)
 }
 
 /**
+ * @brief Matches all packages by file.
+ * @param pkg The package to attempt to match
+ * @param filename The file to match
+ * @return 0 if the package origin is the same as origin, otherwise non zero
+ */
+int
+pkg_match_by_file(struct pkg *pkg, const void *filename)
+{
+	struct pkgfile *file;
+
+	file = pkg_get_next_file(pkg);
+	while (file != NULL) {
+		if (strcmp((const char *)filename, pkgfile_get_name(file)) ==0){
+			pkgfile_free(file);
+			return 0;
+		}
+		pkgfile_free(file);
+		file = pkg_get_next_file(pkg);
+	}
+	return -1;
+}
+
+/**
  * @}
  */
