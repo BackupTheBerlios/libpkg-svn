@@ -138,7 +138,6 @@ pkg_checksum_md5(struct pkgfile *file, char *chk_sum)
  * @brief Executes a program
  * 
  * It will use fmt as the format to generate the execv string.
- * @todo Write
  * @return the return value from the child process
  */
 int
@@ -158,11 +157,35 @@ pkg_exec(const char *fmt, ...)
 	return ret;
 }
 
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageUtilCachedFileInternal File cacheing handler callbacks
+ * @ingroup PackageUtilCachedFile
+ * These functions are callbacks for a FILE pointer designed
+ * to cache the output of a another FILE pointer.
+ * This is useful when downloading with libfetch to not have
+ * to download the file again.
+ *
+ * @{
+ */
+
 struct cached_read {
 	FILE *fd;
 	FILE *cache;
 };
 
+/**
+ * @brief Reads from a file, caches the data and copies it to buf
+ * @param c A cached_read object
+ * @param buf The buffer to save the data to
+ * @param len The ammount of data to read
+ *
+ * This is a callback to fread
+ * @return The amount of data read or -1
+ */
 static int
 pkg_cached_readfn(void *c, char *buf, int len)
 {
@@ -192,6 +215,16 @@ pkg_cached_readfn(void *c, char *buf, int len)
 	return ret;
 }
 
+/**
+ * @brief Seeks to a given point in a cached file
+ * @param c A cached_file object
+ * @param pos The position to move to
+ * @param whence Where to make the move relative to
+ *
+ * This is a callback for fseek
+ * @return -1 on error
+ * @return 0 on success
+ */
 static fpos_t
 pkg_cached_seekfn(void *c, fpos_t pos, int whence)
 {
@@ -201,6 +234,11 @@ pkg_cached_seekfn(void *c, fpos_t pos, int whence)
 	return fseek(cr->fd, pos, whence);
 }
 
+/**
+ * @brief Closes a cached file
+ * @param c A cached_file object
+ * @return 0
+ */
 static int
 pkg_cached_closefn(void *c)
 {
@@ -213,6 +251,23 @@ pkg_cached_closefn(void *c)
 	return 0;
 }
 
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PackageUtilCachedFile File cacheing handler creation
+ * @ingroup PackageUtil
+ *
+ * @{
+ */
+
+/**
+ * @brief Creates a new cached FILE pointer
+ * @param fd The file to cache
+ * @param file The location of the file cache
+ * @return A FILE pointer or NULL
+ */
 FILE *
 pkg_cached_file(FILE *fd, const char *file)
 {
