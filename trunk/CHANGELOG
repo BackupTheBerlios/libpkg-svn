@@ -1,3 +1,93 @@
+2006-07-14
+ * Add pkg_db_get_installed_match_count to retrieve upto count packages that match
+ * Implement pkg_info -W
+ * Add pkg_match_by_file to find (all) packages with a given file
+ * Fix a bug where pkgfile_new_from_disk could fail and return NULL
+ * Add support to compare the checksum of files with the checksum recorded in the package
+ * Use it to implement -g in pkg_info
+ * Remove an unneeded assert in pkg_info
+ * Implement pkg_freebsd_get_contents as a way to retrieve a packages contents file
+
+2006-06-25
+ * Add support for pkg_info -b and -s
+
+2006-06-24
+ * Change a pkgfile_get_data_all to pkgfile_get_size as we are interested in the size not the contents
+ * Fix show_file in pkg_info
+ * Display the seperator at the end of each package
+ * Implement pkg_info -l
+ * Implement pkg_info -e
+ * Use "const char *" for the origin string
+ * Remove an unneeded strdup from pkg_info
+ * Fix a memory leak and correct a string in the last revisio
+ * Implement pkg_info -O
+ * Remove unneeded __unused's
+ * Support selecting packages by shell glob in pkg_info
+ * Allow pkg_info -G to stop shell globbing
+ * Write the correct error message when MATCH_EXACT couldn't find the package
+ * Remove unused commented out functions
+ * Support pkg_get_next_file for installed FreeBSD packages
+ * Use pkg_get_next_file to implement pkg_info -L
+ * Fix memory bug where strdup was used with a buffer that may not end with a null
+
+2006-06-23
+ * Set the mode when writing a pkgfile
+ * Fix symlinks
+ * Move pkg_file.c to pkgfile.c to follow change in name of struct
+ * Rename pkg_file to pkgfile
+ * Rewrite the pkgfile_* functions to be easter to work with
+ * Build a debugging pkg_info
+ * Fix a typo
+ * Add comments on what should be happening
+
+2006-05-03
+ * When building a profiling pkg_add pull in the profiling system libraries
+
+2006-05-02
+ * Fix memory leaks in pkg_add
+ * Have pkg_add use the new pkg_repo_ftp syntax to keep the file when -K is used
+ * Add support to save the file fetched to a given directory
+ * Add pkg_cached_file defintion to pkg_private.h
+ * Close the file we are reading from when we close
+ * Remove the function definition for pkg_cached_file from pkg_util.c as it is also in pkg_private.h
+ * Fix memory leaks in pkg_freebsd objects
+
+2006-05-01
+ * Add a FILE object creator to cache the output of another FILE object
+
+2006-04-29
+ * Rename the pkg Doxygen group to pkg
+ * Add struct pkg and the enum from pkg.h to the Package group docs
+
+2006-04-26
+ * Generate the documentation
+ * Reduce the warnings from Doxygen
+
+2006-04-25
+ * Remove the old FreeBSD package installation backend
+ * Ignore @conflicts lines when installing
+ * Fix freebsd_get_deps return an array with only a NULL when a package has no dependencies
+ * Don't mutilate the +CONTENTS file before installing it. Cvs pkg_add dosn't so neither should we
+ * Register the reverse dependency of a package
+ * Make sure we exit in the same directory we entered in when installing packages
+ * Fix the check for fake installations when executing scripts
+ * Install files and fix the checks to se if this is a fake run
+ * Add a package registration callback to pkg_install
+ * Don't install files when @ignore was the previous line in the +CONTENTS file
+ * In pkg_db_freebsd make sure the last directory and file are initilised
+
+2006-04-24
+ * Reorder the line type enum to a more sensible order
+ * Add support to decode @display lines
+ * As there is no data associated with files make sure it is NULL
+ * Add pkg_action_null, a pkg_action callback to do nothing. This means the check to se if pkg_action is NULL can be removed
+ * Add pkg_install, an internal function to install packages. This removes the need to know the internals of a package from pkg_db.
+ * Make pkg_freebsd know how to install it's self to a given database by using the pkg_install function
+
+2006-04-21
+ * Add the start of a reworked package installation callback.
+ * Add support for executing a script that will check to see if the package can be installed
+
 2006-04-14
  * Allow packages to be installed without registering the installation
  * Use change 93 to implement the -R flag in pkg_add
@@ -6,6 +96,7 @@
  * Use pkg_set_prefix rather than a prefix variable in freebsd_install_pkg_action
  * Add pkg_script_mtree and use if when installing package. This runs the mtree on the +MTREE_DIRS file
  * In freebsd_run_script unlink(2) the script so rmdir(2) will remove the temp directory
+ * Remove problems that have been solved from the README
 
 2006-04-12
  * Implement execution of pre/post installation scripts
