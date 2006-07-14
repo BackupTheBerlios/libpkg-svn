@@ -1,0 +1,15 @@
+<?xml version='1.0'?>
+<?xml-stylesheet href="page.xsl" type="text/xsl"?>
+<page name="downloads">
+ <title>libpkg Documentation</title>
+ <body>
+  <div>
+   <h2>Trunk</h2>
+   <p><a href="doc/trunk/html/index.html">API documentation</a></p>
+  </div>
+  <div>
+   <h2>0.1.20060714</h2>
+   <p><a href="doc/0.1.20060714/html/index.html">API documentation</a></p>
+  </div>
+ </body>
+</page>

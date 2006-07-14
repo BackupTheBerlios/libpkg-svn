@@ -1,4 +1,4 @@
-FILES=index.html downloads.html index.css
+FILES=index.html downloads.html docs.html index.css
 
 FILESDIR?=/home/groups/libpkg/htdocs/
 
@@ -15,5 +15,8 @@ index.html: index.xml page.xsl nav.xml
 
 downloads.html: downloads.xml page.xsl nav.xml
 	xsltproc downloads.xml > downloads.html
+
+docs.html: docs.xml page.xsl nav.xml
+	xsltproc docs.xml > docs.html
 
 page.xsl: nav.xml
