@@ -76,6 +76,7 @@ struct pkg_info {
 	int	  use_blocksize;
 	const char *check_package;
 	const char *origin;
+	const char *search_file;
 	const char *seperator;
 };
 

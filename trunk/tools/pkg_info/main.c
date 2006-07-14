@@ -46,6 +46,7 @@ main(int argc, char **argv)
 	info.check_package = NULL;
 	info.seperator = "";
 	info.use_blocksize = 0;
+	info.search_file = NULL;
 
 	if (argc == 1) {
 		info.match_type = MATCH_ALL;
@@ -146,7 +147,7 @@ main(int argc, char **argv)
 				info.flags |= SHOW_FMTREV;
 				break;
 			case 'W':
-				errx(1, "Unsupported argument");
+				info.search_file = optarg;
 				break;
 			case 'x':
 				info.match_type = MATCH_REGEX;
@@ -206,6 +207,7 @@ pkg_info(struct pkg_info info)
 	retval = 1;
 	pkgs = NULL;
 
+	/* -e package name */
 	if (info.check_package != NULL) {
 		struct pkg *pkg;
 		pkg = pkg_db_get_package(info.db, info.check_package);
@@ -215,6 +217,25 @@ pkg_info(struct pkg_info info)
 		}
 		return 1;
 	}
+
+	/* -W <filename> */
+	if (info.search_file != NULL) {
+		struct stat sb;
+
+		if (stat(info.search_file, &sb) != 0) {
+			/* XXX */
+			return 1;
+		}
+		pkgs = pkg_db_get_installed_match_count(info.db,
+		    pkg_match_by_file, 1, (const void *)info.search_file);
+		if (info.quiet == 0)
+			printf("The following installed package(s) has %s "
+			    "origin:\n", info.origin);
+		printf("%s\n", pkg_get_name(pkgs[0]));
+		return 0;
+	}
+
+	/* -O <origin> */
 	if (info.origin != NULL) {
 		unsigned int pos;
 		pkgs = pkg_db_get_installed_match(info.db, pkg_match_by_origin,
