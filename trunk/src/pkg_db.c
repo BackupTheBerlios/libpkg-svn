@@ -206,7 +206,25 @@ pkg_db_get_installed(struct pkg_db *db)
  * @return A null-terminated array of packages or NULL
  */
 struct pkg **
-pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *data)
+pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match,
+    const void *data)
+{
+	return pkg_db_get_installed_match_count(db, match, 0, data);
+}
+
+/**
+ * @brief Retrieve a NULL terminated array of up to count installed
+ *     packages that match accepts
+ * @param db The database to get the installed packages from
+ * @param match A function that is passed each package and returns 0 if
+ *     the package is wanted in the array
+ * @param count The maximum number of packages to return or 0 to return all
+ * @param data Data to be passed to match
+ * @return A null-terminated array of packages or NULL
+ */
+struct pkg **
+pkg_db_get_installed_match_count(struct pkg_db *db, pkg_db_match *match,
+    unsigned int count, const void *data)
 {
 	if (!db)
 		return NULL;
@@ -215,7 +233,7 @@ pkg_db_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *d
 		match = pkg_match_all;
 
 	if (db->pkg_get_installed_match)
-		return db->pkg_get_installed_match(db, match, data);
+		return db->pkg_get_installed_match(db, match, count, data);
 
 	return NULL;
 }

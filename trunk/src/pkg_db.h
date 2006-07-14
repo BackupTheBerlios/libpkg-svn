@@ -55,6 +55,8 @@ int		  pkg_db_is_installed(struct pkg_db *, struct pkg *);
 struct pkg	**pkg_db_get_installed(struct pkg_db *);
 struct pkg	**pkg_db_get_installed_match(struct pkg_db *, pkg_db_match *,
 			const void *);
+struct pkg	**pkg_db_get_installed_match_count(struct pkg_db *,
+			pkg_db_match *, unsigned int, const void *);
 struct pkg	 *pkg_db_get_package(struct pkg_db *, const char *);
 int		  pkg_db_free(struct pkg_db *);
 

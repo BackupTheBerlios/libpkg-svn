@@ -73,7 +73,7 @@ pkg_static int		  freebsd_install_pkg_action(struct pkg_db *,
 				struct pkg *, int, int, pkg_db_action *);
 pkg_static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
 pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
-				pkg_db_match *, const void *);
+				pkg_db_match *, unsigned int, const void *);
 pkg_static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
 
 /* pkg_install callbacks */
@@ -227,7 +227,7 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 	/* Does the package have an origin and if so is that origin installed */
 	if (pkg_get_origin(pkg) != NULL) {
 		pkgs = freebsd_get_installed_match(db, pkg_match_by_origin,
-		    (const void *)pkg_get_origin(pkg));
+		    0, (const void *)pkg_get_origin(pkg));
 		if (pkgs[0] != NULL)
 			is_installed = 0;
 		pkg_list_free(pkgs);
@@ -241,7 +241,8 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
  *     function it returns 0. NULL on error
  */
 static struct pkg **
-freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *data)
+freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match,
+    unsigned int count, const void *data)
 {
 	DIR *d;
 	struct dirent *de;
@@ -284,6 +285,10 @@ freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match, const void *
 			packages[packages_pos] = pkg;
 			packages_pos++;
 			packages[packages_pos] = NULL;
+
+			/* Stop after count packages */
+			if (count != 0 && packages_pos == count + 1)
+				break;
 		} else
 			pkg_free(pkg);
 		free(dir);
