@@ -147,6 +147,7 @@ main(int argc, char **argv)
 				info.flags |= SHOW_FMTREV;
 				break;
 			case 'W':
+				/* XXX Allow multiple -W files */
 				info.search_file = optarg;
 				break;
 			case 'x':
@@ -221,17 +222,20 @@ pkg_info(struct pkg_info info)
 	/* -W <filename> */
 	if (info.search_file != NULL) {
 		struct stat sb;
+		char *abs_path;
 
-		if (stat(info.search_file, &sb) != 0) {
+		abs_path = pkg_abspath(info.search_file);
+		if (stat(abs_path, &sb) != 0) {
 			/* XXX */
+			free(abs_path);
 			return 1;
 		}
 		pkgs = pkg_db_get_installed_match_count(info.db,
-		    pkg_match_by_file, 1, (const void *)info.search_file);
+		    pkg_match_by_file, 1, (const void *)abs_path);
 		if (info.quiet == 0)
-			printf("The following installed package(s) has %s "
-			    "origin:\n", info.origin);
+			printf("%s was installed by package ", abs_path);
 		printf("%s\n", pkg_get_name(pkgs[0]));
+		free(abs_path);
 		return 0;
 	}
 
