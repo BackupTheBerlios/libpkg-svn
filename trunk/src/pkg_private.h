@@ -46,6 +46,7 @@ struct pkgfile {
 	char		*name;
 	pkgfile_type	 type;
 	pkgfile_loc	 loc;
+	int		 follow_link;
 	FILE		*fd;
 	char		*data;
 	uint64_t	 length;

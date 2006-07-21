@@ -73,6 +73,7 @@ pkgfile_new(const char *filename, pkgfile_type type, pkgfile_loc location)
 
 	file->type = type;
 	file->loc = location;
+	file->follow_link = 0;
 	file->fd = NULL;
 	file->data = NULL;
 	file->length = 0;
@@ -95,20 +96,43 @@ pkgfile_open_fd(struct pkgfile *file)
 	assert(file->loc == pkgfile_loc_disk);
 	assert(file->data == NULL);
 
-	/* Check if the file has already been opened */
-	if (file->fd != NULL)
-		return 0;
+	/* Find the file type */
+	if (file->type == pkgfile_none) {
+		struct stat sb;
 
-	/* Open the file read write */
-	file->fd = fopen(file->name, "r+");
-	if (file->fd == NULL) {
-		/* Attempt to open file read only */
-		file->fd = fopen(file->name, "r");
+		if (lstat(file->name, &sb) != 0)
+			return -1;
+
+		if (S_ISREG(sb.st_mode) ||
+		    (file->follow_link && S_ISLNK(sb.st_mode))) {
+			file->type = pkgfile_regular;
+		} else if(S_ISLNK(sb.st_mode)) {
+			file->type = pkgfile_symlink;
+		} else if (S_ISDIR(sb.st_mode)) {
+			file->type = pkgfile_dir;
+		} else {
+			return -1;
+		}
 	}
 
-	/* If we failed return -1 */
-	if (file->fd == NULL)
-		return -1;
+	if (file->type == pkgfile_regular) {
+		/* Check if the file has already been opened */
+		if (file->fd != NULL)
+			return 0;
+
+		/* Open the file read write */
+		file->fd = fopen(file->name, "r+");
+		if (file->fd == NULL) {
+			/* Attempt to open file read only */
+			file->fd = fopen(file->name, "r");
+		}
+
+		/* If we failed return -1 */
+		if (file->fd == NULL) {
+			return -1;
+		}
+
+	}
 
 	return 0;
 }
@@ -129,29 +153,13 @@ pkgfile_open_fd(struct pkgfile *file)
 struct pkgfile *
 pkgfile_new_from_disk(const char *filename, int follow_link)
 {
-	struct stat sb;
 	struct pkgfile *file;
-	int i;
-
-	errno = 0;
-	i = lstat(filename, &sb);
-	if (i != 0)
-		return NULL;
 
 	file = pkgfile_new(filename, pkgfile_none, pkgfile_loc_disk);
 	if (file == NULL)
 		return NULL;
-	
-	if (S_ISREG(sb.st_mode) || (follow_link && S_ISLNK(sb.st_mode))) {
-		file->type = pkgfile_regular;
-	} else if(S_ISLNK(sb.st_mode)) {
-		file->type = pkgfile_symlink;
-	} else if (S_ISDIR(sb.st_mode)) {
-		file->type = pkgfile_dir;
-	} else {
-		pkgfile_free(file);
-		return NULL;
-	}
+
+	file->follow_link = follow_link;
 
 	return file;
 }
@@ -281,6 +289,9 @@ pkgfile_get_size(struct pkgfile *file)
 	if (file == NULL)
 		return 0;
 
+	if (file->loc == pkgfile_loc_disk)
+		pkgfile_open_fd(file);
+
 	assert(file->type != pkgfile_none);
 	assert(file->type != pkgfile_hardlink);
 	assert(file->type != pkgfile_dir);
@@ -294,7 +305,6 @@ pkgfile_get_size(struct pkgfile *file)
 			if (file->loc == pkgfile_loc_disk) {
 				struct stat sb;
 
-				pkgfile_open_fd(file);
 				fstat(fileno(file->fd), &sb);
 				return sb.st_size;
 			} else if (file->data != NULL) {
@@ -323,6 +333,9 @@ pkgfile_get_data(struct pkgfile *file, uint64_t length)
 	if (file == NULL)
 		return NULL;
 
+	if (file->loc == pkgfile_loc_disk)
+		pkgfile_open_fd(file);
+
 	assert(file->type != pkgfile_none);
 	assert(file->type != pkgfile_hardlink);
 	assert(file->type != pkgfile_dir);
@@ -344,7 +357,6 @@ pkgfile_get_data(struct pkgfile *file, uint64_t length)
 				 */
 				size_t len;
 
-				pkgfile_open_fd(file);
 				len = fread(data, 1, length, file->fd);
 			} else if (file->data != NULL) {
 				memcpy(data, file->data, length);
@@ -387,6 +399,9 @@ pkgfile_compare_checksum_md5(struct pkgfile *file)
 	if (file == NULL || file->md5[0] == '\0')
 		return -1;
 
+	if (file->loc == pkgfile_loc_disk)
+		pkgfile_open_fd(file);
+
 	assert(file->type != pkgfile_none);
 	assert(file->type != pkgfile_hardlink);
 	assert(file->type != pkgfile_symlink);
@@ -427,6 +442,9 @@ pkgfile_seek(struct pkgfile *file, uint64_t position, int whence)
 	if (file == NULL)
 		return -1;
 
+	if (file->loc == pkgfile_loc_disk)
+		pkgfile_open_fd(file);
+
 	assert(file->type != pkgfile_none);
 	assert(file->type != pkgfile_hardlink);
 	assert(file->type != pkgfile_symlink);
@@ -434,7 +452,6 @@ pkgfile_seek(struct pkgfile *file, uint64_t position, int whence)
 
 	if (file->type == pkgfile_regular) {
 		assert(file->loc == pkgfile_loc_disk);
-		pkgfile_open_fd(file);
 		if (file->fd != NULL) {
 			if (fseek(file->fd, position, whence) != 0)
 				return -1;
@@ -470,6 +487,9 @@ pkgfile_write(struct pkgfile *file)
 {
 	if (file == NULL)
 		return -1;
+
+	if (file->loc == pkgfile_loc_disk)
+		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
 	assert(file->type != pkgfile_hardlink);
