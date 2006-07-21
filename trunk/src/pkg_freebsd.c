@@ -597,6 +597,7 @@ freebsd_get_next_file(struct pkg *pkg)
 		file = fpkg->next_file;
 		fpkg->next_file = NULL;
 	} else if (fpkg->archive == NULL)  {
+		/* Read the file from disk */
 		freebsd_parse_contents(fpkg);
 		while (fpkg->line < fpkg->contents->line_count) {
 			if (fpkg->contents->lines[fpkg->line].line_type ==

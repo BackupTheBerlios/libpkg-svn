@@ -425,7 +425,6 @@ pkgfile_compare_checksum_md5(struct pkgfile *file)
 			if (strncmp(checksum, file->md5, 32) == 0)
 				return 0;
 
-			printf("%s\n%s\n\n", checksum, file->name);
 			return 1;
 		}
 	}
