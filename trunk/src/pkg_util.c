@@ -30,8 +30,10 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
+#include <sys/param.h>
 #include <sys/stat.h>
 
+#include <assert.h>
 #include <err.h>
 #include <errno.h>
 #include <md5.h>
@@ -104,6 +106,53 @@ pkg_dir_build(const char *path)
 	}
 	free(str);
 	return (retval);
+}
+
+/**
+ * @brief Creates an absolute pathname from a relative name
+ *
+ * Creates an absolute path, additionally removing all .'s, ..'s, and extraneous
+ * /'s, as realpath() would, but without resolving symlinks.
+ * @return The absolute pathname
+ * @return NULL on error
+ */
+char *
+pkg_abspath(const char *pathname)
+{
+	char *tmp, *tmp1, *resolved_path;
+	char *cwd = NULL;
+	int len;
+
+	assert(pathname != NULL);
+
+	if (pathname[0] != '/') {
+		cwd = getcwd(NULL, MAXPATHLEN);
+		asprintf(&resolved_path, "%s/%s/", cwd, pathname);
+		free(cwd);    
+	} else
+		asprintf(&resolved_path, "%s/", pathname);
+
+	if (resolved_path == NULL)
+		return NULL;
+
+	while ((tmp = strstr(resolved_path, "//")) != NULL)
+		strcpy(tmp, tmp + 1);
+ 
+	while ((tmp = strstr(resolved_path, "/./")) != NULL)
+		strcpy(tmp, tmp + 2);
+ 
+	while ((tmp = strstr(resolved_path, "/../")) != NULL) {
+		*tmp = '\0';
+		if ((tmp1 = strrchr(resolved_path, '/')) == NULL)
+			tmp1 = resolved_path;
+		strcpy(tmp1, tmp + 3);
+	}
+
+	len = strlen(resolved_path);
+	if (len > 1 && resolved_path[len - 1] == '/')
+		resolved_path[len - 1] = '\0';
+
+	return resolved_path;
 }
 
 /**

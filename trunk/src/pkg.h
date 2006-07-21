@@ -117,5 +117,6 @@ int			  pkg_free(struct pkg *);
 /**
  * @}
  */
+char	*pkg_abspath(const char *);
 
 #endif /* __LIBPKG_PKG_H__ */
