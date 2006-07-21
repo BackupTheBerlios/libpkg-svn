@@ -35,10 +35,17 @@
 
 int archive_read_open_stream(struct archive *, FILE *, size_t);
 
+/* Package file location */
+typedef enum {
+	pkgfile_loc_disk,
+	pkgfile_loc_mem
+} pkgfile_loc;
+
 /** @todo Reorder the struct to remove alignment gaps */
 struct pkgfile {
 	char		*name;
 	pkgfile_type	 type;
+	pkgfile_loc	 loc;
 	FILE		*fd;
 	char		*data;
 	uint64_t	 length;
@@ -53,7 +60,7 @@ struct pkgfile {
 /* Main callbacks used in most packages */
 typedef struct pkg	**pkg_get_dependencies_callback(struct pkg *);
 typedef struct pkgfile	**pkg_get_control_files_callback(struct pkg *);
-typedef struct pkgfile  *pkg_get_control_file_callback(struct pkg *,
+typedef struct pkgfile   *pkg_get_control_file_callback(struct pkg *,
 				const char *);
 typedef int		  pkg_free_callback(struct pkg *);
 

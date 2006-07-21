@@ -42,7 +42,8 @@
 #include "pkg.h"
 #include "pkg_private.h"
 
-static struct pkgfile*  pkgfile_new(const char *, pkgfile_type);
+static struct pkgfile	*pkgfile_new(const char *, pkgfile_type, pkgfile_loc);
+static int		 pkgfile_open_fd(struct pkgfile *file);
 
 /**
  * @defgroup PackageFileInternal Internal file functions
@@ -56,7 +57,7 @@ static struct pkgfile*  pkgfile_new(const char *, pkgfile_type);
  * @return A new pkgfile object or NULL
  */
 static struct pkgfile*
-pkgfile_new(const char *filename, pkgfile_type type)
+pkgfile_new(const char *filename, pkgfile_type type, pkgfile_loc location)
 {
 	struct pkgfile *file;
 
@@ -71,6 +72,7 @@ pkgfile_new(const char *filename, pkgfile_type type)
 	}
 
 	file->type = type;
+	file->loc = location;
 	file->fd = NULL;
 	file->data = NULL;
 	file->length = 0;
@@ -78,6 +80,37 @@ pkgfile_new(const char *filename, pkgfile_type type)
 	file->md5[0] = '\0';
 
 	return file;
+}
+
+/**
+ * @brief Creates a FILE pointer in the given pkgfile object
+ * @return  0 On success
+ * @return -1 On error
+ */
+static int
+pkgfile_open_fd(struct pkgfile *file)
+{
+	/* Consistancy check */
+	assert(file != NULL);
+	assert(file->loc == pkgfile_loc_disk);
+	assert(file->data == NULL);
+
+	/* Check if the file has already been opened */
+	if (file->fd != NULL)
+		return 0;
+
+	/* Open the file read write */
+	file->fd = fopen(file->name, "r+");
+	if (file->fd == NULL) {
+		/* Attempt to open file read only */
+		file->fd = fopen(file->name, "r");
+	}
+
+	/* If we failed return -1 */
+	if (file->fd == NULL)
+		return -1;
+
+	return 0;
 }
 
 /**
@@ -105,22 +138,12 @@ pkgfile_new_from_disk(const char *filename, int follow_link)
 	if (i != 0)
 		return NULL;
 
-	file = pkgfile_new(filename, pkgfile_none);
+	file = pkgfile_new(filename, pkgfile_none, pkgfile_loc_disk);
 	if (file == NULL)
 		return NULL;
 	
 	if (S_ISREG(sb.st_mode) || (follow_link && S_ISLNK(sb.st_mode))) {
 		file->type = pkgfile_regular;
-		/* Attempt to open file read/write */
-		file->fd = fopen(file->name, "r+");
-		if (file->fd == NULL) {
-			/* Attempt to open file read only */
-			file->fd = fopen(file->name, "r");
-			if (file->fd == NULL) {
-				pkgfile_free(file);
-				return NULL;
-			}
-		}
 	} else if(S_ISLNK(sb.st_mode)) {
 		file->type = pkgfile_symlink;
 	} else if (S_ISDIR(sb.st_mode)) {
@@ -145,7 +168,7 @@ pkgfile_new_regular(const char *name, const char *contents, uint64_t length)
 	if (name == NULL || (contents == NULL && length > 0))
 		return NULL;
 
-	file = pkgfile_new(name, pkgfile_regular);
+	file = pkgfile_new(name, pkgfile_regular, pkgfile_loc_mem);
 	if (file == NULL)
 		return NULL;
 
@@ -173,7 +196,7 @@ pkgfile_new_symlink(const char *file, const char *data)
 	if (file == NULL || data == NULL)
 		return NULL;
 
-	pkgfile = pkgfile_new(file, pkgfile_symlink);
+	pkgfile = pkgfile_new(file, pkgfile_symlink, pkgfile_loc_mem);
 	if (pkgfile == NULL)
 		return NULL;
 
@@ -198,7 +221,7 @@ pkgfile_new_hardlink(const char *file, const char *other_file)
 	if (file == NULL || other_file == NULL)
 		return NULL;
 
-	pkgfile = pkgfile_new(file, pkgfile_hardlink);
+	pkgfile = pkgfile_new(file, pkgfile_hardlink, pkgfile_loc_mem);
 	if (pkgfile == NULL)
 		return NULL;
 
@@ -223,7 +246,7 @@ pkgfile_new_directory(const char *dir)
 	if (dir == NULL)
 		return NULL;
 
-	file = pkgfile_new(dir, pkgfile_dir);
+	file = pkgfile_new(dir, pkgfile_dir, pkgfile_loc_mem);
 	if (file == NULL)
 		return NULL;
 
@@ -268,8 +291,10 @@ pkgfile_get_size(struct pkgfile *file)
 		case pkgfile_hardlink:
 			break;
 		case pkgfile_regular:
-			if (file->fd != NULL) {
+			if (file->loc == pkgfile_loc_disk) {
 				struct stat sb;
+
+				pkgfile_open_fd(file);
 				fstat(fileno(file->fd), &sb);
 				return sb.st_size;
 			} else if (file->data != NULL) {
@@ -312,13 +337,14 @@ pkgfile_get_data(struct pkgfile *file, uint64_t length)
 			data = malloc(length);
 			if (data == NULL)
 				return NULL;
-			if (file->fd != NULL) {
+			if (file->loc == pkgfile_loc_disk) {
 				/*
 				 * Read up to length bytes
 				 * from the file to data
 				 */
 				size_t len;
 
+				pkgfile_open_fd(file);
 				len = fread(data, 1, length, file->fd);
 			} else if (file->data != NULL) {
 				memcpy(data, file->data, length);
@@ -407,10 +433,13 @@ pkgfile_seek(struct pkgfile *file, uint64_t position, int whence)
 	assert(file->type != pkgfile_dir);
 
 	if (file->type == pkgfile_regular) {
-		assert(file->fd != NULL);
+		assert(file->loc == pkgfile_loc_disk);
+		pkgfile_open_fd(file);
 		if (file->fd != NULL) {
 			if (fseek(file->fd, position, whence) != 0)
 				return -1;
+		} else {
+			return -1;
 		}
 	}
 	return 0;
@@ -450,7 +479,7 @@ pkgfile_write(struct pkgfile *file)
 	case pkgfile_none:
 		break;
 	case pkgfile_regular:
-		if (file->data != NULL) {
+		if (file->loc == pkgfile_loc_mem && file->data != NULL) {
 			uint64_t length;
 			struct stat sb;
 			size_t write_size;
