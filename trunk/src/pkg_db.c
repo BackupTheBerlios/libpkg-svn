@@ -127,12 +127,17 @@ pkg_action_null(int level __unused, const char *fmt __unused, ...)
 
 /**
  * @brief Installs a package to the database
+ * @param db The database to install to
+ * @param pkg The package to install
+ * @param prefix The prefix to use to install the package or NULL
+ * @param reg If true register the package's installation
  * @return 0 on success, -1 on error
  */
 int
-pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg, int reg)
+pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg, const char *prefix,
+	int reg)
 {
-	return pkg_db_install_pkg_action(db, pkg, reg, 0, NULL);
+	return pkg_db_install_pkg_action(db, pkg, prefix, reg, 0, NULL);
 }
 
 /**
@@ -147,8 +152,8 @@ pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg, int reg)
  * @return 0 if the package is installed, -1 otherwise
  */
 int
-pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg, int fake,
-    pkg_db_action *action)
+pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
+    const char *prefix, int reg, int fake, pkg_db_action *action)
 {
 	if (!db) {
 		return -1;
@@ -165,7 +170,7 @@ pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg, int fake,
 	if (action == NULL)
 		action = pkg_action_null;
 
-	return db->pkg_install(db, pkg, reg, fake, action);
+	return db->pkg_install(db, pkg, prefix, reg, fake, action);
 }
 
 /**

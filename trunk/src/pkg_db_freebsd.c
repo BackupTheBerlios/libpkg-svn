@@ -70,7 +70,8 @@ static const int pkg_states[7][12] = {
 };
 
 pkg_static int		  freebsd_install_pkg_action(struct pkg_db *,
-				struct pkg *, int, int, pkg_db_action *);
+				struct pkg *, const char *, int, int,
+				pkg_db_action *);
 pkg_static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
 pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, unsigned int, const void *);
@@ -134,8 +135,8 @@ pkg_db_open_freebsd(const char *base)
  * @return 0 on success, -1 on error
  */
 static int
-freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg, int reg,
-    int fake, pkg_db_action *pkg_action)
+freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
+    const char *prefix __unused, int reg, int fake, pkg_db_action *pkg_action)
 {
 	struct pkg_install_data install_data;
 	char cwd[MAXPATHLEN];

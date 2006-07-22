@@ -44,6 +44,8 @@ struct pkg_add {
 	struct pkg	**pkgs;
 	int		  flags;
 	char		  chroot[PATH_MAX];
+	char		 *base_prefix;
+	char		 *prefix;
 };
 
 /* A linked list of packages that have been installed */
@@ -58,7 +60,8 @@ static char options[] = "hvIRfnrp:P:SMt:C:K";
 
 static void usage(void);
 static int pkg_add(struct pkg_add);
-static int install_package(struct pkg *, struct pkg_repo *,struct pkg_db *,int);
+static int install_package(struct pkg *, struct pkg_repo *,struct pkg_db *,
+	const char *, const char *, int);
 
 int
 main (int argc, char *argv[])
@@ -72,6 +75,8 @@ main (int argc, char *argv[])
 	add.repo = NULL;
 	add.flags = 0;
 	add.chroot[0] = '\0';
+	add.base_prefix = NULL;
+	add.prefix = NULL;
 	while ((ch = getopt(argc, argv, options)) != -1) {
 		switch(ch) {
 		/* Case statements marked TODO will be supported in the next release */
@@ -96,16 +101,19 @@ main (int argc, char *argv[])
 			add.flags |= no_run_flag;
 			break;
 		case 'P':
+			add.base_prefix = optarg;
+			add.prefix = optarg;
 			errx(1, "Unsupported argument");
 			break;
 		case 'p':
+			add.base_prefix = optarg;
+			add.prefix = NULL;
 			errx(1, "Unsupported argument");
 			break;
 		case 'R':
 			add.flags |= no_record_install_flag;
 			break;
 		case 'r':
-			pkg_repo_free(add.repo);
 			remote = 1;
 			break;
 		case 'S':
@@ -128,6 +136,7 @@ main (int argc, char *argv[])
 	argv += optind;
 
 	if (remote != 0) {
+		pkg_repo_free(add.repo);
 		if ((add.flags & keep_file_flag) == keep_file_flag)
 			add.repo = pkg_repo_new_ftp(NULL, NULL, NULL);
 		else
@@ -194,7 +203,8 @@ pkg_add(struct pkg_add add)
 			    pkg_get_name(add.pkgs[i]));
 			continue;
 		}
-		install_package(add.pkgs[i], add.repo, add.db, add.flags);
+		install_package(add.pkgs[i], add.repo, add.db, add.base_prefix,
+		    add.prefix, add.flags);
 	}
 	return 1;
 }
@@ -221,7 +231,7 @@ pkg_action(int level, const char *fmt, ...)
  */
 static int
 install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
-		int flags)
+		const char *base_prefix, const char *prefix, int flags)
 {
 	unsigned int i;
 	int ret;
@@ -266,8 +276,8 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		deps[i] = new_pkg;
 
 		/* Install the dependency */
-		if (install_package(deps[i], repo, db, flags) != 0 &&
-		    (flags & force_flag) != force_flag) {
+		if (install_package(deps[i], repo, db, prefix, prefix, flags)
+		    != 0 && (flags & force_flag) != force_flag) {
 			pkg_list_free(deps);
 			return -1;
 		}
@@ -279,11 +289,11 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 	if ((flags & verbosity_flag) == verbosity_flag) {
 		/* Install with a verbose output */
 		printf("extract: Package name is %s\n", pkg_get_name(pkg));
-		ret = pkg_db_install_pkg_action(db, pkg,
+		ret = pkg_db_install_pkg_action(db, pkg, base_prefix,
 		    ((flags & no_record_install_flag)!= no_record_install_flag),
 		    ((flags & no_run_flag) == no_run_flag), pkg_action);
 	} else if ((flags & no_run_flag) == 0) {
-		ret = pkg_db_install_pkg(db, pkg,
+		ret = pkg_db_install_pkg(db, pkg, base_prefix,
 		    ((flags & no_record_install_flag)!=no_record_install_flag));
 	}
 	/*
