@@ -136,7 +136,7 @@ pkg_db_open_freebsd(const char *base)
  */
 static int
 freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
-    const char *prefix __unused, int reg, int fake, pkg_db_action *pkg_action)
+    const char *prefix, int reg, int fake, pkg_db_action *pkg_action)
 {
 	struct pkg_install_data install_data;
 	char cwd[MAXPATHLEN];
@@ -148,6 +148,14 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	if (getwd(cwd) == NULL)
 		return -1;
 
+	/* Set the package environment */
+	if (prefix == NULL) {
+		prefix = pkg_get_prefix(pkg);
+		if (prefix == NULL)
+			prefix = "/usr/local";
+	}
+	setenv("PKG_PREFIX", prefix, 1);
+
 	pkg_action(PKG_DB_PACKAGE, "Package name is %s", pkg_get_name(pkg));
 
 	/* Run +REQUIRE */
@@ -156,7 +164,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 
 	if (!fake) {
 		/** @todo Check if the force flag is set */
-		if (pkg_run_script(pkg, pkg_script_require) != 0) {
+		if (pkg_run_script(pkg, prefix, pkg_script_require) != 0) {
 			return -1;
 		}
 	}
@@ -166,28 +174,29 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	    pkg_get_name(pkg));
 
 	if (!fake)
-		pkg_run_script(pkg, pkg_script_pre);
+		pkg_run_script(pkg, prefix, pkg_script_pre);
 
 	/* Do the Install */
 	install_data.db = db;
 	install_data.fake = fake;
 	install_data.last_file[0] = '\0';
 	install_data.directory[0] = '\0';
-	pkg_install(pkg, reg, pkg_action, &install_data, freebsd_do_chdir,
-	    freebsd_install_file, freebsd_do_exec, freebsd_register);
+	pkg_install(pkg, prefix, reg, pkg_action, &install_data,
+	    freebsd_do_chdir, freebsd_install_file, freebsd_do_exec,
+	    freebsd_register);
 
 	/* Extract the +MTREE */
 	pkg_action(PKG_DB_INFO, "Running mtree for %s..", pkg_get_name(pkg));
 
 	if (!fake)
-		pkg_run_script(pkg, pkg_script_mtree);
+		pkg_run_script(pkg, prefix, pkg_script_mtree);
 
 	/* Run post-install */
 	pkg_action(PKG_DB_INFO, "Running post-install for %s..",
 	    pkg_get_name(pkg));
 
 	if (!fake)
-		pkg_run_script(pkg, pkg_script_post);
+		pkg_run_script(pkg, prefix, pkg_script_post);
 
 	/** @todo Display contents of \@display */
 

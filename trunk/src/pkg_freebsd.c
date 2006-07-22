@@ -56,12 +56,13 @@ pkg_static struct pkgfile	**freebsd_get_control_files(struct pkg *);
 pkg_static struct pkgfile	 *freebsd_get_control_file(struct pkg *,
 					const char *);
 pkg_static struct pkgfile	 *freebsd_get_next_file(struct pkg *);
-pkg_static int			  freebsd_install(struct pkg *, int,
-					pkg_db_action *, void *, pkg_db_chdir *,
-				       	pkg_db_install_file *, pkg_db_exec *,
-					pkg_db_register *);
+pkg_static int			  freebsd_install(struct pkg *, const char *,
+					int, pkg_db_action *, void *,
+					pkg_db_chdir *, pkg_db_install_file *,
+					pkg_db_exec *, pkg_db_register *);
 pkg_static struct pkg		**freebsd_get_deps(struct pkg *);
-pkg_static int			  freebsd_run_script(struct pkg *, pkg_script);
+pkg_static int			  freebsd_run_script(struct pkg *, const char *,
+					pkg_script);
 pkg_static int			  freebsd_free(struct pkg *);
 
 /* Internal functions */
@@ -428,9 +429,10 @@ freebsd_get_control_file(struct pkg *pkg, const char *filename)
  * @return 0 on success or -1 on error
  */
 static int
-freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
-		pkg_db_chdir *db_chdir, pkg_db_install_file *install_file,
-		pkg_db_exec *do_exec, pkg_db_register *pkg_register)
+freebsd_install(struct pkg *pkg, const char *prefix, int reg,
+		pkg_db_action *pkg_action, void *data, pkg_db_chdir *db_chdir,
+		pkg_db_install_file *install_file, pkg_db_exec *do_exec,
+		pkg_db_register *pkg_register)
 {
 	int ret;
 	unsigned int pos;
@@ -438,6 +440,7 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 	struct pkgfile *contents_file;
 	struct pkg_freebsd_contents *contents;
 	char *file_data;
+	int chdir_first = 1;
 
 	assert(pkg != NULL);
 	assert(pkg_action != NULL);
@@ -507,11 +510,14 @@ freebsd_install(struct pkg *pkg, int reg, pkg_db_action *pkg_action, void *data,
 			const char *dir;
 
 			dir = contents->lines[pos].data;
-			if (strcmp(dir, ".") == 0) {
-				if (reg)
-					db_chdir(pkg, pkg_action, data, dir);
-			} else {
+			if (reg && strcmp(dir, ".") == 0)
 				db_chdir(pkg, pkg_action, data, dir);
+			else if (chdir_first && prefix != NULL)
+				db_chdir(pkg, pkg_action, data, prefix);
+			else
+				db_chdir(pkg, pkg_action, data, dir);
+
+				chdir_first = 0;
 			}
 			break;
 		}
@@ -696,7 +702,7 @@ freebsd_get_deps(struct pkg *pkg)
  * @return 0
  */
 static int
-freebsd_run_script(struct pkg *pkg, pkg_script script)
+freebsd_run_script(struct pkg *pkg, const char *prefix, pkg_script script)
 {
 	struct freebsd_package *fpkg;
 	struct pkgfile *script_file;
@@ -756,7 +762,8 @@ freebsd_run_script(struct pkg *pkg, pkg_script script)
 	switch(script) {
 	case pkg_script_mtree:
 	{
-		const char *prefix = pkg_get_prefix(pkg);
+		if (prefix == NULL)
+			prefix = pkg_get_prefix(pkg);
 		pkg_exec("mtree -U -f +MTREE_DIRS -d -e -p %s >/dev/null",
 		    (prefix != NULL ? prefix : "/usr/local"));
 		break;

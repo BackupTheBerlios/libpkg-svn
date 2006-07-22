@@ -396,7 +396,7 @@ pkg_get_version(struct pkg *pkg)
  * @return The return value of the script, or -1
  */
 int
-pkg_run_script(struct pkg *pkg, pkg_script script)
+pkg_run_script(struct pkg *pkg, const char *prefix, pkg_script script)
 {
 	if (pkg == NULL)
 			return -1;
@@ -404,7 +404,7 @@ pkg_run_script(struct pkg *pkg, pkg_script script)
 	if (pkg->pkg_run_script == NULL)
 		return -1;
 
-	return pkg->pkg_run_script(pkg, script);
+	return pkg->pkg_run_script(pkg, prefix, script);
 }
 
 /**
@@ -464,9 +464,10 @@ pkg_add_file(struct pkg *pkg, struct pkgfile *file)
  * @return 0 on success or -1 or error
  */
 int
-pkg_install(struct pkg *pkg, int reg, pkg_db_action * pkg_action, void *data,
-		pkg_db_chdir *db_chdir,	pkg_db_install_file *install_file,
-		pkg_db_exec *do_exec, pkg_db_register *pkg_register)
+pkg_install(struct pkg *pkg, const char *prefix, int reg,
+		pkg_db_action *pkg_action, void *data, pkg_db_chdir *db_chdir,
+		pkg_db_install_file *install_file, pkg_db_exec *do_exec,
+		pkg_db_register *pkg_register)
 {
 	if (pkg == NULL || data == NULL || db_chdir == NULL ||
 	    install_file == NULL || do_exec == NULL || pkg_register == NULL)
@@ -475,7 +476,7 @@ pkg_install(struct pkg *pkg, int reg, pkg_db_action * pkg_action, void *data,
 	if (pkg->pkg_install == NULL)
 		return -1;
 
-	return pkg->pkg_install(pkg, reg, pkg_action, data, db_chdir,
+	return pkg->pkg_install(pkg, prefix, reg, pkg_action, data, db_chdir,
 	    install_file, do_exec, pkg_register);
 }
 

@@ -108,7 +108,7 @@ const const char	 *pkg_get_name(struct pkg *);
 struct pkgfile		 *pkg_get_next_file(struct pkg *);
 const const char	 *pkg_get_origin(struct pkg *);
 const const char	 *pkg_get_version(struct pkg *);
-int			  pkg_run_script(struct pkg *, pkg_script);
+int			  pkg_run_script(struct pkg *, const char *,pkg_script);
 int			  pkg_add_dependency(struct pkg *, struct pkg *);
 int			  pkg_add_file(struct pkg *, struct pkgfile *);
 int			  pkg_list_free(struct pkg **);
