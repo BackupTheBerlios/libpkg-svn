@@ -150,11 +150,13 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 
 	/* Set the package environment */
 	if (prefix == NULL) {
-		prefix = pkg_get_prefix(pkg);
-		if (prefix == NULL)
-			prefix = "/usr/local";
-	}
-	setenv("PKG_PREFIX", prefix, 1);
+		const char *pkg_prefix = pkg_get_prefix(pkg);
+		if (pkg_prefix == NULL)
+			setenv("PKG_PREFIX", "/usr/local", 1);
+		else
+			setenv("PKG_PREFIX", pkg_prefix, 1);
+	} else
+		setenv("PKG_PREFIX", prefix, 1);
 
 	pkg_action(PKG_DB_PACKAGE, "Package name is %s", pkg_get_name(pkg));
 

@@ -510,15 +510,17 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 			const char *dir;
 
 			dir = contents->lines[pos].data;
-			if (reg && strcmp(dir, ".") == 0)
-				db_chdir(pkg, pkg_action, data, dir);
-			else if (chdir_first && prefix != NULL)
-				db_chdir(pkg, pkg_action, data, prefix);
-			else
-				db_chdir(pkg, pkg_action, data, dir);
-
+			if (strcmp(dir, ".") == 0) {
+				if (reg)
+					db_chdir(pkg, pkg_action, data, dir);
+			} else {
+				if (chdir_first && prefix != NULL)
+					db_chdir(pkg, pkg_action, data, prefix);
+				else
+					db_chdir(pkg, pkg_action, data, dir);
 				chdir_first = 0;
 			}
+
 			break;
 		}
 		case PKG_LINE_FILE:
