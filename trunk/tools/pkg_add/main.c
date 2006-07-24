@@ -103,12 +103,10 @@ main (int argc, char *argv[])
 		case 'P':
 			add.base_prefix = optarg;
 			add.prefix = optarg;
-			errx(1, "Unsupported argument");
 			break;
 		case 'p':
 			add.base_prefix = optarg;
 			add.prefix = NULL;
-			errx(1, "Unsupported argument");
 			break;
 		case 'R':
 			add.flags |= no_record_install_flag;
