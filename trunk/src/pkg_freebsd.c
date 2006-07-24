@@ -418,7 +418,7 @@ freebsd_get_control_file(struct pkg *pkg, const char *filename)
 
 	for (pos = 0; fpkg->control[pos] != NULL; pos++) {
 		const char *pkg_filename = pkgfile_get_name(fpkg->control[pos]);
-		if (strcmp(basename(pkg_filename), filename)==0)
+		if (strcmp(basename(pkg_filename), filename) == 0)
 			return fpkg->control[pos];
 	}
 	return NULL;
@@ -441,6 +441,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	struct pkg_freebsd_contents *contents;
 	char *file_data;
 	int chdir_first = 1;
+	int only_control_files = 0;
 
 	assert(pkg != NULL);
 	assert(pkg_action != NULL);
@@ -525,12 +526,15 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 		}
 		case PKG_LINE_FILE:
 		{
-			struct pkgfile *file;
+			struct pkgfile *file = NULL;
 
-			file = pkg_get_next_file(pkg);
-			if (file == NULL)
+			if (!only_control_files)
+				file = pkg_get_next_file(pkg);
+			if (only_control_files || file == NULL) {
+				only_control_files = ~0;
 				file = pkg_get_control_file(pkg,
 				    contents->lines[pos].line);
+			}
 			if (file == NULL) {
 				/* File not found in the package */
 				ret = -1;
@@ -578,6 +582,9 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	}
 	/* Register the package */
 	pkg_register(pkg, pkg_action, data, control);
+
+	/* Set the return to 0 as we have fully installed the package */
+	ret = 0;
 
 exit:
 	if (contents != NULL)
