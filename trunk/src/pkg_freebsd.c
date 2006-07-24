@@ -94,6 +94,7 @@ struct freebsd_package {
 	freebsd_type pkg_type;
 };
 
+
 /**
  * @defgroup FreebsdPackage FreeBSD Package
  * @ingroup Package
@@ -629,7 +630,11 @@ freebsd_get_next_file(struct pkg *pkg)
 				snprintf(the_file, FILENAME_MAX, "%s/%s",
 				    fpkg->curdir,
 				    fpkg->contents->lines[fpkg->line].line);
+				/* Remove extra slashes from the path */
+				pkg_remove_extra_slashes(the_file);
+
 				file = pkgfile_new_from_disk(the_file, 1);
+
 				if (file == NULL)
 					return NULL;
 				fpkg->line++;
@@ -973,6 +978,7 @@ freebsd_open_control_files(struct freebsd_package *fpkg)
 				FREE_CONTENTS(fpkg->control);
 				return -1;
 			}
+			pkg_remove_extra_slashes(file)
 			pkgfile = pkgfile_new_from_disk(file, 1);
 			addFile(pkgfile);
 			free(file);

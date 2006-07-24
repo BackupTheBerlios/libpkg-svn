@@ -142,5 +142,13 @@ int pkg_checksum_md5(struct pkgfile *, char *);
 int pkg_exec(const char *, ...);
 FILE *pkg_cached_file(FILE *, const char *);
 
+/* Remove extra slashes from the path */
+#define pkg_remove_extra_slashes(path) \
+	{ \
+		char *tmp_str; \
+		while((tmp_str = strstr(path, "//")) != NULL) { \
+			strcpy(tmp_str, tmp_str+1); \
+		} \
+	}
 
 #endif /* __LIBPKG_PKG_PRIVATE_H__ */

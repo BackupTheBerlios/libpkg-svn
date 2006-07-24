@@ -225,6 +225,7 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 	if (!dir) {
 		return -1;
 	}
+	pkg_remove_extra_slashes(dir);
 
 	is_installed = -1;
 
@@ -269,6 +270,7 @@ freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match,
 	asprintf(&dir, "%s" DB_LOCATION, db->db_base);
 	if (!dir)
 		return NULL;
+	pkg_remove_extra_slashes(dir);
 	d = opendir(dir);
 	free(dir);
 	if (!d)
@@ -289,6 +291,7 @@ freebsd_get_installed_match(struct pkg_db *db, pkg_db_match *match,
 			continue;
 		asprintf(&dir, "%s" DB_LOCATION "/%s",
 		    db->db_base, de->d_name);
+		pkg_remove_extra_slashes(dir);
 
 		pkg = pkg_new_freebsd_installed(de->d_name, dir);
 		if (match(pkg, data) == 0) {
@@ -319,6 +322,7 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
 	char dir[MAXPATHLEN + 1];
 
 	snprintf(dir, MAXPATHLEN, "%s/var/db/pkg/%s", db->db_base, pkg_name);
+	pkg_remove_extra_slashes(dir);
 	return pkg_new_freebsd_installed(pkg_name, dir);
 }
 
@@ -363,6 +367,7 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		snprintf(install_data->directory, MAXPATHLEN, "%s/%s",
 		    db->db_base, dir);
 	}
+	pkg_remove_extra_slashes(install_data->directory);
 
 	pkg_action(PKG_DB_PACKAGE, "CWD to %s", install_data->directory);
 	if (!install_data->fake) {
@@ -423,8 +428,10 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	    install_data->last_file);
 
 	pkg_action(PKG_DB_PACKAGE, "execute '%s'", the_cmd);
-	if (!install_data->fake)
+	if (!install_data->fake) {
+		printf("EXEC: %s\n", the_cmd);
 		return pkg_exec(the_cmd);
+	}
 
 	return 0;
 }
@@ -468,6 +475,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 
 		snprintf(required_by, FILENAME_MAX, "%s" DB_LOCATION
 		    "/%s/+REQUIRED_BY", db->db_base, pkg_get_name(deps[pos]));
+		pkg_remove_extra_slashes(required_by);
 
 		/** @todo Make pkgfile work to properly to create the file */
 		fd = fopen(required_by, "a");
@@ -575,6 +583,7 @@ freebsd_format_cmd(char *buf, int max, const char *fmt, const char *dir,
 				case 'B':
 					snprintf(scratch, FILENAME_MAX * 2,
 					    "%s/%s", dir, name);
+					pkg_remove_extra_slashes(scratch);
 					cp = &scratch[strlen(scratch) - 1];
 					while (cp != scratch && *cp != '/')
 						--cp;
@@ -587,6 +596,7 @@ freebsd_format_cmd(char *buf, int max, const char *fmt, const char *dir,
 				case 'f':
 					snprintf(scratch, FILENAME_MAX * 2,
 					    "%s/%s", dir, name);
+					pkg_remove_extra_slashes(scratch);
 					cp = &scratch[strlen(scratch) - 1];
 					while (cp != scratch && *(cp - 1) != '/')
 						--cp;
