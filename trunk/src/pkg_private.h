@@ -142,7 +142,26 @@ int pkg_checksum_md5(struct pkgfile *, char *);
 int pkg_exec(const char *, ...);
 FILE *pkg_cached_file(FILE *, const char *);
 
-/* Remove extra slashes from the path */
+/* 
+ * Remove extra slashes from the path
+ * The first is slower
+ * Valgrind complains on the second
+ */
+#define FOR_VALGRIND
+#define pkg_remove_extra_slashes(path) \
+	{ \
+		char *str_a, *str_b; \
+		str_a = path + 1; \
+		str_b = str_a; \
+		while(*str_a != '\0') { \
+			while(str_b[0] == '/' && str_b[-1] == '/') \
+				str_b++; \
+			if (str_a != str_b) \
+				str_a[0] = str_b[0]; \
+			str_a++; str_b++; \
+		} \
+	}
+#else
 #define pkg_remove_extra_slashes(path) \
 	{ \
 		char *tmp_str; \
@@ -150,5 +169,7 @@ FILE *pkg_cached_file(FILE *, const char *);
 			strcpy(tmp_str, tmp_str+1); \
 		} \
 	}
+#endif
+
 
 #endif /* __LIBPKG_PKG_PRIVATE_H__ */

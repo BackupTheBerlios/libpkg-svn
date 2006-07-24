@@ -89,6 +89,7 @@ struct freebsd_package {
 	struct pkgfile **control;
 	struct pkg_freebsd_contents *contents;
 	struct pkgfile *next_file;
+	struct pkgfile *cur_file;
 	unsigned int line;
 	char *curdir;
 	freebsd_type pkg_type;
@@ -611,6 +612,12 @@ freebsd_get_next_file(struct pkg *pkg)
 	file = NULL;
 	if (fpkg->next_file != NULL) {
 		file = fpkg->next_file;
+
+		/*
+		 * Hand over the file to be free'ed from
+		 * memory when the next file is read
+		 */
+		fpkg->cur_file = fpkg->next_file;
 		fpkg->next_file = NULL;
 	} else if (fpkg->archive == NULL)  {
 		/* Read the file from disk */
@@ -654,11 +661,14 @@ freebsd_get_next_file(struct pkg *pkg)
 		fpkg->line = 0;
 		return NULL;
 	} else {
+		if (fpkg->cur_file != NULL)
+			pkgfile_free(fpkg->cur_file);
 		file = freebsd_get_next_entry(fpkg->archive);
 		if (file == NULL) {
 			archive_read_finish(fpkg->archive);
 			fpkg->archive = NULL;
 		}
+		fpkg->cur_file = file;
 	}
 	return file;
 }
@@ -825,6 +835,9 @@ freebsd_free(struct pkg *pkg)
 		if (fpkg->next_file != NULL)
 			pkgfile_free(fpkg->next_file);
 
+		if (fpkg->cur_file == NULL)
+			pkgfile_free(fpkg->cur_file);
+
 		if (fpkg->control != NULL) {
 			int cur;
 
@@ -891,6 +904,7 @@ freebsd_package_new()
 	fpkg->origin = NULL;
 	fpkg->version = NULL;
 	fpkg->next_file = NULL;
+	fpkg->cur_file = NULL;
 	fpkg->line = 0;
 	fpkg->curdir = NULL;
 	fpkg->pkg_type = fpkg_unknown;
@@ -1038,12 +1052,10 @@ freebsd_get_next_entry(struct archive *a)
 		/* Create the pkgfile and return it */
 		file = pkgfile_new_regular(archive_entry_pathname(entry), str,
 		    length);
+		free(str);
 	} else if (S_ISLNK(sb->st_mode)) {
-		str = strdup(archive_entry_symlink(entry));
-		if (!str)
-			return NULL;
-
-		file = pkgfile_new_symlink(archive_entry_pathname(entry), str);
+		file = pkgfile_new_symlink(archive_entry_pathname(entry),
+		    archive_entry_symlink(entry));
 		
 	}
 	if (file == NULL)
