@@ -147,7 +147,7 @@ FILE *pkg_cached_file(FILE *, const char *);
  * The first is slower
  * Valgrind complains on the second
  */
-#define FOR_VALGRIND
+#ifdef FOR_VALGRIND
 #define pkg_remove_extra_slashes(path) \
 	{ \
 		char *str_a, *str_b; \
