@@ -134,11 +134,31 @@ main (int argc, char *argv[])
 	argv += optind;
 
 	if (remote != 0) {
+		char *site, *path;
+		char *pkg_site;
+
+		site = NULL;
+		path = NULL;
+		if ((pkg_site = getenv("PACKAGESITE")) != NULL) {
+			if (strncmp("http://", pkg_site, 7) == 0 ||
+			    strncmp("ftp://", pkg_site, 6) == 0) {
+				site = pkg_site;
+			}
+			if (site != NULL) {
+				/* Find the first / after the :// */
+				path = strstr(site, "://");
+				path = strchr(path + 3, '/');
+				path[0] = '\0';
+				path++;
+			}
+			printf("%s %s\n", site, path);
+		}
+
 		pkg_repo_free(add.repo);
 		if ((add.flags & keep_file_flag) == keep_file_flag)
-			add.repo = pkg_repo_new_ftp(NULL, NULL, NULL);
+			add.repo = pkg_repo_new_ftp(site, path, NULL);
 		else
-			add.repo = pkg_repo_new_ftp(NULL, NULL, ".");
+			add.repo = pkg_repo_new_ftp(site, path, ".");
 	}
 	/* There are no packages to install. just quit now */
 	if (argc == 0) {

@@ -32,6 +32,7 @@
 #include <sys/utsname.h>
 
 #include <assert.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -109,8 +110,8 @@ pkg_static int		 pkg_name_has_extension(const char *);
  * @brief Creates a pkg_repo with the given sie and path
  * @param site The ftp site to use. If NULL will use ftp.freebsd.org
  * @param path The path to the top level of the packages
- * @param cached_dir The directory to save a copy of each package file in or NULL
- *     If NULL will use the default path
+ * @param cached_dir The directory to save a copy of each package file in or
+ *     NULL. If NULL will use the default path
  * @return A pkg_repo object or NULL
  */
 struct pkg_repo *
@@ -250,7 +251,7 @@ ftp_get_fd(const char *pkg_name, struct ftp_repo *f_repo)
 	else
 		ext = ".tbz";
 
-	asprintf(&ftpname, "ftp://%s/%s/%s/%s%s", f_repo->site, f_repo->path,
+	asprintf(&ftpname, "%s/%s/%s/%s%s", f_repo->site, f_repo->path,
 	    subdir, pkg_name, ext);
 	if (!ftpname) {
 		return NULL;
@@ -261,7 +262,7 @@ ftp_get_fd(const char *pkg_name, struct ftp_repo *f_repo)
 	/* Try the alternate subdir if the primary one fails. */
 	if (fd == NULL) {
 		free(ftpname);
-		asprintf(&ftpname, "ftp://%s/%s/%s/%s%s", f_repo->site,
+		asprintf(&ftpname, "%s/%s/%s/%s%s", f_repo->site,
 		    f_repo->path, fallback_subdir, pkg_name, ext);
 		if (!ftpname) {
 			return NULL;
@@ -295,7 +296,7 @@ ftp_create_repo(const char *site, const char *path, const char *cache_dir)
 
 	/* Figure out the site */
 	if (!site)
-		f_repo->site = strdup("ftp.freebsd.org");
+		f_repo->site = strdup("ftp://ftp.freebsd.org");
 	else
 		f_repo->site = strdup(site);
 
@@ -326,8 +327,17 @@ ftp_create_repo(const char *site, const char *path, const char *cache_dir)
 			}
 		}
 
-	} else
-		f_repo->path = strdup(path);
+	} else {
+		/* If the path ends with Latest or All strip it out */
+		const char *last_dir;
+		last_dir = basename(path);
+		if (strcmp(last_dir, "All") == 0 ||
+		    strcmp(last_dir, "Latest") == 0) {
+			f_repo->path = strdup(dirname(path));
+			printf("%s\n", f_repo->path);
+		} else
+			f_repo->path = strdup(path);
+	}
 
 	if (!f_repo->path) {
 		return NULL;
