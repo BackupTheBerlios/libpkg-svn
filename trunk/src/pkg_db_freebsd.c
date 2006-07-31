@@ -372,6 +372,7 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	pkg_remove_extra_slashes(install_data->directory);
 
 	pkg_action(PKG_DB_PACKAGE, "CWD to %s", install_data->directory);
+
 	if (!install_data->fake) {
 		pkg_dir_build(install_data->directory);
 		return chdir(install_data->directory);
@@ -431,7 +432,6 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 
 	pkg_action(PKG_DB_PACKAGE, "execute '%s'", the_cmd);
 	if (!install_data->fake) {
-		printf("EXEC: %s\n", the_cmd);
 		return pkg_exec(the_cmd);
 	}
 
