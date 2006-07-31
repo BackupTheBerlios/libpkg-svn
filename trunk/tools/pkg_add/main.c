@@ -212,7 +212,7 @@ usage()
 static int
 pkg_add(struct pkg_add add)
 {
-	int i;
+	int i, ret;
 	assert(add.db != NULL);
 	assert(add.repo != NULL);
 	for (i=0; add.pkgs[i] != NULL; i++) {
@@ -221,10 +221,12 @@ pkg_add(struct pkg_add add)
 			    pkg_get_name(add.pkgs[i]));
 			continue;
 		}
-		install_package(add.pkgs[i], add.repo, add.db, add.base_prefix,
-		    add.prefix, add.flags);
+		ret = install_package(add.pkgs[i], add.repo, add.db,
+		    add.base_prefix, add.prefix, add.flags);
+		if (ret != 0)
+			return 1;
 	}
-	return 1;
+	return 0;
 }
 
 /*
