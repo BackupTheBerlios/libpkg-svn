@@ -145,7 +145,8 @@ pkg_new_freebsd_from_file(FILE *fd)
 
 	freebsd_parse_contents(fpkg);
 	assert(fpkg->contents != NULL);
-	if (fpkg->contents->lines[1].line_type != PKG_LINE_NAME) {
+	if (fpkg->contents->lines[1].line_type != PKG_LINE_NAME ||
+	    fpkg->contents->lines[3].line_type != PKG_LINE_CWD) {
 		/** @todo cleanup */
 		return NULL;
 	}
@@ -161,6 +162,12 @@ pkg_new_freebsd_from_file(FILE *fd)
 	pkg_add_callbacks_install(pkg, freebsd_install, freebsd_get_next_file,
 	    freebsd_run_script);
 	pkg->data = fpkg;
+
+	/*
+	 * Set the prefix to the first @cwd line.
+	 * This should be line 3 otherwise we have a bad package
+	 */
+	pkg->pkg_prefix = strdup(fpkg->contents->lines[3].data);
 
 	return pkg;
 }
@@ -510,19 +517,21 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 			break;
 		case PKG_LINE_CWD:
 		{
-			const char *dir;
+			const char *dir = NULL;
 
-			dir = contents->lines[pos].data;
-			if (strcmp(dir, ".") == 0) {
+			if (strcmp(contents->lines[pos].data, ".") == 0) {
 				if (reg)
-					db_chdir(pkg, pkg_action, data, dir);
+					dir = contents->lines[pos].data;
 			} else {
 				if (chdir_first && prefix != NULL)
-					db_chdir(pkg, pkg_action, data, prefix);
+					dir = prefix;
 				else
-					db_chdir(pkg, pkg_action, data, dir);
+					dir = contents->lines[pos].data;
 				chdir_first = 0;
 			}
+			if (dir != NULL)
+				db_chdir(pkg, pkg_action, data, dir);
+
 
 			break;
 		}
