@@ -183,9 +183,11 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	install_data.fake = fake;
 	install_data.last_file[0] = '\0';
 	install_data.directory[0] = '\0';
-	pkg_install(pkg, prefix, reg, pkg_action, &install_data,
+	if (pkg_install(pkg, prefix, reg, pkg_action, &install_data,
 	    freebsd_do_chdir, freebsd_install_file, freebsd_do_exec,
-	    freebsd_register);
+	    freebsd_register) != 0) {
+		return -1;
+	}
 
 	/* Extract the +MTREE */
 	pkg_action(PKG_DB_INFO, "Running mtree for %s..", pkg_get_name(pkg));
@@ -384,8 +386,8 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  * @return 0 on success or -1 on error
  */
 static int
-freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action __unused,
-		void *data, struct pkgfile *file)
+freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
+	struct pkgfile *file)
 {
 	struct pkg_install_data *install_data;
 

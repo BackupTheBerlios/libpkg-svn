@@ -27,6 +27,7 @@
  *
  */
 
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 
@@ -38,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "pkg.h"
 #include "pkg_private.h"
@@ -189,7 +191,6 @@ pkgfile_new_regular(const char *name, const char *contents, uint64_t length)
 	memcpy(file->data, contents, file->length);
 
 	return file;
-	
 }
 
 /**
@@ -293,13 +294,17 @@ pkgfile_get_size(struct pkgfile *file)
 		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
-	assert(file->type != pkgfile_hardlink);
 	assert(file->type != pkgfile_dir);
 
 	switch (file->type) {
 		case pkgfile_none:
 		case pkgfile_dir:
+			break;
 		case pkgfile_hardlink:
+			assert(file->loc == pkgfile_loc_mem);
+			if (file->loc == pkgfile_loc_mem) {
+				return file->length;
+			}
 			break;
 		case pkgfile_regular:
 			if (file->loc == pkgfile_loc_disk) {
@@ -324,6 +329,7 @@ pkgfile_get_size(struct pkgfile *file)
 /**
  * @brief Reads up to length bytes from a file
  * @return A string containing the data or NULL
+ * @todo Change to return "const char *" and not do the strdup
  */
 char *
 pkgfile_get_data(struct pkgfile *file, uint64_t length)
@@ -337,13 +343,19 @@ pkgfile_get_data(struct pkgfile *file, uint64_t length)
 		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
-	assert(file->type != pkgfile_hardlink);
 	assert(file->type != pkgfile_dir);
 
 	switch (file->type) {
 		case pkgfile_none:
-		case pkgfile_hardlink:
 		case pkgfile_dir:
+			break;
+		case pkgfile_hardlink:
+			assert(file->loc == pkgfile_loc_mem);
+			if (file->loc == pkgfile_loc_mem) {
+				if (file->data == NULL)
+					return NULL;
+				data = strdup(file->data);
+			}
 			break;
 		case pkgfile_regular:
 			/** @todo check length < size left in file */
@@ -388,14 +400,31 @@ pkgfile_get_data_all(struct pkgfile *file)
 }
 
 /**
+ * @brief Sets the expected md5 of a file
+ * @return  0 on success
+ * @return -1 on error
+ */
+int
+pkgfile_set_checksum_md5(struct pkgfile *file, const char *md5)
+{
+	if (file == NULL || md5 == NULL)
+		return -1;
+
+	strlcpy(file->md5, md5, 33);
+	return 0;
+}
+
+/**
  * @brief Compares a file's MD5 checksum with the version on disk
- * @return 1 if the recorded checksum is different to the disk checksum
- * @return 0 if the recorded checksum is the same as the disk checksum
+ * @return  1 if the recorded checksum is different to the disk checksum
+ * @return  0 if the recorded checksum is the same as the disk checksum
  * @return -1 if there is a problem with the file object
  */
 int
 pkgfile_compare_checksum_md5(struct pkgfile *file)
 {
+	char checksum[33];
+
 	if (file == NULL || file->md5[0] == '\0')
 		return -1;
 
@@ -403,32 +432,38 @@ pkgfile_compare_checksum_md5(struct pkgfile *file)
 		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
-	assert(file->type != pkgfile_hardlink);
-	assert(file->type != pkgfile_symlink);
 	assert(file->type != pkgfile_dir);
 
 	switch (file->type) {
 		case pkgfile_none:
-		case pkgfile_hardlink:
-		case pkgfile_symlink:
 		case pkgfile_dir:
+			return -1;
+		case pkgfile_hardlink:
+		{
+			char real_file[MAXPATHLEN + 1];
+
+			getcwd(real_file, MAXPATHLEN + 1);
+			snprintf(real_file, MAXPATHLEN + 1, "%s/%s", real_file,
+			    file->data);
+			MD5File(real_file, checksum);
 			break;
+		}
+		case pkgfile_symlink:
 		case pkgfile_regular:
 		{
-			char checksum[33];
+			char *file_data;
 
-			if (file->name == NULL)
-				return -1;
+			file_data = pkgfile_get_data_all(file);
+			MD5Data(file_data, pkgfile_get_size(file), checksum);
+			free(file_data);
 
-			MD5File(file->name, checksum);
-
-			if (strncmp(checksum, file->md5, 32) == 0)
-				return 0;
-
-			return 1;
+			break;
 		}
 	}
-	return -1;
+	if (strncmp(checksum, file->md5, 32) == 0)
+		return 0;
+
+	return 1;
 }
 
 /**

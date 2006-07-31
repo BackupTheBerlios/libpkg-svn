@@ -156,34 +156,6 @@ pkg_abspath(const char *pathname)
 }
 
 /**
- * @brief Checks a file against a given md5 checksum
- * @return 0 if the file matches the checksum, or -1 otherwise
- */
-int
-pkg_checksum_md5(struct pkgfile *file, char *chk_sum)
-{
-	char sum[33];
-	char *file_data;
-
-	if (!file) {
-		return -1;
-	}
-
-	if (!sum) {
-		return -1;
-	}
-
-	/* Perform a checksum on the file to install */
-	file_data = pkgfile_get_data_all(file);
-	MD5Data(file_data, pkgfile_get_size(file), sum);
-	free(file_data);
-	if (strcmp(sum, chk_sum)) {
-		return -1;
-	}
-	return 0;
-}
-
-/**
  * @brief Executes a program
  * 
  * It will use fmt as the format to generate the execv string.

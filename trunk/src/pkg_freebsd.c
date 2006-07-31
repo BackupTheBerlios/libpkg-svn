@@ -556,7 +556,8 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 
 				p = strchr(contents->lines[pos+1].data, ':');
 				p++;
-				if (pkg_checksum_md5(file, p) == 0) {
+				pkgfile_set_checksum_md5(file, p);
+				if (pkgfile_compare_checksum_md5(file) == 0) {
 					if (!ignore) {
 						install_file(pkg, pkg_action,
 						    data, file);
@@ -1057,9 +1058,16 @@ freebsd_get_next_entry(struct archive *a)
 		file = pkgfile_new_symlink(archive_entry_pathname(entry),
 		    archive_entry_symlink(entry));
 		
+	} else {
+		/* Probibly a hardlink */
+		const char *hard_link = archive_entry_hardlink(entry);
+		if (hard_link != NULL) {
+			file = pkgfile_new_hardlink(
+			    archive_entry_pathname(entry), hard_link);
+		}
 	}
 	if (file == NULL)
-		errx(1, "File is not regular or symbolic link");
+		errx(1, "File is not regular, a hard link or a symbolic link");
 
 	pkgfile_set_mode(file, sb->st_mode);
 	return file;

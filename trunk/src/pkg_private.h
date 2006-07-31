@@ -138,7 +138,6 @@ struct pkg {
 };
 
 int pkg_dir_build(const char *);
-int pkg_checksum_md5(struct pkgfile *, char *);
 int pkg_exec(const char *, ...);
 FILE *pkg_cached_file(FILE *, const char *);
 

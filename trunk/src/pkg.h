@@ -65,6 +65,7 @@ const char	*pkgfile_get_name(struct pkgfile *);
 uint64_t	 pkgfile_get_size(struct pkgfile *);
 char		*pkgfile_get_data(struct pkgfile *, uint64_t);
 char		*pkgfile_get_data_all(struct pkgfile *);
+int		 pkgfile_set_checksum_md5(struct pkgfile *, const char *);
 int		 pkgfile_compare_checksum_md5(struct pkgfile *);
 int		 pkgfile_seek(struct pkgfile *, uint64_t, int);
 int		 pkgfile_set_mode(struct pkgfile *, mode_t);
