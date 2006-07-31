@@ -514,7 +514,8 @@ pkgfile_set_mode(struct pkgfile *file, mode_t mode)
 
 /**
  * @brief Writes a pkgfile to disk
- * @return 0 on success or -1 on error
+ * @return  0 on success
+ * @return -1 on error
  */
 int
 pkgfile_write(struct pkgfile *file)
@@ -526,12 +527,11 @@ pkgfile_write(struct pkgfile *file)
 		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
-	assert(file->type != pkgfile_hardlink);
 	assert(file->type != pkgfile_dir);
 
 	switch (file->type) {
 	case pkgfile_none:
-		break;
+		return -1;
 	case pkgfile_regular:
 		if (file->loc == pkgfile_loc_mem && file->data != NULL) {
 			uint64_t length;
@@ -594,13 +594,15 @@ pkgfile_write(struct pkgfile *file)
 		}
 		break;
 	case pkgfile_hardlink:
+		if (link(file->data, file->name) != 0)
+			return -1;
 		break;
 	case pkgfile_symlink:
 		if (symlink(file->data, file->name) != 0)
 			return -1;
 		break;
 	case pkgfile_dir:
-		break;
+		return -1;
 	}
 
 	return 0;
