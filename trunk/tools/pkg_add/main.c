@@ -79,7 +79,6 @@ main (int argc, char *argv[])
 	add.prefix = NULL;
 	while ((ch = getopt(argc, argv, options)) != -1) {
 		switch(ch) {
-		/* Case statements marked TODO will be supported in the next release */
 		case 'C':
 			strlcpy(add.chroot, optarg, PATH_MAX);
 			break;
@@ -88,7 +87,6 @@ main (int argc, char *argv[])
 			break;
 		case 'I':
 			add.flags |= no_run_script_flag;
-			errx(1, "Unsupported argument");
 			break;
 		case 'K':
 			/* Save the package file in . or ${PKGDIR} */
@@ -311,10 +309,12 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		printf("extract: Package name is %s\n", pkg_get_name(pkg));
 		ret = pkg_db_install_pkg_action(db, pkg, base_prefix,
 		    ((flags & no_record_install_flag)!= no_record_install_flag),
-		    ((flags & no_run_flag) == no_run_flag), pkg_action);
+		    ((flags & no_run_script_flag) == no_run_script_flag),
+		    ((flags & no_run_flag) != no_run_flag), pkg_action);
 	} else if ((flags & no_run_flag) == 0) {
 		ret = pkg_db_install_pkg(db, pkg, base_prefix,
-		    ((flags & no_record_install_flag)!=no_record_install_flag));
+		    ((flags & no_record_install_flag)!=no_record_install_flag),
+		    ((flags & no_run_script_flag) != no_run_script_flag));
 	}
 	/*
 	 * Insert the installed package in a linked

@@ -70,7 +70,7 @@ static const int pkg_states[7][12] = {
 };
 
 pkg_static int		  freebsd_install_pkg_action(struct pkg_db *,
-				struct pkg *, const char *, int, int,
+				struct pkg *, const char *, int, int, int,
 				pkg_db_action *);
 pkg_static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
 pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
@@ -136,7 +136,8 @@ pkg_db_open_freebsd(const char *base)
  */
 static int
 freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
-    const char *prefix, int reg, int fake, pkg_db_action *pkg_action)
+    const char *prefix, int reg, int scripts, int fake,
+    pkg_db_action *pkg_action)
 {
 	struct pkg_install_data install_data;
 	char cwd[MAXPATHLEN];
@@ -175,7 +176,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	pkg_action(PKG_DB_INFO, "Running pre-install for %s..",
 	    pkg_get_name(pkg));
 
-	if (!fake)
+	if (!fake && scripts)
 		pkg_run_script(pkg, prefix, pkg_script_pre);
 
 	/* Do the Install */
@@ -199,7 +200,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	pkg_action(PKG_DB_INFO, "Running post-install for %s..",
 	    pkg_get_name(pkg));
 
-	if (!fake)
+	if (!fake && scripts)
 		pkg_run_script(pkg, prefix, pkg_script_post);
 
 	/** @todo Display contents of \@display */

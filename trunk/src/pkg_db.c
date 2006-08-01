@@ -135,9 +135,9 @@ pkg_action_null(int level __unused, const char *fmt __unused, ...)
  */
 int
 pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg, const char *prefix,
-	int reg)
+	int reg, int scripts)
 {
-	return pkg_db_install_pkg_action(db, pkg, prefix, reg, 0, NULL);
+	return pkg_db_install_pkg_action(db, pkg, prefix, reg, scripts, 0,NULL);
 }
 
 /**
@@ -153,7 +153,7 @@ pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg, const char *prefix,
  */
 int
 pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
-    const char *prefix, int reg, int fake, pkg_db_action *action)
+    const char *prefix, int reg, int scripts, int fake, pkg_db_action *action)
 {
 	if (!db) {
 		return -1;
@@ -170,7 +170,7 @@ pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	if (action == NULL)
 		action = pkg_action_null;
 
-	return db->pkg_install(db, pkg, prefix, reg, fake, action);
+	return db->pkg_install(db, pkg, prefix, reg, scripts, fake, action);
 }
 
 /**
