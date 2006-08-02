@@ -331,11 +331,9 @@ pkgfile_get_size(struct pkgfile *file)
  * @return A string containing the data or NULL
  * @todo Change to return "const char *" and not do the strdup
  */
-char *
-pkgfile_get_data(struct pkgfile *file, uint64_t length)
+const char *
+pkgfile_get_data(struct pkgfile *file)
 {
-	char *data;
-	data = NULL;
 	if (file == NULL)
 		return NULL;
 
@@ -346,57 +344,37 @@ pkgfile_get_data(struct pkgfile *file, uint64_t length)
 	assert(file->type != pkgfile_dir);
 
 	switch (file->type) {
-		case pkgfile_none:
-		case pkgfile_dir:
-			break;
-		case pkgfile_hardlink:
-			assert(file->loc == pkgfile_loc_mem);
-			if (file->loc == pkgfile_loc_mem) {
+	case pkgfile_none:
+	case pkgfile_dir:
+		break;
+	case pkgfile_hardlink:
+		assert(file->loc == pkgfile_loc_mem);
+		if (file->loc == pkgfile_loc_mem) {
+			if (file->data == NULL)
+				return NULL;
+			return file->data;
+		}
+		break;
+	case pkgfile_regular:
+		if (file->loc == pkgfile_loc_disk) {
+			/* Load the file to the data pointer */
+			if (file->data == NULL) {
+				file->data = malloc(file->length);
 				if (file->data == NULL)
 					return NULL;
-				data = strdup(file->data);
-			}
-			break;
-		case pkgfile_regular:
-			/** @todo check length < size left in file */
-			data = malloc(length);
-			if (data == NULL)
-				return NULL;
-			if (file->loc == pkgfile_loc_disk) {
 				/*
 				 * Read up to length bytes
 				 * from the file to data
 				 */
-				size_t len;
-
-				len = fread(data, 1, length, file->fd);
-			} else if (file->data != NULL) {
-				memcpy(data, file->data, length);
+				/** @todo check length < size left in file */
+				fread(file->data, 1, file->length, file->fd);
 			}
-			break;
-		case pkgfile_symlink:
-			if (file->data == NULL)
-				return NULL;
-			data = strdup(file->data);
+		}
+	case pkgfile_symlink:
+		return file->data;
 	}
 	
-	return data;
-}
-
-/**
- * @brief Reads the entire contents of a file
- * @return A string containing the entire file or NULL
- */
-char*
-pkgfile_get_data_all(struct pkgfile *file)
-{
-	uint64_t size;
-
-	if (file == NULL)
-		return NULL;
-
-	size = pkgfile_get_size(file);
-	return pkgfile_get_data(file, size);
+	return NULL;
 }
 
 /**
@@ -451,11 +429,12 @@ pkgfile_compare_checksum_md5(struct pkgfile *file)
 		case pkgfile_symlink:
 		case pkgfile_regular:
 		{
-			char *file_data;
-
-			file_data = pkgfile_get_data_all(file);
-			MD5Data(file_data, pkgfile_get_size(file), checksum);
-			free(file_data);
+			/*
+			 * Make sure the data has been loaded
+			 * then calculate the checksum
+			 */
+			pkgfile_get_data(file);
+			MD5Data(file->data, file->length, checksum);
 
 			break;
 		}

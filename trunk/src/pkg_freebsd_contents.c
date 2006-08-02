@@ -279,7 +279,7 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 		struct pkgfile *file)
 {
 	char md5[33], tmp[37];
-	char *data;
+	const char *data;
 
 	if (contents == NULL || contents->file != NULL || file == NULL)
 		return -1;
@@ -289,7 +289,7 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 		return -1;
 	}
 
-	data = pkgfile_get_data_all(file);
+	data = pkgfile_get_data(file);
 	if (!data)
 		return -1;
 	MD5Data(data, pkgfile_get_size(file), md5);

@@ -175,15 +175,14 @@ show_file(struct pkgfile *file, const char *seperator, const char *title,
 		printf("ERROR: show_file: Can't open '%s' for reading!\n",
 		    pkgfile_get_name(file));
 	} else {
-		char *str;
+		const char *str;
 		uint64_t length, pos;
 
 		length = pkgfile_get_size(file);
-		str = pkgfile_get_data_all(file);
+		str = pkgfile_get_data(file);
 		for (pos = 0; pos < length; pos++) {
 			putchar(str[pos]);
 		}
-		free(str);
 	}
 	putchar('\n');
 	putchar('\n');
@@ -239,18 +238,20 @@ show_index(struct pkg *pkg)
 	assert(comment != NULL);
 	if (comment != NULL && len < 80) {
 		/** @todo Rewrite */
-		char desc[60], *ptr;
+		char desc[60], *s;
+		const char *ptr;
 		/*
 		 * Copy the comment to a buffer
 		 * so it is 80 characters wide
 		 */
-		ptr = pkgfile_get_data(comment, 80-len);
+		ptr = pkgfile_get_data(comment);
 		assert(ptr != NULL);
 		strlcpy(desc, ptr, (unsigned int)80-len);
-		free(ptr);
-		ptr = strchr(desc, '\n');
-		if (ptr)
-			ptr[0] = '\0';
+
+		/* Make sure the line is null terminated at the line break */
+		s = strchr(desc, '\n');
+		if (s)
+			s[0] = '\0';
 		printf("%s\n", desc);
 	} else
 		putchar('\n');

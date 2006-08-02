@@ -448,7 +448,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	struct pkgfile **control;
 	struct pkgfile *contents_file;
 	struct pkg_freebsd_contents *contents;
-	char *file_data;
+	const char *file_data;
 	int chdir_first = 1;
 	int only_control_files = 0;
 
@@ -479,10 +479,9 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 		return -1;
 	}
 
-	file_data = pkgfile_get_data_all(contents_file);
+	file_data = pkgfile_get_data(contents_file);
 	contents = pkg_freebsd_contents_new(file_data,
 	    pkgfile_get_size(contents_file));
-	free(file_data);
 	if (contents == NULL) {
 		return -1;
 	}
@@ -1089,7 +1088,7 @@ freebsd_get_next_entry(struct archive *a)
 static int
 freebsd_parse_contents(struct freebsd_package *fpkg)
 {
-	char *file_data;
+	const char *file_data;
 	struct pkgfile *contents_file;
 	int i;
 	
@@ -1111,10 +1110,9 @@ freebsd_parse_contents(struct freebsd_package *fpkg)
 	if (contents_file == NULL)
 		return -1;
 
-	file_data = pkgfile_get_data_all(contents_file);
+	file_data = pkgfile_get_data(contents_file);
 	fpkg->contents = pkg_freebsd_contents_new(file_data,
 	    pkgfile_get_size(contents_file));
-	free(file_data);
 	return 0;
 }
 
