@@ -108,6 +108,7 @@ pkgfile_open_fd(struct pkgfile *file)
 		if (S_ISREG(sb.st_mode) ||
 		    (file->follow_link && S_ISLNK(sb.st_mode))) {
 			file->type = pkgfile_regular;
+			file->length = sb.st_size;
 		} else if(S_ISLNK(sb.st_mode)) {
 			file->type = pkgfile_symlink;
 		} else if (S_ISDIR(sb.st_mode)) {
