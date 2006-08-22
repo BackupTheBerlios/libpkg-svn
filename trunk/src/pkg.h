@@ -69,6 +69,7 @@ int		 pkgfile_compare_checksum_md5(struct pkgfile *);
 int		 pkgfile_seek(struct pkgfile *, uint64_t, int);
 int		 pkgfile_set_mode(struct pkgfile *, mode_t);
 int		 pkgfile_write(struct pkgfile *);
+int		 pkgfile_unlink(struct pkgfile *);
 int		 pkgfile_free(struct pkgfile *);
 
 /**
@@ -91,7 +92,11 @@ typedef enum {
 	pkg_script_pre,
 	pkg_script_post,
 	pkg_script_mtree,
-	pkg_script_require
+	pkg_script_require,
+	pkg_script_require_deinstall,
+	pkg_script_deinstall,
+	pkg_script_pre_deinstall,
+	pkg_script_post_deinstall
 } pkg_script;
 
 struct pkg		 *pkg_new_empty(const char *);
@@ -104,6 +109,7 @@ const char		 *pkg_get_prefix(struct pkg *);
 struct pkgfile		**pkg_get_control_files(struct pkg *);
 struct pkgfile		 *pkg_get_control_file(struct pkg *, const char *);
 struct pkg		**pkg_get_dependencies(struct pkg *);
+struct pkg		**pkg_get_reverse_dependencies(struct pkg *);
 const char		 *pkg_get_name(struct pkg *);
 struct pkgfile		 *pkg_get_next_file(struct pkg *);
 const char		 *pkg_get_origin(struct pkg *);

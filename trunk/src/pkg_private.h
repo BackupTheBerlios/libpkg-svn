@@ -69,6 +69,7 @@ struct pkg		 *pkg_new(const char *,
 				pkg_get_control_files_callback *,
 				pkg_get_control_file_callback *,
 				pkg_get_dependencies_callback *,
+				pkg_get_dependencies_callback *,
 				pkg_free_callback *);
 
 /* Callbacks to get data from a package, eg. the description */
@@ -100,14 +101,23 @@ typedef int	  	  pkg_install_callback(struct pkg *, const char *, int,
 				pkg_db_action *, void *, pkg_db_chdir *,
 				pkg_db_install_file *, pkg_db_exec *,
 				pkg_db_register *);
+typedef int		  pkg_deinstall_callback(struct pkg *, pkg_db_action *,
+				void *, pkg_db_chdir *, pkg_db_install_file *,
+				pkg_db_exec *, pkg_db_register *);
 typedef struct pkgfile	 *pkg_get_next_file_callback(struct pkg *);
 typedef int		  pkg_run_script_callback(struct pkg *, const char *,
 				pkg_script);
+
 int			  pkg_add_callbacks_install(struct pkg *,
 				pkg_install_callback *,
+				pkg_deinstall_callback *,
 				pkg_get_next_file_callback *,
 				pkg_run_script_callback *);
 int			  pkg_install(struct pkg *, const char *, int,
+				pkg_db_action *, void *, pkg_db_chdir *,
+				pkg_db_install_file *, pkg_db_exec *,
+				pkg_db_register *);
+int			  pkg_deinstall(struct pkg *,
 				pkg_db_action *, void *, pkg_db_chdir *,
 				pkg_db_install_file *, pkg_db_exec *,
 				pkg_db_register *);
@@ -122,6 +132,7 @@ struct pkg {
 	pkg_get_control_files_callback	*pkg_get_control_files;
 	pkg_get_control_file_callback	*pkg_get_control_file;
 	pkg_get_dependencies_callback	*pkg_get_deps;
+	pkg_get_dependencies_callback	*pkg_get_rdeps;
 	pkg_free_callback		*pkg_free;
 
 	pkg_get_version_callback	*pkg_get_version;
@@ -131,8 +142,9 @@ struct pkg {
 	pkg_add_dependency_callback	*pkg_add_depend;
 	pkg_add_file_callback		*pkg_add_file;
 
-	/* Callbacks used with installing packages */
+	/* Callbacks used with (de)installing packages */
 	pkg_install_callback		*pkg_install;
+	pkg_deinstall_callback		*pkg_deinstall;
 	pkg_get_next_file_callback	*pkg_get_next_file;
 	pkg_run_script_callback		*pkg_run_script;
 };

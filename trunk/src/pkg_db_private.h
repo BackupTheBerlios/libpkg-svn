@@ -37,12 +37,15 @@ typedef struct pkg	 *pkg_db_get_package_callback(struct pkg_db *,
 				const char *);
 typedef struct pkg	**pkg_db_get_installed_match_callback(struct pkg_db *,
 				pkg_db_match *, unsigned int, const void *);
+typedef int	pkg_db_deinstall_pkg_callback(struct pkg_db *, struct pkg *,
+			int, int, pkg_db_action *);
 
 
 struct pkg_db	*pkg_db_open(const char *, pkg_db_install_pkg_callback *,
 			pkg_db_is_installed_callback *,
 			pkg_db_get_installed_match_callback *,
-			pkg_db_get_package_callback *);
+			pkg_db_get_package_callback *,
+			pkg_db_deinstall_pkg_callback *);
 struct pkg_db {
 	void	*data;
 
@@ -52,6 +55,7 @@ struct pkg_db {
 	pkg_db_is_installed_callback		*pkg_is_installed;
 	pkg_db_get_installed_match_callback	*pkg_get_installed_match;
 	pkg_db_get_package_callback		*pkg_get_package;
+	pkg_db_deinstall_pkg_callback		*pkg_deinstall;
 };
 
 #endif /* __LIBPKG_PKG_DB_PRIVATE_H__ */

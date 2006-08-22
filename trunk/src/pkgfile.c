@@ -96,7 +96,6 @@ pkgfile_open_fd(struct pkgfile *file)
 	/* Consistancy check */
 	assert(file != NULL);
 	assert(file->loc == pkgfile_loc_disk);
-	assert(file->data == NULL);
 
 	/* Find the file type */
 	if (file->type == pkgfile_none) {
@@ -444,6 +443,21 @@ pkgfile_compare_checksum_md5(struct pkgfile *file)
 		return 0;
 
 	return 1;
+}
+
+/**
+ * @brief Unlinkes the given file
+ * @return  0 on success
+ * @return -1 on error
+ */
+int
+pkgfile_unlink(struct pkgfile *file)
+{
+	if (file == NULL)
+		return -1;
+
+	assert(file->loc == pkgfile_loc_disk);
+	return unlink(file->name);
 }
 
 /**

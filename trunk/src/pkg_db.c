@@ -51,13 +51,15 @@
  * @param get_installed_match The callback to be used by
  *     pkg_db_get_installed_match()
  * @param get_package The callback to be used by pkg_db_get_package()
+ * @param pkg_deinstall The callback to be used by pkg_db_deinstall_package()
  * @returns A pkg_db object or NULL
  */
 struct pkg_db*
 pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 		pkg_db_is_installed_callback *is_installed,
 		pkg_db_get_installed_match_callback *get_installed_match,
-		pkg_db_get_package_callback *get_package)
+		pkg_db_get_package_callback *get_package,
+		pkg_db_deinstall_pkg_callback* deinstall)
 {
 	struct pkg_db *db;
 	struct stat sb;
@@ -99,6 +101,7 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	db->pkg_is_installed = is_installed;
 	db->pkg_get_installed_match = get_installed_match;
 	db->pkg_get_package = get_package;
+	db->pkg_deinstall = deinstall;
 
 	db->data = NULL;
 
@@ -257,6 +260,36 @@ pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
 		return db->pkg_get_package(db, pkg_name);
 
 	return NULL;
+}
+
+int
+pkg_db_delete_package(struct pkg_db *db, struct pkg *pkg, int scripts, int fake)
+{
+	return pkg_db_delete_package_action(db, pkg, scripts, fake, NULL);
+}
+
+/**
+ * @brief Removes a package and it's files from a database
+ * @param db The database to deinstall from
+ * @param pkg The package to deinstall
+ * @param action A callback that is used to inform the user the status
+ *     of the installation
+ * @return  0 on success
+ * @return -1 on error
+ */
+int
+pkg_db_delete_package_action(struct pkg_db *db, struct pkg *pkg, int scripts,
+	int fake, pkg_db_action *action)
+{
+	if (db == NULL || pkg == NULL)
+		return -1;
+
+	if (action == NULL)
+		action = pkg_action_null;
+
+	if (db->pkg_deinstall != NULL)
+		return db->pkg_deinstall(db, pkg, scripts, fake, action);
+	return -1;
 }
 
 /**

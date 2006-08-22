@@ -59,6 +59,9 @@ struct pkg	**pkg_db_get_installed_match(struct pkg_db *, pkg_db_match *,
 struct pkg	**pkg_db_get_installed_match_count(struct pkg_db *,
 			pkg_db_match *, unsigned int, const void *);
 struct pkg	 *pkg_db_get_package(struct pkg_db *, const char *);
+int		  pkg_db_delete_package(struct pkg_db *, struct pkg *, int,int);
+int		  pkg_db_delete_package_action(struct pkg_db *, struct pkg *,
+			int, int, pkg_db_action *);
 int		  pkg_db_free(struct pkg_db *);
 
 int		  pkg_match_all(struct pkg *, const void *);

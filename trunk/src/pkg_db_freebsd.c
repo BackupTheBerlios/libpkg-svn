@@ -69,25 +69,31 @@ static const int pkg_states[7][12] = {
 	{ -1, -1, -1, -1, -1,  6, -1, -1, -1, -1, -1, -1 }  /* p6 */
 };
 
-pkg_static int		  freebsd_install_pkg_action(struct pkg_db *,
+static int		  freebsd_install_pkg_action(struct pkg_db *,
 				struct pkg *, const char *, int, int, int,
 				pkg_db_action *);
-pkg_static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
-pkg_static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
+static int		  freebsd_is_installed(struct pkg_db *, struct pkg *);
+static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, unsigned int, const void *);
-pkg_static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);	
+static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);
+static int		  freebsd_deinstall_pkg(struct pkg_db *, struct pkg *,
+				int, int, pkg_db_action *);
 
-/* pkg_install callbacks */
-pkg_static int	freebsd_do_chdir(struct pkg *, pkg_db_action *, void *,
+/* pkg_(install|deinstall) callbacks */
+static int	freebsd_do_chdir(struct pkg *, pkg_db_action *, void *,
 				const char *);
-pkg_static int	freebsd_install_file(struct pkg *, pkg_db_action *, void *,
+static int	freebsd_install_file(struct pkg *, pkg_db_action *, void *,
 				struct pkgfile *);
-pkg_static int	freebsd_do_exec(struct pkg *, pkg_db_action *, void *,
+static int	freebsd_deinstall_file(struct pkg *, pkg_db_action *, void *,
+				struct pkgfile *);
+static int	freebsd_do_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
-pkg_static int	freebsd_register(struct pkg *, pkg_db_action *, void *,
+static int	freebsd_register(struct pkg *, pkg_db_action *, void *,
+				struct pkgfile **);
+static int	freebsd_deregister(struct pkg *, pkg_db_action *, void *,
 				struct pkgfile **);
 /* Internal */
-pkg_static void			 freebsd_format_cmd(char *, int, const char *,
+static void			 freebsd_format_cmd(char *, int, const char *,
 				const char *, const char *);
 
 /**
@@ -106,7 +112,7 @@ pkg_db_open_freebsd(const char *base)
 {
 	return pkg_db_open(base, freebsd_install_pkg_action,
 	    freebsd_is_installed, freebsd_get_installed_match,
-	    freebsd_get_package);
+	    freebsd_get_package, freebsd_deinstall_pkg);
 }
 
 /**
@@ -330,6 +336,102 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
 }
 
 /**
+ * @brief Callback for pkg_db_deinstall_package()
+ * @return  0 on success
+ * @return -1 on fatal error
+ */
+static int
+freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *pkg, int scripts __unused, int fake,
+	pkg_db_action *pkg_action)
+{
+	struct pkg_install_data deinstall_data;
+	struct pkg *real_pkg;
+//	struct pkg **rdeps;
+
+	assert(db != NULL);
+	assert(pkg != NULL);
+
+	/* Get the real package. The one supplyed may be an empty one */
+	/** @todo Check if the package suplyed is a valid package or not */
+	real_pkg = freebsd_get_package(db, pkg_get_name(pkg));
+# if 0
+	/* Check if the package is installed */
+	if (real_pkg == NULL) {
+		pkg_action(PKG_DB_INFO, "No such package '%s' installed",
+		    pkg_get_name(pkg));
+		return -1;
+	}
+
+	/** @todo Check if package is dependended on */
+	rdeps = pkg_get_reverse_dependencies(pkg);
+	if (rdeps == NULL) {
+		return -1;
+	} else if (rdeps[0] != NULL) {
+		unsigned int pos, buf_size, buf_used;
+		char *buf;
+		/* XXX */
+		buf_used = 0;
+		buf_size = 1024;
+		buf = malloc(buf_size);
+		if (buf == NULL) {
+			pkg_action(PKG_DB_INFO,
+			    "package '%s' is required by other packages and "
+			    "may not be deinstalled however an error occured "
+			    "while retrieving the list of packages",
+			    pkg_get_name(real_pkg));
+			return -1;
+		}
+		/* Load the names of the packages into a buffer */
+		for (pos = 0; rdeps[pos] != NULL; pos++) {
+			size_t len;
+
+			len = strlen(pkg_get_name(rdeps[pos]));
+			if (buf_used + len >= buf_size) {
+				buf_size += 1024;
+				buf = realloc(buf, buf_size);
+			}
+			strlcat(buf, pkg_get_name(rdeps[pos]), buf_size);
+			strlcat(buf, "\n", buf_size);
+			buf_used += len + 1;
+		}
+		pkg_action(PKG_DB_INFO,
+		    "package '%s' is required by these other packages "
+		    "and may not be deinstalled:\n%s",
+		    pkg_get_name(real_pkg), buf);
+		free(buf);
+		return -1;
+	}
+
+	if (pkg_run_script(real_pkg, NULL, pkg_script_require_deinstall) != 0) {
+		/* XXX */
+		return -1;
+	}
+
+	/** @todo Run +DEINSTALL <pkg-name> DEINSTALL, check if return value == 0 */
+	if (pkg_run_script(real_pkg, NULL, pkg_script_pre_deinstall) != 0) {
+		/* XXX */
+		return -1;
+	}
+
+	/** @todo Remove this package from other packages reverse dependencies */
+
+#endif
+	/* Do the deinstall */
+	deinstall_data.db = db;
+	deinstall_data.fake = fake;
+	deinstall_data.last_file[0] = '\0';
+	deinstall_data.directory[0] = '\0';
+	if (pkg_deinstall(pkg, pkg_action, &deinstall_data,
+	    freebsd_do_chdir, freebsd_deinstall_file,
+	    freebsd_do_exec, freebsd_deregister) != 0) {
+		return -1;
+	}
+
+	/** @todo Run +POST-DEINSTALL <pkg-name>/+DEINSTALL <pkg-name> POST-DEINSTALL */
+
+	return -1;
+}
+/**
  * @}
  */
 
@@ -385,7 +487,8 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 /**
  * @brief The install_file callback of pkg_install() for the FreeBSD package
  *     database
- * @return 0 on success or -1 on error
+ * @return  0 on success
+ * @return -1 on error
  */
 static int
 freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
@@ -409,6 +512,19 @@ freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	return 0;
 }
 
+/**
+ * @brief The deinstall_file callback of pkg_deinstall() for the FreeBSD
+ *     package database
+ * @return  0 on success
+ * @return -1 on error
+ */
+static int
+freebsd_deinstall_file(struct pkg *pkg __unused, pkg_db_action *pkg_action __unused, void *data __unused,
+	struct pkgfile *file)
+{
+	assert(file != NULL);
+	return pkgfile_unlink(file);
+}
 /**
  * @brief The do_chdir callback of pkg_install() for the FreeBSD package
  *     database
@@ -491,6 +607,19 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	
 	pkg_action(PKG_DB_INFO, "Package %s registered in %s" DB_LOCATION "/%s",
 	    pkg_get_name(pkg), db->db_base, pkg_get_name(pkg));
+	return -1;
+}
+
+/**
+ * @brief The pkg_deregister callback of pkg_deinstall() for the FreeBSD
+ *     package database
+ * @return  0 on success
+ * @return -1 on error
+ */
+static int
+freebsd_deregister(struct pkg *pkg __unused, pkg_db_action *pkg_action __unused, void *data __unused,
+		struct pkgfile **control __unused)
+{
 	return -1;
 }
 

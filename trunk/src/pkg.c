@@ -27,6 +27,7 @@
  *
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -58,6 +59,7 @@ pkg_new(const char *pkg_name,
 		pkg_get_control_files_callback *control_files,
 		pkg_get_control_file_callback *control_file,
 		pkg_get_dependencies_callback *get_deps,
+		pkg_get_dependencies_callback *get_rdeps,
 		pkg_free_callback *free_pkg)
 {
 	struct pkg *pkg;
@@ -81,6 +83,7 @@ pkg_new(const char *pkg_name,
 	pkg->pkg_get_control_files = control_files;
 	pkg->pkg_get_control_file = control_file;
 	pkg->pkg_get_deps = get_deps;
+	pkg->pkg_get_rdeps = get_rdeps;
 	pkg->pkg_free = free_pkg;
 
 	/* Set the other callbacks to NULL */
@@ -91,6 +94,7 @@ pkg_new(const char *pkg_name,
 	pkg->pkg_get_next_file = NULL;
 	pkg->pkg_run_script = NULL;
 	pkg->pkg_install = NULL;
+	pkg->pkg_deinstall = NULL;
 
 	/* The data is unknown so set to NULL */
 	pkg->pkg_prefix = NULL;
@@ -153,6 +157,7 @@ pkg_add_callbacks_empty(struct pkg *pkg,
 int
 pkg_add_callbacks_install (struct pkg *pkg,
 		pkg_install_callback *install,
+		pkg_deinstall_callback *deinstall,
 		pkg_get_next_file_callback *next_file,
 		pkg_run_script_callback *run_script)
 {
@@ -160,6 +165,7 @@ pkg_add_callbacks_install (struct pkg *pkg,
 		return -1;
 
 	pkg->pkg_install = install;
+	pkg->pkg_deinstall = deinstall;
 	pkg->pkg_get_next_file = next_file;
 	pkg->pkg_run_script = run_script;
 	return 0;
@@ -191,7 +197,7 @@ pkg_add_callbacks_install (struct pkg *pkg,
 struct pkg*
 pkg_new_empty(const char *pkg_name)
 {
-	return pkg_new(pkg_name, NULL, NULL, NULL, NULL);
+	return pkg_new(pkg_name, NULL, NULL, NULL, NULL, NULL);
 }
 
 /**
@@ -308,8 +314,35 @@ pkg_get_dependencies(struct pkg *pkg)
 	if (!pkg)
 		return NULL;
 
+	assert(pkg->pkg_get_deps == NULL ||
+	    pkg->pkg_get_deps != pkg->pkg_get_rdeps);
 	if (pkg->pkg_get_deps)
 		return pkg->pkg_get_deps(pkg);
+	return NULL;
+}
+
+/**
+ * @brief Gets all the packages that depend on the named package
+ * @param pkg The package
+ *
+ * This retrieves a list of packages that depend on the
+ * given package.
+ * If no packages depend on the given package the array
+ * will only contain a NULL
+ * @return A NULL terminated array of packages
+ * @return NULL on error
+ */
+struct pkg **
+pkg_get_reverse_dependencies(struct pkg *pkg)
+{
+	if (!pkg)
+		return NULL;
+
+	assert(pkg->pkg_get_rdeps == NULL ||
+	    pkg->pkg_get_deps != pkg->pkg_get_rdeps);
+	if (pkg->pkg_get_rdeps != NULL)
+		return pkg->pkg_get_rdeps(pkg);
+
 	return NULL;
 }
 
@@ -480,6 +513,41 @@ pkg_install(struct pkg *pkg, const char *prefix, int reg,
 	    install_file, do_exec, pkg_register);
 }
 
+/**
+ * @brief Deinstalls a package using the given callbacks
+ * @param pkg The package to deinstall
+ * @param pkg_action A callback to display a message to the user
+ * @param data A pointer to pass to pkg_db_* callbacks
+ * @param db_chdir A callback to change to a new directory
+ * @param deinstall_file A callback to install a file in a database
+ * @param do_exec A callback to execute a script
+ * @param pkg_deregister A callback to register a package
+ *
+ * pkg_deinstall() is an internal function to the library.
+ * It is designed to seperate the knowledge of packages and
+ * package databases apart.
+ * The package database now only knows how to deinstall the
+ * parts of a package it is given, not the internals of a
+ * given package.
+ * 
+ * @return  0 on success
+ * @return -1 or error
+ */
+int
+pkg_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
+		pkg_db_chdir *db_chdir,	pkg_db_install_file *deinstall_file,
+		pkg_db_exec *do_exec, pkg_db_register *pkg_deregister)
+{
+	if (pkg == NULL || data == NULL || db_chdir == NULL ||
+	    deinstall_file == NULL || do_exec == NULL || pkg_deregister == NULL)
+		return -1;
+
+	if (pkg->pkg_deinstall == NULL)
+		return -1;
+
+	return pkg->pkg_deinstall(pkg, pkg_action, data, db_chdir,
+	    deinstall_file, do_exec, pkg_deregister);
+}
 
 /**
  * @brief Frees a NULL terminated array of packages
