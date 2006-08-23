@@ -38,7 +38,7 @@
 #include "pkg_private.h"
 #include "pkg_repo_private.h"
 
-pkg_static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
+static struct pkg *file_get_pkg(struct pkg_repo *, const char *);
 
 /**
  * @defgroup PackageRepoLocalFreebsd FreeBSD local files repository

@@ -90,14 +90,14 @@ struct ftp_repo {
 int getosreldate(void);
 
 /* Callbacks */
-pkg_static struct pkg	*ftp_get_pkg(struct pkg_repo *, const char *);
-pkg_static int		 ftp_free(struct pkg_repo *);
+static struct pkg	*ftp_get_pkg(struct pkg_repo *, const char *);
+static int		 ftp_free(struct pkg_repo *);
 /* Internal */
-pkg_static FILE		*ftp_get_fd(const char *, struct ftp_repo *);
-pkg_static struct ftp_repo	*ftp_create_repo(const char *, const char *,
+static FILE		*ftp_get_fd(const char *, struct ftp_repo *);
+static struct ftp_repo	*ftp_create_repo(const char *, const char *,
 					const char *);
 /*pkg_static int		 pkg_in_All(const char *); */
-pkg_static int		 pkg_name_has_extension(const char *);
+static int		 pkg_name_has_extension(const char *);
 
 /**
  * @defgroup PackageRepoFtp FTP package repository
@@ -110,9 +110,10 @@ pkg_static int		 pkg_name_has_extension(const char *);
  * @brief Creates a pkg_repo with the given sie and path
  * @param site The ftp site to use. If NULL will use ftp.freebsd.org
  * @param path The path to the top level of the packages
- * @param cached_dir The directory to save a copy of each package file in or
+ * @param cache_dir The directory to save a copy of each package file in or
  *     NULL. If NULL will use the default path
- * @return A pkg_repo object or NULL
+ * @return A pkg_repo object
+ * @return NULL on error
  */
 struct pkg_repo *
 pkg_repo_new_ftp(const char *site, const char *path, const char *cache_dir)

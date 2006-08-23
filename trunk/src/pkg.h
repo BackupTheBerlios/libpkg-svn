@@ -35,32 +35,23 @@
 
 #include <stdio.h>	/* FILE */
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-#define pkg_static static
-#else
-#define pkg_static
-#endif
+/**
+ * @addtogroup PackageFile
+ *
+ * @{
+ */
 
-/*
- * Object to hold files in
+/**
+ * @brief The struct to use to interact with files in a safe way
+ * @struct pkgfile pkg.h <pkg.h>
  */
 struct pkgfile;
-
-typedef enum {
-	pkgfile_none,
-	pkgfile_regular,
-	pkgfile_hardlink,
-	pkgfile_symlink,
-	pkgfile_dir
-} pkgfile_type;
 
 struct pkgfile	*pkgfile_new_from_disk(const char *, int);
 struct pkgfile	*pkgfile_new_regular(const char *, const char *, uint64_t);
 struct pkgfile	*pkgfile_new_symlink(const char *, const char *);
 struct pkgfile	*pkgfile_new_hardlink(const char *, const char *);
 struct pkgfile	*pkgfile_new_directory(const char *);
-struct pkgfile	*pkgfile_new_from_buffer(const char *, const char *,
-			pkgfile_type);
 const char	*pkgfile_get_name(struct pkgfile *);
 uint64_t	 pkgfile_get_size(struct pkgfile *);
 const char	*pkgfile_get_data(struct pkgfile *);
@@ -73,6 +64,10 @@ int		 pkgfile_unlink(struct pkgfile *);
 int		 pkgfile_free(struct pkgfile *);
 
 /**
+ * @}
+ */
+
+/**
  * @addtogroup Package
  *
  * @{
@@ -83,26 +78,32 @@ int		 pkgfile_free(struct pkgfile *);
  */
 
 /**
+ * @brief The basic struct to use when interacting with a Package
  * @struct pkg pkg.h <pkg.h>
  */
 struct pkg;
 
+/**
+ * @brief An enum of all possible scripts that can be run by pkg_run_script()
+ */
 typedef enum {
-	pkg_script_noop,
-	pkg_script_pre,
-	pkg_script_post,
-	pkg_script_mtree,
-	pkg_script_require,
-	pkg_script_require_deinstall,
-	pkg_script_deinstall,
-	pkg_script_pre_deinstall,
-	pkg_script_post_deinstall
+	pkg_script_noop, /**< Noop */
+	pkg_script_pre, /**< Pre-install */
+	pkg_script_post, /**< Post-install */
+	pkg_script_mtree, /**< Mtree */
+	pkg_script_require, /**< Requirement check */
+	pkg_script_require_deinstall, /**< Removal Requirement check */
+	pkg_script_deinstall, /**< Deinstall check */
+	pkg_script_pre_deinstall, /**< Pre-removal */
+	pkg_script_post_deinstall /**< Post-removal */
 } pkg_script;
 
 struct pkg		 *pkg_new_empty(const char *);
 struct pkg		 *pkg_new_freebsd_from_file(FILE *);
 struct pkg		 *pkg_new_freebsd_installed(const char *, const char *);
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 struct pkg		 *pkg_new_freebsd_empty(const char *);
+#endif
 int			  pkg_compare(const void *, const void *);
 int			  pkg_set_prefix(struct pkg *, const char *);
 const char		 *pkg_get_prefix(struct pkg *);

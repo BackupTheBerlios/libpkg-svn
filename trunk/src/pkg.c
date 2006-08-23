@@ -51,6 +51,7 @@
  * @param control_files A callback to be used by pkg_get_control_files()
  * @param control_file A callback to be used by pkg_get_control_file()
  * @param get_deps A callback to be used by pkg_get_dependencies()
+ * @param get_rdeps A callback to be used by pkg_get_reverse_dependencies()
  * @param free_pkg A call back to be used by pkg_free()
  * @return A new pkg object, or NULL on error
  */
@@ -129,7 +130,8 @@ pkg_add_callbacks_data(struct pkg *pkg,
  * @param pkg The package returned by pkg_new()
  * @param add_depend A callback to be used by pkg_get_dependencies()
  * @param add_file A callback to be used by pkg_add_file()
- * @return 0 on success, -1 on error.
+ * @return  0 on success
+ * @return -1 on error
  */
 int
 pkg_add_callbacks_empty(struct pkg *pkg, 
@@ -149,10 +151,11 @@ pkg_add_callbacks_empty(struct pkg *pkg,
  * @brief Internal function to add callbacks that are used when a package is installed
  * @param pkg The package returned by pkg_new()
  * @param install A callback to be used by pkg_install()
+ * @param deinstall A callback to be used by pkg_deinstall()
  * @param next_file A callback to be used by pkg_get_next_file()
  * @param run_script A callback to be used by pkg_run_script()
- * @return 0 on success, -1 on error.
- * @return
+ * @return  0 on success
+ * @return -1 on error
  */
 int
 pkg_add_callbacks_install (struct pkg *pkg,
@@ -425,6 +428,7 @@ pkg_get_version(struct pkg *pkg)
 /**
  * @brief Runs the named script from the package
  * @param pkg The package
+ * @param prefix Thh prefix to pass to the script or NULL fro the default
  * @param script The script to run
  * @return The return value of the script, or -1
  */
@@ -479,6 +483,7 @@ pkg_add_file(struct pkg *pkg, struct pkgfile *file)
 /**
  * @brief Installs a package using the given callbacks
  * @param pkg The package to install
+ * @param prefix The prefix to install the package to or NULL for the default
  * @param reg If true the package will be registered
  * @param pkg_action A callback to display a message to the user
  * @param data A pointer to pass to pkg_db_* callbacks

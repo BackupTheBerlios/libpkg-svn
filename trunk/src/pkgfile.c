@@ -492,9 +492,10 @@ pkgfile_seek(struct pkgfile *file, uint64_t position, int whence)
 
 /**
  * @brief Sets the given file's mode
- * @param Tile The file to set the mode on
- * @param The mode to set. 0 will unset it
- * @return 0 o success or -1 on error
+ * @param file The file to set the mode on
+ * @param mode The mode to set. 0 will unset it
+ * @return  0 on success
+ * @return -1 on error
  */
 int
 pkgfile_set_mode(struct pkgfile *file, mode_t mode)

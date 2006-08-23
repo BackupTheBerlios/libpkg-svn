@@ -51,7 +51,7 @@
  * @param get_installed_match The callback to be used by
  *     pkg_db_get_installed_match()
  * @param get_package The callback to be used by pkg_db_get_package()
- * @param pkg_deinstall The callback to be used by pkg_db_deinstall_package()
+ * @param deinstall The callback to be used by pkg_db_deinstall_package()
  * @returns A pkg_db object or NULL
  */
 struct pkg_db*
@@ -108,6 +108,12 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 	return db;
 }
 
+/**
+ * @brief The package action used when NULL is passed in
+ * 
+ * This is a function that does nothing.
+ * It is used for a pkg_action when no output is required
+ */
 static void
 pkg_action_null(int level __unused, const char *fmt __unused, ...)
 {
@@ -134,6 +140,7 @@ pkg_action_null(int level __unused, const char *fmt __unused, ...)
  * @param pkg The package to install
  * @param prefix The prefix to use to install the package or NULL
  * @param reg If true register the package's installation
+ * @param scripts If true run the packages scripts
  * @return 0 on success, -1 on error
  */
 int
@@ -147,7 +154,9 @@ pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg, const char *prefix,
  * @brief Installs a package to the database
  * @param db The database to install to
  * @param pkg The package to install
+ * @param prefix If not NULL override the package's prefix
  * @param reg If true register the package
+ * @param scripts If true run the package's scripts
  * @param fake If true we will only fetch the package and report what would
  *     have happened during the install
  * @param action A callback that is used to inform the user the status
@@ -262,6 +271,13 @@ pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
 	return NULL;
 }
 
+/**
+ * @brief Removes a package from the package database and filesystem
+ * @param db The database to deinstall from
+ * @param pkg The package to deinstall
+ * @param scripts If true run the package's scripts
+ * @param fake If true don't deinstall but run through the procedure
+ */
 int
 pkg_db_delete_package(struct pkg_db *db, struct pkg *pkg, int scripts, int fake)
 {
@@ -272,6 +288,8 @@ pkg_db_delete_package(struct pkg_db *db, struct pkg *pkg, int scripts, int fake)
  * @brief Removes a package and it's files from a database
  * @param db The database to deinstall from
  * @param pkg The package to deinstall
+ * @param scripts If true run the package's scripts
+ * @param fake If true don't deinstall but run through the removal procedure
  * @param action A callback that is used to inform the user the status
  *     of the installation
  * @return  0 on success

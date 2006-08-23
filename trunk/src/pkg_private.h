@@ -41,6 +41,17 @@ typedef enum {
 	pkgfile_loc_mem
 } pkgfile_loc;
 
+/**
+ * @brief The type of file the pkgfile object is interacting with
+ */
+typedef enum {
+	pkgfile_none, /**< No file */
+	pkgfile_regular, /**< A regular file */
+	pkgfile_hardlink, /**< A hard link */
+	pkgfile_symlink, /**< A symlink */
+	pkgfile_dir /**< A directory */
+} pkgfile_type;
+
 /** @todo Reorder the struct to remove alignment gaps */
 struct pkgfile {
 	char		*name;
