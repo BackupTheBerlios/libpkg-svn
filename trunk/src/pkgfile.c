@@ -45,7 +45,8 @@
 #include "pkg_private.h"
 
 static struct pkgfile	*pkgfile_new(const char *, pkgfile_type, pkgfile_loc);
-static int		 pkgfile_open_fd(struct pkgfile *file);
+static int		 pkgfile_open_fd(struct pkgfile *);
+static int		 pkgfile_get_type(struct pkgfile *);
 
 /**
  * @defgroup PackageFileInternal Internal file functions
@@ -97,25 +98,8 @@ pkgfile_open_fd(struct pkgfile *file)
 	assert(file != NULL);
 	assert(file->loc == pkgfile_loc_disk);
 
-	/* Find the file type */
-	if (file->type == pkgfile_none) {
-		struct stat sb;
-
-		if (lstat(file->name, &sb) != 0)
-			return -1;
-
-		if (S_ISREG(sb.st_mode) ||
-		    (file->follow_link && S_ISLNK(sb.st_mode))) {
-			file->type = pkgfile_regular;
-			file->length = sb.st_size;
-		} else if(S_ISLNK(sb.st_mode)) {
-			file->type = pkgfile_symlink;
-		} else if (S_ISDIR(sb.st_mode)) {
-			file->type = pkgfile_dir;
-		} else {
-			return -1;
-		}
-	}
+	if (pkgfile_get_type(file) != 0)
+		return -1;
 
 	if (file->type == pkgfile_regular) {
 		/* Check if the file has already been opened */
@@ -136,6 +120,42 @@ pkgfile_open_fd(struct pkgfile *file)
 
 	}
 
+	return 0;
+}
+
+/**
+ * @brief Gets a file's type from disk
+ *
+ * This is to be used when the file's type in needed but
+ * the file dosn't need to be opened
+ * @return  0 on success
+ * @return -1 on error
+ */
+int
+pkgfile_get_type(struct pkgfile *file)
+{
+	assert(file != NULL);
+	assert(file->loc == pkgfile_loc_disk);
+
+	/* Find the file type */
+	if (file->type == pkgfile_none) {
+		struct stat sb;
+
+		if (lstat(file->name, &sb) != 0)
+			return -1;
+
+		if (S_ISREG(sb.st_mode) ||
+		    (file->follow_link && S_ISLNK(sb.st_mode))) {
+			file->type = pkgfile_regular;
+			file->length = sb.st_size;
+		} else if(S_ISLNK(sb.st_mode)) {
+			file->type = pkgfile_symlink;
+		} else if (S_ISDIR(sb.st_mode)) {
+			file->type = pkgfile_dir;
+		} else {
+			return -1;
+		}
+	}
 	return 0;
 }
 
@@ -457,7 +477,13 @@ pkgfile_unlink(struct pkgfile *file)
 		return -1;
 
 	assert(file->loc == pkgfile_loc_disk);
-	return unlink(file->name);
+
+	pkgfile_get_type(file);
+	if (file->type == pkgfile_dir) {
+		return rmdir(file->name);
+	} else {
+		return unlink(file->name);
+	}
 }
 
 /**
