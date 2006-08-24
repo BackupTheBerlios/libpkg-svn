@@ -508,6 +508,54 @@ pkgfile_set_mode(struct pkgfile *file, mode_t mode)
 }
 
 /**
+ * @brief Removes the first occurance of line from a file
+ * @param file The file
+ * @param file The line to remove
+ * @return  1 on line not found
+ * @return  0 on success
+ * @return -1 on error
+ */
+int
+pkgfile_remove_line(struct pkgfile *file, const char *line)
+{
+	char *buf, *ptr;
+
+	if (file == NULL || line == NULL)
+		return -1;
+
+	assert(file->loc == pkgfile_loc_disk);
+
+	/* Read in the file */
+	pkgfile_get_data(file);
+	assert(file->type == pkgfile_regular);
+
+	buf = file->data;
+	while ((buf = memmem(buf, file->length, line, strlen(line))) != NULL) {
+		/* Check the found line is complete */
+		if ((buf == file->data || buf[-1] == '\n') &&
+		    (buf + strlen(line) == file->data + file->length || 
+		     buf[strlen(line)] == '\n')) {
+			break;
+		}
+	}
+	if (buf == NULL)
+		return 1;
+
+	/* Move the rest of the file */
+	ptr = buf + strlen(line) + 1;
+	memcpy(buf, ptr, file->length - (ptr - file->data));
+	file->length -= strlen(line) + 1;
+	fseek(file->fd, 0, SEEK_SET);
+	if (fwrite(file->data, 1, file->length, file->fd) != file->length) {
+		assert(0);
+		return -1;
+	}
+	ftruncate(fileno(file->fd), file->length);
+
+	return 0;
+}
+
+/**
  * @brief Writes a pkgfile to disk
  * @return  0 on success
  * @return -1 on error
