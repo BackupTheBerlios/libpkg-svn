@@ -203,12 +203,16 @@ pkgfile_new_regular(const char *name, const char *contents, uint64_t length)
 		return NULL;
 
 	file->length = length;
-	file->data = malloc(file->length);
-	if (file->data == NULL) {
-		pkgfile_free(file);
-		return NULL;
+	if (file->length == 0) {
+		file->data = NULL;
+	} else {
+		file->data = malloc(file->length);
+		if (file->data == NULL) {
+			pkgfile_free(file);
+			return NULL;
+		}
+		memcpy(file->data, contents, file->length);
 	}
-	memcpy(file->data, contents, file->length);
 
 	return file;
 }
@@ -602,7 +606,7 @@ pkgfile_write(struct pkgfile *file)
 	case pkgfile_none:
 		return -1;
 	case pkgfile_regular:
-		if (file->loc == pkgfile_loc_mem && file->data != NULL) {
+		if (file->loc == pkgfile_loc_mem) {
 			uint64_t length;
 			struct stat sb;
 			size_t write_size;
@@ -642,17 +646,20 @@ pkgfile_write(struct pkgfile *file)
 				fclose(fd);
 				return -1;
 			}
-			/* We can now write to the file */
-			buf = file->data;
+			if (file->data == NULL) {
+			} else {
+				/* We can now write to the file */
+				buf = file->data;
 
-			length = file->length;
-			while (length > 0) {
-				write_size = fwrite(buf, 1, length, fd);
-				length -= write_size;
-				buf += write_size;
-				if (write_size == 0) {
-					assert(0);
-					break;
+				length = file->length;
+				while (length > 0) {
+					write_size = fwrite(buf, 1, length, fd);
+					length -= write_size;
+					buf += write_size;
+					if (write_size == 0) {
+						assert(0);
+						break;
+					}
 				}
 			}
 
