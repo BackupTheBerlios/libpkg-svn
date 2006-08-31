@@ -6,6 +6,7 @@ LDADD+=		-L/usr/local/lib -lcheck
 LDADD+=		${.OBJDIR}/../src/libpkg.a /usr/lib/libmd.a
 
 MAN=
+WARNS=	6
 
 run_test: all
 	cd ${.OBJDIR} && ./test

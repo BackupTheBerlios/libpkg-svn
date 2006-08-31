@@ -2,10 +2,26 @@
 #include <stdlib.h>
 
 int
-main(int argc, char *argv[])
+setup_testdir()
+{
+	system("rm -fr testdir");
+	return system("mkdir testdir");
+}
+
+int
+cleanup_testdir()
+{
+	if (system("rmdir testdir") == 0)
+		return 0;
+
+	system("rm -fr testdir");
+	return 1;
+}
+
+int
+main(int argc __unused, char *argv[] __unused)
 {
 	int fail_count;
-	Suite *s;
 	SRunner *sr;
 
 	sr = srunner_create(pkgfile_suite());
