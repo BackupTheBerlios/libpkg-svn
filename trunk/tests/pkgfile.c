@@ -31,9 +31,12 @@ empty_regular_file_tests(const char *buf)
 
 	fail_unless(pkgfile_get_size(file) == 0, NULL);
 	fail_unless(pkgfile_get_data(file) == NULL, NULL);
+
 	/* The md5 of an empty string is d41d8cd98f00b204e9800998ecf8427e */
 	fail_unless(pkgfile_set_checksum_md5(file,
 		"d41d8cd98f00b204e9800998ecf8427e") == 0, NULL);
+	fail_unless(strcmp(file->md5, "d41d8cd98f00b204e9800998ecf8427e") == 0,
+	    NULL);
 	fail_unless(pkgfile_compare_checksum_md5(file) == 0, NULL);
 
 	SETUP_TESTDIR();
@@ -104,8 +107,12 @@ START_TEST(pkgfile_regular_data_test)
 
 	/* Check this fails with bad data */
 	fail_unless(pkgfile_set_checksum_md5(file, "") == -1, NULL);
+	fail_unless(strcmp(file->md5, "781e5e245d69b566979b86e28d23f2c7") == 0,
+		NULL);
 	fail_unless(pkgfile_set_checksum_md5(file,
 	    "123456789012345678901234567890123") == -1, NULL);
+	fail_unless(strcmp(file->md5, "781e5e245d69b566979b86e28d23f2c7") == 0,
+		NULL);
 	
 	fail_unless(pkgfile_set_checksum_md5(file,
 		"12345678901234567890123456789012") == 0, NULL);
@@ -115,10 +122,14 @@ START_TEST(pkgfile_regular_data_test)
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	/* Attempting to over write a file should fail */
+	fail_unless(pkgfile_write(file) == -1, NULL);
 	fail_unless((fd = fopen("testdir/Foo2", "r")) != NULL, NULL);
 	fstat(fileno(fd), &sb);
 	fail_unless(S_ISREG(sb.st_mode), NULL);
 	fail_unless(sb.st_size == 10, "Created file size is not 10");
+	fail_unless(sb.st_nlink == 1, NULL);
 	/* XXX Check the file contents are correct */
 	fclose(fd);
 	system("rm testdir/Foo2");
@@ -195,11 +206,88 @@ START_TEST(pkgfile_hardlink_bad_test)
 }
 END_TEST
 
+START_TEST(pkgfile_hardlink_test)
+{
+	struct pkgfile *file;
+	struct stat sb;
+
+	fail_unless((file = pkgfile_new_hardlink("testdir/Foo", "testdir/Bar"))
+	    != NULL, NULL);
+	fail_unless(file->type == pkgfile_hardlink, NULL);
+	fail_unless(file->loc == pkgfile_loc_mem, NULL);
+	fail_unless(file->fd == NULL, NULL);
+	fail_unless(file->mode == 0, NULL);
+	fail_unless(file->md5[0] == '\0', NULL);
+
+	/* Test the file length */
+	fail_unless(pkgfile_get_size(file) == 11, NULL);
+	fail_unless(file->length == 11, NULL);
+
+	/* Test the data */
+	fail_unless(pkgfile_get_data(file) != NULL, NULL);
+	fail_unless(strcmp(pkgfile_get_data(file), "testdir/Bar") == 0, NULL);
+	fail_unless(strcmp(file->data, "testdir/Bar") == 0, NULL);
+
+	SETUP_TESTDIR();
+	system("touch testdir/Bar");	
+	/*
+	 * pkgfile_compare_checksum_md5 will compare
+	 * against the file pointed to by the hardlink
+	 */
+	fail_unless(pkgfile_set_checksum_md5(file,
+		"d41d8cd98f00b204e9800998ecf8427e") == 0, NULL);
+	fail_unless(pkgfile_compare_checksum_md5(file) == 0, NULL);
+
+	fail_unless(pkgfile_write(file) == 0, NULL);
+	fail_unless(stat("testdir/Foo", &sb) == 0, NULL);
+	fail_unless(S_ISREG(sb.st_mode), NULL);
+	fail_unless(sb.st_nlink == 2, NULL);
+	system("rm testdir/Foo");
+	system("rm testdir/Bar");
+	CLEANUP_TESTDIR();
+
+	fail_unless(pkgfile_free(file) == 0, NULL);
+}
+END_TEST
+
 /* Tests on creating a directory from a buffer */
 START_TEST(pkgfile_directory_bad_test)
 {
 	/* Test creating a directory from bad data fails */
 	fail_unless(pkgfile_new_directory(NULL) == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkgfile_directory_test)
+{
+	struct pkgfile *file;
+	struct stat sb;
+
+	fail_unless((file = pkgfile_new_directory("testdir/newdir")) != NULL,
+	    NULL);
+	fail_unless(file->type == pkgfile_dir, NULL);
+	fail_unless(file->loc == pkgfile_loc_mem, NULL);
+	fail_unless(file->data == NULL, NULL);
+	fail_unless(file->fd == NULL, NULL);
+	fail_unless(file->mode == 0, NULL);
+	fail_unless(file->md5[0] == '\0', NULL);
+
+	/* Test the file length */
+	fail_unless(pkgfile_get_size(file) == 14, NULL);
+	fail_unless(file->length == 14, NULL);
+
+	/* Test the data */
+	fail_unless(pkgfile_get_data(file) != NULL, NULL);
+	fail_unless(strcmp(pkgfile_get_data(file), "testdir/newdir") ==0, NULL);
+
+	SETUP_TESTDIR();
+	fail_unless(pkgfile_write(file) == 0, NULL);
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	fail_unless(stat("testdir/newdir", &sb) == 0, NULL);
+	fail_unless(S_ISDIR(sb.st_mode), NULL);
+	system("rmdir testdir/newdir");
+	CLEANUP_TESTDIR();
+	fail_unless(pkgfile_free(file) == 0, NULL);
 }
 END_TEST
 
@@ -228,8 +316,10 @@ pkgfile_suite()
 	tcase_add_test(tc_symlink, pkgfile_symlink_good_test);
 
 	tcase_add_test(tc_hardlink, pkgfile_hardlink_bad_test);
+	tcase_add_test(tc_hardlink, pkgfile_hardlink_test);
 
 	tcase_add_test(tc_dir, pkgfile_directory_bad_test);
+	tcase_add_test(tc_dir, pkgfile_directory_test);
 
 	return s;
 }
