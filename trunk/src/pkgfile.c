@@ -233,6 +233,7 @@ pkgfile_new_symlink(const char *file, const char *data)
 	if (pkgfile == NULL)
 		return NULL;
 
+	pkgfile->length = strlen(data);
 	pkgfile->data = strdup(data);
 	if (pkgfile->data == NULL) {
 		pkgfile_free(pkgfile);
@@ -258,6 +259,7 @@ pkgfile_new_hardlink(const char *file, const char *other_file)
 	if (pkgfile == NULL)
 		return NULL;
 
+	pkgfile->length = strlen(other_file);
 	pkgfile->data = strdup(other_file);
 	if (pkgfile->data == NULL) {
 		pkgfile_free(pkgfile);
@@ -282,12 +284,6 @@ pkgfile_new_directory(const char *dir)
 	file = pkgfile_new(dir, pkgfile_dir, pkgfile_loc_mem);
 	if (file == NULL)
 		return NULL;
-
-	file->data = strdup(dir);
-	if (file->data == NULL) {
-		pkgfile_free(file);
-		return NULL;
-	}
 
 	return file;
 }
@@ -318,11 +314,14 @@ pkgfile_get_size(struct pkgfile *file)
 		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
-	assert(file->type != pkgfile_dir);
 
 	switch (file->type) {
 		case pkgfile_none:
+			break;
 		case pkgfile_dir:
+			if (file->length == 0)
+				file->length = strlen(file->name);
+			return file->length;
 			break;
 		case pkgfile_hardlink:
 			assert(file->loc == pkgfile_loc_mem);
@@ -365,12 +364,12 @@ pkgfile_get_data(struct pkgfile *file)
 		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
-	assert(file->type != pkgfile_dir);
 
 	switch (file->type) {
 	case pkgfile_none:
-	case pkgfile_dir:
 		break;
+	case pkgfile_dir:
+		return file->name;
 	case pkgfile_hardlink:
 		assert(file->loc == pkgfile_loc_mem);
 		if (file->loc == pkgfile_loc_mem) {
@@ -409,7 +408,7 @@ pkgfile_get_data(struct pkgfile *file)
 int
 pkgfile_set_checksum_md5(struct pkgfile *file, const char *md5)
 {
-	if (file == NULL || md5 == NULL)
+	if (file == NULL || md5 == NULL || strlen(md5) != 32)
 		return -1;
 
 	strlcpy(file->md5, md5, 33);
@@ -600,7 +599,6 @@ pkgfile_write(struct pkgfile *file)
 		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
-	assert(file->type != pkgfile_dir);
 
 	switch (file->type) {
 	case pkgfile_none:
@@ -629,7 +627,8 @@ pkgfile_write(struct pkgfile *file)
 					return -1;
 				}
 				/* We created the file */
-			} else if (fstat(fileno(fd), &sb) != 0) {
+			}
+			if (fstat(fileno(fd), &sb) != 0) {
 				/* And fstat can find it */
 				fclose(fd);
 				return -1;
@@ -646,8 +645,7 @@ pkgfile_write(struct pkgfile *file)
 				fclose(fd);
 				return -1;
 			}
-			if (file->data == NULL) {
-			} else {
+			if (file->data != NULL) {
 				/* We can now write to the file */
 				buf = file->data;
 
@@ -678,7 +676,13 @@ pkgfile_write(struct pkgfile *file)
 			return -1;
 		break;
 	case pkgfile_dir:
-		return -1;
+#define DEF_MODE (S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
+		if (mkdir(file->name,
+		    (file->mode == 0 ? DEF_MODE : file->mode)) != 0) {
+			return -1;
+		}
+#undef DEF_MODE
+		break;
 	}
 
 	return 0;
