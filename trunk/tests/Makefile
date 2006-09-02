@@ -9,6 +9,6 @@ MAN=
 WARNS=	6
 
 run_test: all
-	cd ${.OBJDIR} && ./test
+	cd ${.OBJDIR} && MALLOC_OPTIONS=AJ ./test
 
 .include <bsd.prog.mk>
