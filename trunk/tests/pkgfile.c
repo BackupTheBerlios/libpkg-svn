@@ -152,6 +152,7 @@ START_TEST(pkgfile_regular_existing_test)
 	fail_unless(pkgfile_write(file) == -1, NULL);
 	fd = fopen("testdir/Foo", "r");
 	fread(buf, 5, 1, fd);
+	buf[5] = '\0';
 	/* Check the file has not been touched */
 	fail_unless(strcmp(buf, "Hello") == 0, NULL);
 	fclose(fd);
@@ -194,6 +195,7 @@ START_TEST(pkgfile_regular_depth_test)
 	fail_unless(pkgfile_write(file) == 0, NULL);
 	fd = fopen("testdir/foo/bar", "r");
 	fread(buf, 10, 1, fd);
+	buf[10] = '\0';
 	/* Check the file has been written correctly */
 	fail_unless(strcmp(buf, "0123456789") == 0, NULL);
 	fclose(fd);
@@ -217,7 +219,6 @@ END_TEST
 START_TEST(pkgfile_symlink_good_test)
 {
 	struct pkgfile *file;
-	int fd;
 	struct stat sb;
 
 	fail_unless((file = pkgfile_new_symlink("testdir/link", "Foo")) != NULL,
@@ -246,14 +247,10 @@ START_TEST(pkgfile_symlink_good_test)
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fail_unless((fd = open("testdir/link", O_RDONLY | O_NOFOLLOW)) != 0,
-	    NULL);
-	fstat(fd, &sb);
-	fail_unless(sb.st_size == 3, "Created file size is not 3");
 	/* XXX Check the file contents are correct */
-	close(fd);
-	lstat("testdir/link", &sb);
+	fail_unless(lstat("testdir/link", &sb) == 0, NULL);
 	fail_unless(S_ISLNK(sb.st_mode), NULL);
+	fail_unless(sb.st_size == 3, "Created file size is not 3");
 	system("rm testdir/link");
 	CLEANUP_TESTDIR();
 
@@ -274,6 +271,7 @@ START_TEST(pkgfile_symlink_existing_test)
 	fail_unless(pkgfile_write(file) == -1, NULL);
 	fd = fopen("testdir/Foo", "r");
 	fread(buf, 5, 1, fd);
+	buf[5] = '\0';
 	/* Check the file has not been touched */
 	fail_unless(strcmp(buf, "Hello") == 0, NULL);
 	fclose(fd);
