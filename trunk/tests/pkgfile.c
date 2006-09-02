@@ -95,8 +95,8 @@ START_TEST(pkgfile_regular_data_test)
 
 	/* Test the data */
 	fail_unless(pkgfile_get_data(file) != NULL, NULL);
-	fail_unless(strcmp(pkgfile_get_data(file), "0123456789") == 0, NULL);
-	fail_unless(strcmp(file->data, "0123456789") == 0, NULL);
+	fail_unless(strncmp(pkgfile_get_data(file), "0123456789", 10)== 0,NULL);
+	fail_unless(strncmp(file->data, "0123456789", 10) == 0, NULL);
 
 	/* The md5 of 0123456789 string is 781e5e245d69b566979b86e28d23f2c7 */
 	fail_unless(pkgfile_set_checksum_md5(file,
@@ -136,6 +136,71 @@ START_TEST(pkgfile_regular_data_test)
 	CLEANUP_TESTDIR();
 
 	fail_unless(pkgfile_free(file) == 0, "pkg_free returned non zero");
+}
+END_TEST
+
+START_TEST(pkgfile_regular_existing_test)
+{
+	struct pkgfile *file;
+	FILE *fd;
+	char buf[6];
+
+	/* Test if pkgfile_write will fail with a regular file */
+	file = pkgfile_new_regular("testdir/Foo", "0123456789", 10);
+	SETUP_TESTDIR();
+	system("echo Hello > testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	fd = fopen("testdir/Foo", "r");
+	fread(buf, 5, 1, fd);
+	/* Check the file has not been touched */
+	fail_unless(strcmp(buf, "Hello") == 0, NULL);
+	fclose(fd);
+	system("rm testdir/Foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/* Test if pkgfile_write will fail with a symlink */
+	file = pkgfile_new_regular("testdir/Foo", "0123456789", 10);
+	SETUP_TESTDIR();
+	symlink("testdir/Bar", "testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rm testdir/Foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/* Test if pkgfile_write will fail with a directory */
+	file = pkgfile_new_regular("testdir/Foo", "0123456789", 10);
+	SETUP_TESTDIR();
+	system("mkdir testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rmdir testdir/Foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+}
+END_TEST
+
+/*
+ * A test to make sure the pkgfile_write will
+ * create the parent directories required
+ */
+START_TEST(pkgfile_regular_depth_test)
+{
+	struct pkgfile *file;
+	FILE *fd;
+	char buf[11];
+
+	file = pkgfile_new_regular("testdir/foo/bar", "0123456789", 10);
+	SETUP_TESTDIR();
+	fail_unless(pkgfile_write(file) == 0, NULL);
+	fd = fopen("testdir/foo/bar", "r");
+	fread(buf, 10, 1, fd);
+	/* Check the file has been written correctly */
+	fail_unless(strcmp(buf, "0123456789") == 0, NULL);
+	fclose(fd);
+	system("rm testdir/foo/bar");
+	system("rmdir testdir/foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
 }
 END_TEST
 
@@ -193,6 +258,79 @@ START_TEST(pkgfile_symlink_good_test)
 	CLEANUP_TESTDIR();
 
 	fail_unless(pkgfile_free(file) == 0, NULL);
+}
+END_TEST
+
+START_TEST(pkgfile_symlink_existing_test)
+{
+	struct pkgfile *file;
+	FILE *fd;
+	char buf[6];
+
+	/* Test if pkgfile_write will fail with a regular file */
+	file = pkgfile_new_symlink("testdir/Foo", "0123456789");
+	SETUP_TESTDIR();
+	system("echo Hello > testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	fd = fopen("testdir/Foo", "r");
+	fread(buf, 5, 1, fd);
+	/* Check the file has not been touched */
+	fail_unless(strcmp(buf, "Hello") == 0, NULL);
+	fclose(fd);
+	system("rm testdir/Foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/* Test if pkgfile_write will fail with a symlink */
+	file = pkgfile_new_symlink("testdir/Foo", "0123456789");
+	SETUP_TESTDIR();
+	symlink("testdir/Bar", "testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rm testdir/Foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/* Test if pkgfile_write will fail with a directory */
+	file = pkgfile_new_symlink("testdir/Foo", "0123456789");
+	SETUP_TESTDIR();
+	system("mkdir testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rmdir testdir/Foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+}
+END_TEST
+
+/*
+ * A test to make sure the pkgfile_write will
+ * create the parent directories required
+ */
+START_TEST(pkgfile_symlink_depth_test)
+{
+	struct pkgfile *file;
+	struct stat sb;
+
+	file = pkgfile_new_symlink("testdir/foo/bar", "0123456789");
+	SETUP_TESTDIR();
+	fail_unless(pkgfile_write(file) == 0, NULL);
+	fail_unless(lstat("testdir/foo/bar", &sb) == 0, NULL);
+	fail_unless(S_ISLNK(sb.st_mode), NULL);
+	system("rm testdir/foo/bar");
+	system("rmdir testdir/foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/*
+	 * Check pkgfile_write fails when there
+	 * is already a file named testdir/foo
+	 */
+	file = pkgfile_new_symlink("testdir/foo/bar", "0123456789");
+	SETUP_TESTDIR();
+	system("touch testdir/foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rm testdir/foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
 }
 END_TEST
 
@@ -311,9 +449,13 @@ pkgfile_suite()
 	tcase_add_test(tc_regular, pkgfile_regular_bad_test);
 	tcase_add_test(tc_regular, pkgfile_regular_empty_test);
 	tcase_add_test(tc_regular, pkgfile_regular_data_test);
+	tcase_add_test(tc_regular, pkgfile_regular_existing_test);
+	tcase_add_test(tc_regular, pkgfile_regular_depth_test);
 
 	tcase_add_test(tc_symlink, pkgfile_symlink_bad_test);
 	tcase_add_test(tc_symlink, pkgfile_symlink_good_test);
+	tcase_add_test(tc_symlink, pkgfile_symlink_existing_test);
+	tcase_add_test(tc_symlink, pkgfile_symlink_depth_test);
 
 	tcase_add_test(tc_hardlink, pkgfile_hardlink_bad_test);
 	tcase_add_test(tc_hardlink, pkgfile_hardlink_test);
