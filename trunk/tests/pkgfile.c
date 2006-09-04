@@ -386,6 +386,90 @@ START_TEST(pkgfile_hardlink_test)
 }
 END_TEST
 
+START_TEST(pkgfile_hardlink_existing_test)
+{
+	struct pkgfile *file;
+	FILE *fd;
+	char buf[6];
+
+	/* Test if pkgfile_write will fail with a regular file */
+	file = pkgfile_new_hardlink("testdir/Foo", "testdir/Bar");
+	SETUP_TESTDIR();
+	system("touch testdir/Bar");
+	system("echo Hello > testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	fd = fopen("testdir/Foo", "r");
+	fread(buf, 5, 1, fd);
+	buf[5] = '\0';
+	/* Check the file has not been touched */
+	fail_unless(strcmp(buf, "Hello") == 0, NULL);
+	fclose(fd);
+	system("rm testdir/Foo");
+	system("rm testdir/Bar");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/* Test if pkgfile_write will fail with a symlink */
+	file = pkgfile_new_hardlink("testdir/Foo", "testdir/Bar");
+	SETUP_TESTDIR();
+	system("touch testdir/Bar");
+	symlink("testdir/Baz", "testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rm testdir/Foo");
+	system("rm testdir/Bar");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/* Test if pkgfile_write will fail with a directory */
+	file = pkgfile_new_hardlink("testdir/Foo", "testdir/Bar");
+	SETUP_TESTDIR();
+	system("touch testdir/Bar");
+	system("mkdir testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rmdir testdir/Foo");
+	system("rm testdir/Bar");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+}
+END_TEST
+
+/*
+ * A test to make sure the pkgfile_write will
+ * create the parent directories required
+ */
+START_TEST(pkgfile_hardlink_depth_test)
+{
+	struct pkgfile *file;
+	struct stat sb;
+
+	file = pkgfile_new_hardlink("testdir/foo/bar", "testdir/Bar");
+	SETUP_TESTDIR();
+	system("touch testdir/Bar");
+	fail_unless(pkgfile_write(file) == 0, NULL);
+	fail_unless(lstat("testdir/foo/bar", &sb) == 0, NULL);
+	fail_unless(S_ISREG(sb.st_mode), NULL);
+	system("rm testdir/foo/bar");
+	system("rmdir testdir/foo");
+	system("rm testdir/Bar");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/*
+	 * Check pkgfile_write fails when there
+	 * is already a file named testdir/foo
+	 */
+	file = pkgfile_new_hardlink("testdir/foo/bar", "testdir/Bar");
+	SETUP_TESTDIR();
+	system("touch testdir/Bar");
+	system("touch testdir/foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rm testdir/foo");
+	system("rm testdir/Bar");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+}
+END_TEST
+
 /* Tests on creating a directory from a buffer */
 START_TEST(pkgfile_directory_bad_test)
 {
@@ -418,12 +502,81 @@ START_TEST(pkgfile_directory_test)
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fail_unless(pkgfile_write(file) == -1, NULL);
+	/*
+	 * A directory should only fail if it is being written
+	 * with different permissions than the existing one
+	 */
+	fail_unless(pkgfile_write(file) == 0, NULL);
 	fail_unless(stat("testdir/newdir", &sb) == 0, NULL);
 	fail_unless(S_ISDIR(sb.st_mode), NULL);
 	system("rmdir testdir/newdir");
 	CLEANUP_TESTDIR();
 	fail_unless(pkgfile_free(file) == 0, NULL);
+}
+END_TEST
+
+START_TEST(pkgfile_directory_existing_test)
+{
+	struct pkgfile *file;
+	FILE *fd;
+	char buf[6];
+
+	/* Test if pkgfile_write will fail with a regular file */
+	file = pkgfile_new_directory("testdir/Foo");
+	SETUP_TESTDIR();
+	system("echo Hello > testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	fd = fopen("testdir/Foo", "r");
+	fread(buf, 5, 1, fd);
+	buf[5] = '\0';
+	/* Check the file has not been touched */
+	fail_unless(strcmp(buf, "Hello") == 0, NULL);
+	fclose(fd);
+	system("rm testdir/Foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/* Test if pkgfile_write will fail with a symlink */
+	file = pkgfile_new_directory("testdir/Foo");
+	SETUP_TESTDIR();
+	symlink("testdir/Bar", "testdir/Foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rm testdir/Foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+}
+END_TEST
+
+/*
+ * A test to make sure the pkgfile_write will
+ * create the parent directories required
+ */
+START_TEST(pkgfile_directory_depth_test)
+{
+	struct pkgfile *file;
+	struct stat sb;
+
+	file = pkgfile_new_directory("testdir/foo/bar");
+	SETUP_TESTDIR();
+	fail_unless(pkgfile_write(file) == 0, NULL);
+	fail_unless(lstat("testdir/foo/bar", &sb) == 0, NULL);
+	fail_unless(S_ISDIR(sb.st_mode), NULL);
+	system("rmdir testdir/foo/bar");
+	system("rmdir testdir/foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
+
+	/*
+	 * Check pkgfile_write fails when there
+	 * is already a file named testdir/foo
+	 */
+	file = pkgfile_new_directory("testdir/foo/bar");
+	SETUP_TESTDIR();
+	system("touch testdir/foo");
+	fail_unless(pkgfile_write(file) == -1, NULL);
+	system("rm testdir/foo");
+	CLEANUP_TESTDIR();
+	pkgfile_free(file);
 }
 END_TEST
 
@@ -457,9 +610,13 @@ pkgfile_suite()
 
 	tcase_add_test(tc_hardlink, pkgfile_hardlink_bad_test);
 	tcase_add_test(tc_hardlink, pkgfile_hardlink_test);
+	tcase_add_test(tc_hardlink, pkgfile_hardlink_depth_test);
+	tcase_add_test(tc_hardlink, pkgfile_hardlink_existing_test);
 
 	tcase_add_test(tc_dir, pkgfile_directory_bad_test);
 	tcase_add_test(tc_dir, pkgfile_directory_test);
+	tcase_add_test(tc_dir, pkgfile_directory_existing_test);
+	tcase_add_test(tc_dir, pkgfile_directory_depth_test);
 
 	return s;
 }
