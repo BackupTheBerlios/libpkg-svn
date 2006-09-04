@@ -672,8 +672,16 @@ pkgfile_write(struct pkgfile *file)
 			return -1;
 		break;
 	case pkgfile_symlink:
-		if (symlink(file->data, file->name) != 0)
-			return -1;
+		if (symlink(file->data, file->name) != 0) {
+			char *dir_name;
+			if (errno != ENOENT)
+				return -1;
+
+			dir_name = dirname(file->name);
+			pkg_dir_build(dir_name);
+			if (symlink(file->data, file->name) != 0)
+				return -1;
+		}
 		break;
 	case pkgfile_dir:
 #define DEF_MODE (S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
