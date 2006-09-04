@@ -621,7 +621,7 @@ pkgfile_write(struct pkgfile *file)
 				 * on the dir and opening again
 				 */
 				dir_name = dirname(file->name);
-				pkg_dir_build(dir_name);
+				pkg_dir_build(dir_name, 0);
 				fd = fopen(file->name, "a");
 				if (fd == NULL) {
 					return -1;
@@ -668,8 +668,16 @@ pkgfile_write(struct pkgfile *file)
 		}
 		break;
 	case pkgfile_hardlink:
-		if (link(file->data, file->name) != 0)
-			return -1;
+		if (link(file->data, file->name) != 0) {
+			char *dir_name;
+			if (errno != ENOENT)
+				return -1;
+
+			dir_name = dirname(file->name);
+			pkg_dir_build(dir_name, 0);
+			if (link(file->data, file->name) != 0)
+				return -1;
+		}
 		break;
 	case pkgfile_symlink:
 		if (symlink(file->data, file->name) != 0) {
@@ -678,18 +686,14 @@ pkgfile_write(struct pkgfile *file)
 				return -1;
 
 			dir_name = dirname(file->name);
-			pkg_dir_build(dir_name);
+			pkg_dir_build(dir_name, 0);
 			if (symlink(file->data, file->name) != 0)
 				return -1;
 		}
 		break;
 	case pkgfile_dir:
-#define DEF_MODE (S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)
-		if (mkdir(file->name,
-		    (file->mode == 0 ? DEF_MODE : file->mode)) != 0) {
+		if (pkg_dir_build(file->name, file->mode) != 0)
 			return -1;
-		}
-#undef DEF_MODE
 		break;
 	}
 

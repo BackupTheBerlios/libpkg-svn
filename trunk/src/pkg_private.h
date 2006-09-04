@@ -160,7 +160,7 @@ struct pkg {
 	pkg_run_script_callback		*pkg_run_script;
 };
 
-int pkg_dir_build(const char *);
+int pkg_dir_build(const char *, mode_t);
 int pkg_exec(const char *, ...);
 FILE *pkg_cached_file(FILE *, const char *);
 

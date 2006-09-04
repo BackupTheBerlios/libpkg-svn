@@ -61,7 +61,7 @@ static int	 pkg_cached_closefn(void *);
  */
 /* Based off src/bin/mkdir/mkdir.c 1.32 */
 int
-pkg_dir_build(const char *path)
+pkg_dir_build(const char *path, mode_t mode)
 {
 	struct stat sb;
 	int last, retval;
@@ -83,7 +83,8 @@ pkg_dir_build(const char *path)
 		*p = '\0';
 		if (!last && p[1] == '\0')
 			last = 1;
-		if (mkdir(str, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
+		if (mkdir(str,
+		    (mode == 0) ? (S_IRWXU | S_IRWXG | S_IRWXO) : mode) < 0) {
 			if (errno == EEXIST || errno == EISDIR) {
 				if (stat(str, &sb) < 0) {
 					retval = -1;

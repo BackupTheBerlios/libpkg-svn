@@ -72,11 +72,11 @@ static int		  freebsd_run_script(struct pkg *, const char *,
 static int		  freebsd_free(struct pkg *);
 
 /* Internal functions */
-pkg_static struct freebsd_package *freebsd_package_new(void);
-pkg_static int			  freebsd_open_control_files(
+static struct freebsd_package	 *freebsd_package_new(void);
+static int			  freebsd_open_control_files(
 					struct freebsd_package *);
-pkg_static struct pkgfile	 *freebsd_get_next_entry(struct archive *);
-pkg_static int			  freebsd_parse_contents(
+static struct pkgfile		 *freebsd_get_next_entry(struct archive *);
+static int			  freebsd_parse_contents(
 					struct freebsd_package *);
 
 typedef enum {
@@ -205,7 +205,8 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 		return NULL;
 
 	pkg = pkg_new(pkg_name, freebsd_get_control_files,
-	    freebsd_get_control_file, NULL, freebsd_get_rdeps, freebsd_free);
+	    freebsd_get_control_file, freebsd_get_deps, freebsd_get_rdeps,
+	    freebsd_free);
 	if (pkg == NULL)
 		return NULL;
 	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin);
@@ -476,12 +477,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	}
 
 	/* Find the +CONTENTS file in the control files */
-	for (pos = 0; control[pos] != NULL; pos++) {
-		const char *pkg_filename = pkgfile_get_name(control[pos]);
-		if (!strcmp(pkg_filename, "+CONTENTS"))
-			break;
-	}
-	contents_file = control[pos];
+	contents_file = freebsd_get_control_file(pkg, "+CONTENTS");
 	if (contents_file == NULL) {
 		return -1;
 	}
@@ -647,13 +643,7 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	}
 
 	/* Find the +CONTENTS file in the control files */
-	for (pos = 0; control[pos] != NULL; pos++) {
-		const char *pkg_filename = pkgfile_get_name(control[pos]);
-		if (!strcmp(basename(pkg_filename), "+CONTENTS"))
-			break;
-		printf("%u %s\n", pos, pkg_filename);
-	}
-	contents_file = control[pos];
+	contents_file = pkg_get_control_file(pkg, "+CONTENTS");
 	assert(contents_file != NULL);
 	if (contents_file == NULL) {
 		return -1;
@@ -670,9 +660,9 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	for (pos = 0; pos < contents->line_count; pos++) {
 		switch (contents->lines[pos].line_type) {
 		case PKG_LINE_IGNORE:
-			/* Error in contents file */
-			ret = -1;
-			goto exit;
+			/* Skip 2 lines for the file and checksum */
+			pos += 2;
+			break;
 		case PKG_LINE_COMMENT:
 		case PKG_LINE_EXEC:
 		case PKG_LINE_MTREE:
@@ -689,16 +679,18 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 				db_chdir(pkg, pkg_action, data, dir);
 			break;
 		}
+		case PKG_LINE_DIRRM:
 		case PKG_LINE_FILE:
 		{
 			struct pkgfile *file;
 
-			/*
-			 * This will give us the correct file as
-			 * it is reading from the same list as us
-			 */
-			file = pkgfile_new_from_disk(contents->lines[pos].line,
-			    0);
+			if (contents->lines[pos].line_type == PKG_LINE_FILE) {
+				file = pkgfile_new_from_disk(
+				    contents->lines[pos].line, 0);
+			} else {
+				file = pkgfile_new_from_disk(
+				    contents->lines[pos].data, 0);
+			}
 			deinstall_file(pkg, pkg_action, data, file);
 			break;
 		}
@@ -706,22 +698,19 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 			do_exec(pkg, pkg_action, data,
 			    contents->lines[pos].data);
 			break;
-		case PKG_LINE_DIRRM:
-			printf("Dir rm: %s\n", contents->lines[pos].data);
-			break;
 		default:
 			warnx("ERROR: Incorrect line in +CONTENTS file "
 			    "\"%s %s\"\n", contents->lines[pos].line,
 			    contents->lines[pos].data);
 		}
 	}
+	db_chdir(pkg, pkg_action, data, ".");
 	/* Register the package */
 	pkg_deregister(pkg, pkg_action, data, control);
 
 	/* Set the return to 0 as we have fully installed the package */
 	ret = 0;
 
-exit:
 	if (contents != NULL)
 		pkg_freebsd_contents_free(contents);
 
@@ -815,6 +804,7 @@ static struct pkg **
 freebsd_get_deps(struct pkg *pkg)
 {
 	struct freebsd_package *fpkg;
+	struct pkgfile *contents_file;
 	struct pkg **pkgs;
 	unsigned int pkg_count;
 	size_t pkg_size;
@@ -825,13 +815,17 @@ freebsd_get_deps(struct pkg *pkg)
 	fpkg = pkg->data;
 	assert(fpkg != NULL);
 	assert(fpkg->pkg_type != fpkg_unknown);
-	assert(fpkg->pkg_type != fpkg_from_installed);
 	assert(fpkg->pkg_type != fpkg_from_empty);
 
 	freebsd_open_control_files(fpkg);
 	assert(fpkg->control != NULL);
 
-	assert(strcmp("+CONTENTS", pkgfile_get_name(fpkg->control[0])) == 0);
+	freebsd_parse_contents(fpkg);
+	assert(fpkg->contents != NULL);
+
+	contents_file = pkg_get_control_file(pkg, "+CONTENTS");
+	if (contents_file == NULL)
+		return NULL;
 
 	pkg_count = 0;
 	pkg_size = sizeof(struct pkg *);
