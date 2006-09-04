@@ -634,7 +634,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  * @return -1 on error
  */
 static int
-freebsd_deregister(struct pkg *pkg __unused, pkg_db_action *pkg_action __unused, void *data,
+freebsd_deregister(struct pkg *pkg, pkg_db_action *pkg_action __unused, void *data,
 		struct pkgfile **control)
 {
 	unsigned int pos;
