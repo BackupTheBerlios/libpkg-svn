@@ -10,7 +10,50 @@
 #include <pkg.h>
 #include <pkg_private.h>
 
+void basic_file_tests(struct pkgfile *, pkgfile_type, pkgfile_loc);
+void test_checksums(struct pkgfile *, const char *);
 void empty_regular_file_tests(const char *);
+
+/*
+ * Check a pkgfile object is correct after it has been created
+ */
+void
+basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc)
+{
+	fail_unless(file->loc == loc, NULL);
+	fail_unless(file->type == type, NULL);
+	fail_unless(file->fd == NULL, NULL);
+	fail_unless(file->mode == 0, NULL);
+	fail_unless(file->md5[0] == '\0', NULL);
+}
+
+void
+test_checksums(struct pkgfile *file, const char *md5)
+{
+	fail_unless(strlen(md5) == 32, NULL);
+	fail_unless(pkgfile_set_checksum_md5(file, md5) == 0, NULL);
+	fail_unless(strcmp(file->md5, md5) == 0, NULL);
+	fail_unless(pkgfile_compare_checksum_md5(file) == 0, NULL);
+
+	/* Check this fails with bad data that is too short */
+	fail_unless(pkgfile_set_checksum_md5(file, "") == -1, NULL);
+	fail_unless(strcmp(file->md5, md5) == 0, NULL);
+
+	/* Check this fails with bad data that is too long */
+	fail_unless(pkgfile_set_checksum_md5(file,
+	    "123456789012345678901234567890123") == -1, NULL);
+	fail_unless(strcmp(file->md5, md5) == 0, NULL);
+
+	/*
+	 * Check it accepts a correct length checksum
+	 * but fails to validate the file with it
+	 */
+	fail_unless(pkgfile_set_checksum_md5(file,
+		"12345678901234567890123456789012") == 0, NULL);
+	fail_unless(strcmp(file->md5, "12345678901234567890123456789012") == 0,
+		NULL);
+	fail_unless(pkgfile_compare_checksum_md5(file) == 1, NULL);
+}
 
 void
 empty_regular_file_tests(const char *buf)
@@ -23,21 +66,13 @@ empty_regular_file_tests(const char *buf)
 	    != NULL, NULL);
 	fail_unless(strcmp(pkgfile_get_name(file), "testdir/Foo") == 0, NULL);
 	fail_unless(strcmp(file->name, "testdir/Foo") == 0, NULL);
-	fail_unless(file->type == pkgfile_regular, NULL);
-	fail_unless(file->loc == pkgfile_loc_mem, NULL);
-	fail_unless(file->fd == NULL, NULL);
-	fail_unless(file->mode == 0, NULL);
-	fail_unless(file->md5[0] == '\0', NULL);
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem);
 
 	fail_unless(pkgfile_get_size(file) == 0, NULL);
 	fail_unless(pkgfile_get_data(file) == NULL, NULL);
 
 	/* The md5 of an empty string is d41d8cd98f00b204e9800998ecf8427e */
-	fail_unless(pkgfile_set_checksum_md5(file,
-		"d41d8cd98f00b204e9800998ecf8427e") == 0, NULL);
-	fail_unless(strcmp(file->md5, "d41d8cd98f00b204e9800998ecf8427e") == 0,
-	    NULL);
-	fail_unless(pkgfile_compare_checksum_md5(file) == 0, NULL);
+	test_checksums(file, "d41d8cd98f00b204e9800998ecf8427e");
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
@@ -83,11 +118,7 @@ START_TEST(pkgfile_regular_data_test)
 	    "0123456789", 10)) != NULL, NULL);
 	fail_unless(strcmp(pkgfile_get_name(file), "testdir/Foo2") == 0, NULL);
 	fail_unless(strcmp(file->name, "testdir/Foo2") == 0, NULL);
-	fail_unless(file->type == pkgfile_regular, NULL);
-	fail_unless(file->loc == pkgfile_loc_mem, NULL);
-	fail_unless(file->fd == NULL, NULL);
-	fail_unless(file->mode == 0, NULL);
-	fail_unless(file->md5[0] == '\0', NULL);
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem);
 
 	/* Test the file length */
 	fail_unless(pkgfile_get_size(file) == 10, NULL);
@@ -99,26 +130,7 @@ START_TEST(pkgfile_regular_data_test)
 	fail_unless(strncmp(file->data, "0123456789", 10) == 0, NULL);
 
 	/* The md5 of 0123456789 string is 781e5e245d69b566979b86e28d23f2c7 */
-	fail_unless(pkgfile_set_checksum_md5(file,
-		"781e5e245d69b566979b86e28d23f2c7") == 0, NULL);
-	fail_unless(strcmp(file->md5, "781e5e245d69b566979b86e28d23f2c7") == 0,
-		NULL);
-	fail_unless(pkgfile_compare_checksum_md5(file) == 0, NULL);
-
-	/* Check this fails with bad data */
-	fail_unless(pkgfile_set_checksum_md5(file, "") == -1, NULL);
-	fail_unless(strcmp(file->md5, "781e5e245d69b566979b86e28d23f2c7") == 0,
-		NULL);
-	fail_unless(pkgfile_set_checksum_md5(file,
-	    "123456789012345678901234567890123") == -1, NULL);
-	fail_unless(strcmp(file->md5, "781e5e245d69b566979b86e28d23f2c7") == 0,
-		NULL);
-	
-	fail_unless(pkgfile_set_checksum_md5(file,
-		"12345678901234567890123456789012") == 0, NULL);
-	fail_unless(strcmp(file->md5, "12345678901234567890123456789012") == 0,
-		NULL);
-	fail_unless(pkgfile_compare_checksum_md5(file) == 1, NULL);
+	test_checksums(file, "781e5e245d69b566979b86e28d23f2c7");
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
@@ -223,11 +235,7 @@ START_TEST(pkgfile_symlink_good_test)
 
 	fail_unless((file = pkgfile_new_symlink("testdir/link", "Foo")) != NULL,
 	    NULL);
-	fail_unless(file->type == pkgfile_symlink, NULL);
-	fail_unless(file->loc == pkgfile_loc_mem, NULL);
-	fail_unless(file->fd == NULL, NULL);
-	fail_unless(file->mode == 0, NULL);
-	fail_unless(file->md5[0] == '\0', NULL);
+	basic_file_tests(file, pkgfile_symlink, pkgfile_loc_mem);
 
 	/* Test the file length */
 	fail_unless(pkgfile_get_size(file) == 3, NULL);
@@ -239,11 +247,7 @@ START_TEST(pkgfile_symlink_good_test)
 	fail_unless(strcmp(file->data, "Foo") == 0, NULL);
 
 	/* The md5 of Foo is 1356c67d7ad1638d816bfb822dd2c25d */
-	fail_unless(pkgfile_set_checksum_md5(file,
-		"1356c67d7ad1638d816bfb822dd2c25d") == 0, NULL);
-	fail_unless(strcmp(file->md5, "1356c67d7ad1638d816bfb822dd2c25d") == 0,
-		NULL);
-	fail_unless(pkgfile_compare_checksum_md5(file) == 0, NULL);
+	test_checksums(file, "1356c67d7ad1638d816bfb822dd2c25d");
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
@@ -349,11 +353,7 @@ START_TEST(pkgfile_hardlink_test)
 
 	fail_unless((file = pkgfile_new_hardlink("testdir/Foo", "testdir/Bar"))
 	    != NULL, NULL);
-	fail_unless(file->type == pkgfile_hardlink, NULL);
-	fail_unless(file->loc == pkgfile_loc_mem, NULL);
-	fail_unless(file->fd == NULL, NULL);
-	fail_unless(file->mode == 0, NULL);
-	fail_unless(file->md5[0] == '\0', NULL);
+	basic_file_tests(file, pkgfile_hardlink, pkgfile_loc_mem);
 
 	/* Test the file length */
 	fail_unless(pkgfile_get_size(file) == 11, NULL);
@@ -370,9 +370,7 @@ START_TEST(pkgfile_hardlink_test)
 	 * pkgfile_compare_checksum_md5 will compare
 	 * against the file pointed to by the hardlink
 	 */
-	fail_unless(pkgfile_set_checksum_md5(file,
-		"d41d8cd98f00b204e9800998ecf8427e") == 0, NULL);
-	fail_unless(pkgfile_compare_checksum_md5(file) == 0, NULL);
+	test_checksums(file, "d41d8cd98f00b204e9800998ecf8427e");
 
 	fail_unless(pkgfile_write(file) == 0, NULL);
 	fail_unless(stat("testdir/Foo", &sb) == 0, NULL);
@@ -485,12 +483,7 @@ START_TEST(pkgfile_directory_test)
 
 	fail_unless((file = pkgfile_new_directory("testdir/newdir")) != NULL,
 	    NULL);
-	fail_unless(file->type == pkgfile_dir, NULL);
-	fail_unless(file->loc == pkgfile_loc_mem, NULL);
-	fail_unless(file->data == NULL, NULL);
-	fail_unless(file->fd == NULL, NULL);
-	fail_unless(file->mode == 0, NULL);
-	fail_unless(file->md5[0] == '\0', NULL);
+	basic_file_tests(file, pkgfile_dir, pkgfile_loc_mem);
 
 	/* Test the file length */
 	fail_unless(pkgfile_get_size(file) == 14, NULL);
