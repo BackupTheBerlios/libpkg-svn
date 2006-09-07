@@ -18,7 +18,8 @@
 #define DEPTH_DIR "testdir/dir"
 #define DEPTH_FILE DEPTH_DIR "/DEPTH"
 
-void basic_file_tests(struct pkgfile *, pkgfile_type, pkgfile_loc);
+void basic_file_tests(struct pkgfile *, pkgfile_type, pkgfile_loc, const char *,
+	unsigned int);
 void test_checksums(struct pkgfile *, const char *);
 void existing_regular_test(struct pkgfile *);
 void existing_symlink_test(struct pkgfile *);
@@ -30,13 +31,35 @@ void empty_regular_file_tests(const char *);
  * Check a pkgfile object is correct after it has been created
  */
 void
-basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc)
+basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
+	const char *data, unsigned int length)
 {
 	fail_unless(file->loc == loc, NULL);
 	fail_unless(file->type == type, NULL);
 	fail_unless(file->fd == NULL, NULL);
 	fail_unless(file->mode == 0, NULL);
 	fail_unless(file->md5[0] == '\0', NULL);
+
+	/* Test the file length */
+	fail_unless(pkgfile_get_size(file) == length, NULL);
+	fail_unless(file->length == length, NULL);
+
+	/* Test the data */
+	if (data != NULL) {
+		fail_unless(pkgfile_get_data(file) != NULL, NULL);
+		fail_unless(strncmp(pkgfile_get_data(file), data, length) == 0,
+		    NULL);
+
+		if (file->type != pkgfile_dir) {
+			fail_unless(file->data != NULL, NULL);
+			fail_unless(strncmp(file->data, data, length) == 0,
+			    NULL);
+		} else {
+			fail_unless(file->data == NULL, NULL);
+			fail_unless(strncmp(file->name, data, length) == 0,
+			    NULL);
+		}
+	}
 }
 
 void
@@ -79,6 +102,8 @@ existing_regular_test(struct pkgfile *file)
 	SETUP_TESTDIR();
 	system("touch " LINK_TARGET);
 	system("echo Hello > " BASIC_FILE);
+
+	/* This should fail as BASIC_FILE already exists */
 	fail_unless(pkgfile_write(file) == -1, NULL);
 	fd = fopen(BASIC_FILE, "r");
 	fread(buf, 5, 1, fd);
@@ -145,9 +170,8 @@ empty_regular_file_tests(const char *buf)
 	    != NULL, NULL);
 	fail_unless(strcmp(pkgfile_get_name(file), BASIC_FILE) == 0, NULL);
 	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem);
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, NULL, 0);
 
-	fail_unless(pkgfile_get_size(file) == 0, NULL);
 	fail_unless(pkgfile_get_data(file) == NULL, NULL);
 
 	/* The md5 of an empty string is d41d8cd98f00b204e9800998ecf8427e */
@@ -197,11 +221,8 @@ START_TEST(pkgfile_regular_data_test)
 	    != NULL, NULL);
 	fail_unless(strcmp(pkgfile_get_name(file), BASIC_FILE) == 0, NULL);
 	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem);
-
-	/* Test the file length */
-	fail_unless(pkgfile_get_size(file) == 10, NULL);
-	fail_unless(file->length == 10, NULL);
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, "0123456789",
+	    10);
 
 	/* Test the data */
 	fail_unless(pkgfile_get_data(file) != NULL, NULL);
@@ -299,11 +320,8 @@ START_TEST(pkgfile_symlink_good_test)
 
 	fail_unless((file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET))
 	    != NULL, NULL);
-	basic_file_tests(file, pkgfile_symlink, pkgfile_loc_mem);
-
-	/* Test the file length */
-	fail_unless(pkgfile_get_size(file) == LINK_TARGET_LENGTH, NULL);
-	fail_unless(file->length == LINK_TARGET_LENGTH, NULL);
+	basic_file_tests(file, pkgfile_symlink, pkgfile_loc_mem, LINK_TARGET,
+	    LINK_TARGET_LENGTH);
 
 	/* Test the data */
 	fail_unless(pkgfile_get_data(file) != NULL, NULL);
@@ -393,11 +411,8 @@ START_TEST(pkgfile_hardlink_test)
 
 	fail_unless((file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET))
 	    != NULL, NULL);
-	basic_file_tests(file, pkgfile_hardlink, pkgfile_loc_mem);
-
-	/* Test the file length */
-	fail_unless(pkgfile_get_size(file) == LINK_TARGET_LENGTH, NULL);
-	fail_unless(file->length == LINK_TARGET_LENGTH, NULL);
+	basic_file_tests(file, pkgfile_hardlink, pkgfile_loc_mem, LINK_TARGET,
+	    LINK_TARGET_LENGTH);
 
 	/* Test the data */
 	fail_unless(pkgfile_get_data(file) != NULL, NULL);
@@ -490,7 +505,8 @@ START_TEST(pkgfile_directory_test)
 	struct stat sb;
 
 	fail_unless((file = pkgfile_new_directory(BASIC_FILE)) != NULL, NULL);
-	basic_file_tests(file, pkgfile_dir, pkgfile_loc_mem);
+	basic_file_tests(file, pkgfile_dir, pkgfile_loc_mem, BASIC_FILE,
+	    BASIC_FILE_LENGTH);
 
 	/* Test the file length */
 	fail_unless(pkgfile_get_size(file) == BASIC_FILE_LENGTH, NULL);
