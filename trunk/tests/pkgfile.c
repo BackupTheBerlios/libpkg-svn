@@ -29,6 +29,7 @@ static void depth_test_fail_write(struct pkgfile *);
 static void empty_regular_file_tests(const char *);
 static void check_regular_file_data(const char *, const char *, int, int);
 static void check_symlink_data(const char *, const char *);
+static void check_directory_data(const char *);
 
 /*
  * Check a pkgfile object is correct after it has been created
@@ -231,6 +232,12 @@ check_symlink_data(const char *filename, const char *expected_data)
 	fail_unless(strcmp(buf, expected_data) == 0, NULL);
 }
 
+static void
+check_directory_data(const char *directory)
+{
+	fail_unless(stat(directory, &sb) == 0, NULL);
+	fail_unless(S_ISDIR(sb.st_mode), NULL);
+}
 /* Tests on creating a regular file from a buffer */
 START_TEST(pkgfile_regular_bad_test)
 {
@@ -521,8 +528,7 @@ START_TEST(pkgfile_directory_test)
 	 * with different permissions than the existing one
 	 */
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fail_unless(stat(BASIC_FILE, &sb) == 0, NULL);
-	fail_unless(S_ISDIR(sb.st_mode), NULL);
+	check_directory_data(BASIC_FILE);
 	system("rmdir " BASIC_FILE);
 	CLEANUP_TESTDIR();
 	fail_unless(pkgfile_free(file) == 0, NULL);
@@ -557,8 +563,7 @@ START_TEST(pkgfile_directory_depth_test)
 	file = pkgfile_new_directory(DEPTH_FILE);
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fail_unless(lstat(DEPTH_FILE, &sb) == 0, NULL);
-	fail_unless(S_ISDIR(sb.st_mode), NULL);
+	check_directory_data(DEPTH_FILE)
 	system("rmdir " DEPTH_FILE);
 	system("rmdir " DEPTH_DIR);
 	CLEANUP_TESTDIR();
