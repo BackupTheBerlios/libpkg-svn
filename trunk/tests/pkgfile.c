@@ -1,5 +1,6 @@
 #include "test.h"
 
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -27,6 +28,7 @@ static void existing_directory_test(struct pkgfile *);
 static void depth_test_fail_write(struct pkgfile *);
 static void empty_regular_file_tests(const char *);
 static void check_regular_file_data(const char *, const char *, int, int);
+static void check_symlink_data(const char *, const char *);
 
 /*
  * Check a pkgfile object is correct after it has been created
@@ -110,7 +112,7 @@ existing_regular_test(struct pkgfile *file)
 	CLEANUP_TESTDIR();
 }
 
-/* Tests if pkgfile_write fails if BASIC_FILE exiasts and is a symlink */
+/* Tests if pkgfile_write fails if BASIC_FILE exists and is a symlink */
 static void
 existing_symlink_test(struct pkgfile *file)
 {
@@ -118,6 +120,7 @@ existing_symlink_test(struct pkgfile *file)
 	system("touch " LINK_TARGET);
 	symlink("testdir/Bar", BASIC_FILE);
 	fail_unless(pkgfile_write(file) == -1, NULL);
+	check_symlink_data(BASIC_FILE, "testdir/Bar");
 	system("rm " BASIC_FILE);
 	system("rm " LINK_TARGET);
 	CLEANUP_TESTDIR();
@@ -199,7 +202,7 @@ check_regular_file_data(const char *filename, const char *expected_data,
 	fstat(fileno(fd), &sb);
 	fail_unless(S_ISREG(sb.st_mode), NULL);
 	fail_unless(sb.st_size == length, NULL);
-	fail_unless(sb.st_nlink == link_count, "%d %d", sb.st_nlink, link_count);
+	fail_unless(sb.st_nlink == link_count, NULL);
 
 	fail_unless((buf = calloc(length + 1, 1)) != NULL, NULL);
 	fread(buf, length, 1, fd);
@@ -208,6 +211,24 @@ check_regular_file_data(const char *filename, const char *expected_data,
 	free(buf);
 
 	fclose(fd);
+}
+
+static void
+check_symlink_data(const char *filename, const char *expected_data)
+{
+	struct stat sb;
+	char buf[MAXPATHLEN];
+	int len;
+
+	/* XXX Check the file contents are correct */
+	fail_unless(lstat(filename, &sb) == 0, NULL);
+	fail_unless(S_ISLNK(sb.st_mode), NULL);
+	fail_unless(sb.st_size == strlen(expected_data), NULL);
+
+	fail_unless((len = readlink(filename, buf, MAXPATHLEN)) != -1, NULL);
+	fail_unless(len <= MAXPATHLEN, NULL);
+	buf[len] = '\0';
+	fail_unless(strcmp(buf, expected_data) == 0, NULL);
 }
 
 /* Tests on creating a regular file from a buffer */
@@ -315,22 +336,16 @@ END_TEST
 START_TEST(pkgfile_symlink_good_test)
 {
 	struct pkgfile *file;
-	struct stat sb;
 
 	fail_unless((file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET))
 	    != NULL, NULL);
 	basic_file_tests(file, pkgfile_symlink, pkgfile_loc_mem, LINK_TARGET,
 	    LINK_TARGET_LENGTH);
-
-	/* The md5 of Foo is 1356c67d7ad1638d816bfb822dd2c25d */
 	test_checksums(file, LINK_TARGET_MD5);
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	/* XXX Check the file contents are correct */
-	fail_unless(lstat(BASIC_FILE, &sb) == 0, NULL);
-	fail_unless(S_ISLNK(sb.st_mode), NULL);
-	fail_unless(sb.st_size == LINK_TARGET_LENGTH, NULL);
+	check_symlink_data(BASIC_FILE, LINK_TARGET);
 	system("rm " BASIC_FILE);
 	CLEANUP_TESTDIR();
 
@@ -366,13 +381,11 @@ END_TEST
 START_TEST(pkgfile_symlink_depth_test)
 {
 	struct pkgfile *file;
-	struct stat sb;
 
 	file = pkgfile_new_symlink(DEPTH_FILE, LINK_TARGET);
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fail_unless(lstat(DEPTH_FILE, &sb) == 0, NULL);
-	fail_unless(S_ISLNK(sb.st_mode), NULL);
+	check_symlink_data(DEPTH_FILE, LINK_TARGET);
 	system("rm " DEPTH_FILE);
 	system("rmdir " DEPTH_DIR);
 	CLEANUP_TESTDIR();
