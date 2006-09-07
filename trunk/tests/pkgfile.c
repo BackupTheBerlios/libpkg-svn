@@ -196,7 +196,6 @@ check_regular_file_data(const char *filename, const char *expected_data,
 	FILE *fd;
 	char *buf;
 
-
 	fail_unless((fd = fopen(filename, "r")) != NULL, NULL);
 
 	/* Check the file looks correct */
@@ -235,9 +234,12 @@ check_symlink_data(const char *filename, const char *expected_data)
 static void
 check_directory_data(const char *directory)
 {
+	struct stat sb;
+
 	fail_unless(stat(directory, &sb) == 0, NULL);
 	fail_unless(S_ISDIR(sb.st_mode), NULL);
 }
+
 /* Tests on creating a regular file from a buffer */
 START_TEST(pkgfile_regular_bad_test)
 {
@@ -326,6 +328,45 @@ START_TEST(pkgfile_regular_depth_test)
 	/* Test pkg_write will fail when it can't create a parent directory */
 	file = pkgfile_new_regular(DEPTH_FILE, "0123456789", 10);
 	depth_test_fail_write(file);
+	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_regular_modify_test)
+{
+	struct pkgfile *file;
+	char data[12];
+
+	sprintf(data, "12345\n");
+	file = pkgfile_new_regular(DEPTH_FILE, data, 6);
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 6);
+	fail_unless(pkgfile_append(file, "67890", 5) == 0, NULL);
+	sprintf(data, "12345\n67890");
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 11);
+	pkgfile_free(file);
+
+	/* Remove the first line in a file */
+	sprintf(data, "12345\n67890");
+	file = pkgfile_new_regular(DEPTH_FILE, data, 11);
+	fail_unless(pkgfile_remove_line(file, "12345") == 0, NULL);
+	sprintf(data, "67890");
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 5);
+	pkgfile_free(file);
+
+	/* Remove a middle line from a file */
+	sprintf(data, "12345\n67\n89");
+	file = pkgfile_new_regular(DEPTH_FILE, data, 11);
+	fail_unless(pkgfile_remove_line(file, "67") == 0, NULL);
+	sprintf(data, "12345\n89");
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 8);
+	pkgfile_free(file);
+
+	/* Remove the Last line in a file */
+	sprintf(data, "12345\n67890");
+	file = pkgfile_new_regular(DEPTH_FILE, data, 11);
+	fail_unless(pkgfile_remove_line(file, "12345") == 0, NULL);
+	sprintf(data, "67890");
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 5);
 	pkgfile_free(file);
 }
 END_TEST
@@ -511,7 +552,6 @@ END_TEST
 START_TEST(pkgfile_directory_test)
 {
 	struct pkgfile *file;
-	struct stat sb;
 
 	fail_unless((file = pkgfile_new_directory(BASIC_FILE)) != NULL, NULL);
 	basic_file_tests(file, pkgfile_dir, pkgfile_loc_mem, BASIC_FILE,
@@ -558,12 +598,11 @@ END_TEST
 START_TEST(pkgfile_directory_depth_test)
 {
 	struct pkgfile *file;
-	struct stat sb;
 
 	file = pkgfile_new_directory(DEPTH_FILE);
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	check_directory_data(DEPTH_FILE)
+	check_directory_data(DEPTH_FILE);
 	system("rmdir " DEPTH_FILE);
 	system("rmdir " DEPTH_DIR);
 	CLEANUP_TESTDIR();
@@ -601,6 +640,7 @@ pkgfile_suite()
 	tcase_add_test(tc_regular, pkgfile_regular_data_test);
 	tcase_add_test(tc_regular, pkgfile_regular_existing_test);
 	tcase_add_test(tc_regular, pkgfile_regular_depth_test);
+	tcase_add_test(tc_regular, pkgfile_regular_modify_test);
 
 	tcase_add_test(tc_symlink, pkgfile_symlink_bad_test);
 	tcase_add_test(tc_symlink, pkgfile_symlink_good_test);
