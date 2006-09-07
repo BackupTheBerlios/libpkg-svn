@@ -552,11 +552,10 @@ pkgfile_remove_line(struct pkgfile *file, const char *line)
 	if (file == NULL || line == NULL)
 		return -1;
 
-	assert(file->loc == pkgfile_loc_disk);
+	assert(file->type == pkgfile_regular);
 
 	/* Read in the file */
 	pkgfile_get_data(file);
-	assert(file->type == pkgfile_regular);
 
 	buf = file->data;
 	while ((buf = memmem(buf, file->length, line, strlen(line))) != NULL) {
@@ -574,12 +573,46 @@ pkgfile_remove_line(struct pkgfile *file, const char *line)
 	ptr = buf + strlen(line) + 1;
 	memcpy(buf, ptr, file->length - (ptr - file->data));
 	file->length -= strlen(line) + 1;
-	fseek(file->fd, 0, SEEK_SET);
-	if (fwrite(file->data, 1, file->length, file->fd) != file->length) {
-		assert(0);
-		return -1;
+
+	if (file->loc == pkgfile_loc_disk) {
+		fseek(file->fd, 0, SEEK_SET);
+		if (fwrite(file->data, 1, file->length, file->fd) !=
+		    file->length) {
+			assert(0);
+			return -1;
+		}
+		ftruncate(fileno(file->fd), file->length);
 	}
-	ftruncate(fileno(file->fd), file->length);
+
+	return 0;
+}
+
+int
+pkgfile_append(struct pkgfile *file, const char *data, uint64_t length)
+{
+	if (file == NULL)
+		return -1;
+
+	if (data == NULL && length != 0)
+		return -1;
+
+	assert(file->loc == pkgfile_loc_mem);
+	assert(file->type == pkgfile_regular);
+
+	assert(file->data != NULL);
+	if (file->data != NULL) {
+		char *new_data;
+
+		new_data = realloc(file->data, file->length + length);
+		if (new_data == NULL)
+			return -1;
+
+		/* Update the internal pointer and copy the new data */
+		file->data = new_data;
+		memcpy(file->data + file->length, data, length);
+		file->length += length;
+		
+	}
 
 	return 0;
 }
