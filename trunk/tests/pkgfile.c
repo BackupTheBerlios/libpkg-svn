@@ -18,19 +18,20 @@
 #define DEPTH_DIR "testdir/dir"
 #define DEPTH_FILE DEPTH_DIR "/DEPTH"
 
-void basic_file_tests(struct pkgfile *, pkgfile_type, pkgfile_loc, const char *,
-	unsigned int);
-void test_checksums(struct pkgfile *, const char *);
-void existing_regular_test(struct pkgfile *);
-void existing_symlink_test(struct pkgfile *);
-void existing_directory_test(struct pkgfile *);
-void depth_test_fail_write(struct pkgfile *);
-void empty_regular_file_tests(const char *);
+static void basic_file_tests(struct pkgfile *, pkgfile_type, pkgfile_loc,
+	const char *, unsigned int);
+static void test_checksums(struct pkgfile *, const char *);
+static void existing_regular_test(struct pkgfile *);
+static void existing_symlink_test(struct pkgfile *);
+static void existing_directory_test(struct pkgfile *);
+static void depth_test_fail_write(struct pkgfile *);
+static void empty_regular_file_tests(const char *);
+static void check_regular_file_data(const char *, const char *, int, int);
 
 /*
  * Check a pkgfile object is correct after it has been created
  */
-void
+static void
 basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
 	const char *data, unsigned int length)
 {
@@ -62,7 +63,7 @@ basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
 	}
 }
 
-void
+static void
 test_checksums(struct pkgfile *file, const char *md5)
 {
 	fail_unless(strlen(md5) == 32, NULL);
@@ -73,6 +74,7 @@ test_checksums(struct pkgfile *file, const char *md5)
 	/* Check this fails with bad data that is too short */
 	fail_unless(pkgfile_set_checksum_md5(file, "") == -1, NULL);
 	fail_unless(strcmp(file->md5, md5) == 0, NULL);
+	fail_unless(pkgfile_compare_checksum_md5(file) == 0, NULL);
 
 	/* Check this fails with bad data that is too long */
 	fail_unless(pkgfile_set_checksum_md5(file,
@@ -91,33 +93,25 @@ test_checksums(struct pkgfile *file, const char *md5)
 }
 
 /* Tests if pkgfile_write fails when BASIC_FILE already exists and is regular*/
-void
+static void
 existing_regular_test(struct pkgfile *file)
 {
-	FILE *fd;
-	char buf[6];
-
 	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 
 	SETUP_TESTDIR();
 	system("touch " LINK_TARGET);
-	system("echo Hello > " BASIC_FILE);
+	system("echo -n Hello > " BASIC_FILE);
 
 	/* This should fail as BASIC_FILE already exists */
 	fail_unless(pkgfile_write(file) == -1, NULL);
-	fd = fopen(BASIC_FILE, "r");
-	fread(buf, 5, 1, fd);
-	buf[5] = '\0';
-	/* Check the file has not been touched */
-	fail_unless(strcmp(buf, "Hello") == 0, NULL);
-	fclose(fd);
+	check_regular_file_data(BASIC_FILE, "Hello", 5, 1);
 	system("rm " BASIC_FILE);
 	system("rm " LINK_TARGET);
 	CLEANUP_TESTDIR();
 }
 
 /* Tests if pkgfile_write fails if BASIC_FILE exiasts and is a symlink */
-void
+static void
 existing_symlink_test(struct pkgfile *file)
 {
 	SETUP_TESTDIR();
@@ -130,7 +124,7 @@ existing_symlink_test(struct pkgfile *file)
 }
 
 /* Tests if pkgfile_write fails if BASIC_FILE exiasts and is a directory */
-void
+static void
 existing_directory_test(struct pkgfile *file)
 {
 	SETUP_TESTDIR();
@@ -142,7 +136,7 @@ existing_directory_test(struct pkgfile *file)
 	CLEANUP_TESTDIR();
 }
 
-void
+static void
 depth_test_fail_write(struct pkgfile *file)
 {
 	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
@@ -159,7 +153,7 @@ depth_test_fail_write(struct pkgfile *file)
 	CLEANUP_TESTDIR();
 }
 
-void
+static void
 empty_regular_file_tests(const char *buf)
 {
 	struct pkgfile *file;
@@ -190,6 +184,32 @@ empty_regular_file_tests(const char *buf)
 	fail_unless(pkgfile_free(file) == 0, NULL);
 }
 
+static void
+check_regular_file_data(const char *filename, const char *expected_data,
+    int length, int link_count)
+{
+	struct stat sb;
+	FILE *fd;
+	char *buf;
+
+
+	fail_unless((fd = fopen(filename, "r")) != NULL, NULL);
+
+	/* Check the file looks correct */
+	fstat(fileno(fd), &sb);
+	fail_unless(S_ISREG(sb.st_mode), NULL);
+	fail_unless(sb.st_size == length, NULL);
+	fail_unless(sb.st_nlink == link_count, "%d %d", sb.st_nlink, link_count);
+
+	fail_unless((buf = calloc(length + 1, 1)) != NULL, NULL);
+	fread(buf, length, 1, fd);
+	/* Check the file has been written correctly */
+	fail_unless(strcmp(buf, expected_data) == 0, NULL);
+	free(buf);
+
+	fclose(fd);
+}
+
 /* Tests on creating a regular file from a buffer */
 START_TEST(pkgfile_regular_bad_test)
 {
@@ -213,8 +233,6 @@ END_TEST
 START_TEST(pkgfile_regular_data_test)
 {
 	struct pkgfile *file;
-	FILE *fd;
-	struct stat sb;
 
 	/* Create a file with data */
 	fail_unless((file = pkgfile_new_regular(BASIC_FILE, "0123456789", 10))
@@ -224,26 +242,14 @@ START_TEST(pkgfile_regular_data_test)
 	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, "0123456789",
 	    10);
 
-	/* Test the data */
-	fail_unless(pkgfile_get_data(file) != NULL, NULL);
-	fail_unless(strncmp(pkgfile_get_data(file), "0123456789", 10)== 0,NULL);
-	fail_unless(strncmp(file->data, "0123456789", 10) == 0, NULL);
-
 	/* The md5 of 0123456789 string is 781e5e245d69b566979b86e28d23f2c7 */
 	test_checksums(file, "781e5e245d69b566979b86e28d23f2c7");
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fail_unless(pkgfile_write(file) == -1, NULL);
 	/* Attempting to over write a file should fail */
 	fail_unless(pkgfile_write(file) == -1, NULL);
-	fail_unless((fd = fopen(BASIC_FILE, "r")) != NULL, NULL);
-	fstat(fileno(fd), &sb);
-	fail_unless(S_ISREG(sb.st_mode), NULL);
-	fail_unless(sb.st_size == 10, NULL);
-	fail_unless(sb.st_nlink == 1, NULL);
-	/* XXX Check the file contents are correct */
-	fclose(fd);
+	check_regular_file_data(BASIC_FILE, "0123456789", 10, 1);
 	system("rm " BASIC_FILE);
 	CLEANUP_TESTDIR();
 
@@ -279,18 +285,11 @@ END_TEST
 START_TEST(pkgfile_regular_depth_test)
 {
 	struct pkgfile *file;
-	FILE *fd;
-	char buf[11];
 
 	file = pkgfile_new_regular(DEPTH_FILE, "0123456789", 10);
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fd = fopen(DEPTH_FILE, "r");
-	fread(buf, 10, 1, fd);
-	buf[10] = '\0';
-	/* Check the file has been written correctly */
-	fail_unless(strcmp(buf, "0123456789") == 0, NULL);
-	fclose(fd);
+	check_regular_file_data(DEPTH_FILE, "0123456789", 10, 1);
 	system("rm " DEPTH_FILE);
 	system("rmdir " DEPTH_DIR);
 	CLEANUP_TESTDIR();
@@ -322,11 +321,6 @@ START_TEST(pkgfile_symlink_good_test)
 	    != NULL, NULL);
 	basic_file_tests(file, pkgfile_symlink, pkgfile_loc_mem, LINK_TARGET,
 	    LINK_TARGET_LENGTH);
-
-	/* Test the data */
-	fail_unless(pkgfile_get_data(file) != NULL, NULL);
-	fail_unless(strcmp(pkgfile_get_data(file), LINK_TARGET) == 0, NULL);
-	fail_unless(strcmp(file->data, LINK_TARGET) == 0, NULL);
 
 	/* The md5 of Foo is 1356c67d7ad1638d816bfb822dd2c25d */
 	test_checksums(file, LINK_TARGET_MD5);
@@ -407,30 +401,27 @@ END_TEST
 START_TEST(pkgfile_hardlink_test)
 {
 	struct pkgfile *file;
-	struct stat sb;
 
 	fail_unless((file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET))
 	    != NULL, NULL);
 	basic_file_tests(file, pkgfile_hardlink, pkgfile_loc_mem, LINK_TARGET,
 	    LINK_TARGET_LENGTH);
 
-	/* Test the data */
-	fail_unless(pkgfile_get_data(file) != NULL, NULL);
-	fail_unless(strcmp(pkgfile_get_data(file), LINK_TARGET) == 0, NULL);
-	fail_unless(strcmp(file->data, LINK_TARGET) == 0, NULL);
-
 	SETUP_TESTDIR();
-	system("touch " LINK_TARGET);
+	system("echo -n 0123456789 > " LINK_TARGET);
 	/*
 	 * pkgfile_compare_checksum_md5 will compare
 	 * against the file pointed to by the hardlink
 	 */
-	test_checksums(file, "d41d8cd98f00b204e9800998ecf8427e");
+	test_checksums(file, "781e5e245d69b566979b86e28d23f2c7");
 
+	/* Test the file is correct before writing to it */
+	check_regular_file_data(LINK_TARGET, "0123456789", 10, 1);
+
+	/* Write to the file then test both link points */
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fail_unless(stat(BASIC_FILE, &sb) == 0, NULL);
-	fail_unless(S_ISREG(sb.st_mode), NULL);
-	fail_unless(sb.st_nlink == 2, NULL);
+	check_regular_file_data(BASIC_FILE, "0123456789", 10, 2);
+	check_regular_file_data(LINK_TARGET, "0123456789", 10, 2);
 	system("rm " BASIC_FILE);
 	system("rm " LINK_TARGET);
 	CLEANUP_TESTDIR();
@@ -467,14 +458,12 @@ END_TEST
 START_TEST(pkgfile_hardlink_depth_test)
 {
 	struct pkgfile *file;
-	struct stat sb;
 
 	file = pkgfile_new_hardlink(DEPTH_FILE, LINK_TARGET);
 	SETUP_TESTDIR();
-	system("touch " LINK_TARGET);
+	system("echo -n 0123456789 > " LINK_TARGET);
 	fail_unless(pkgfile_write(file) == 0, NULL);
-	fail_unless(lstat(DEPTH_FILE, &sb) == 0, NULL);
-	fail_unless(S_ISREG(sb.st_mode), NULL);
+	check_regular_file_data(LINK_TARGET, "0123456789", 10, 2);
 	system("rm " DEPTH_FILE);
 	system("rmdir " DEPTH_DIR);
 	system("rm " LINK_TARGET);
@@ -511,10 +500,6 @@ START_TEST(pkgfile_directory_test)
 	/* Test the file length */
 	fail_unless(pkgfile_get_size(file) == BASIC_FILE_LENGTH, NULL);
 	fail_unless(file->length == BASIC_FILE_LENGTH, NULL);
-
-	/* Test the data */
-	fail_unless(pkgfile_get_data(file) != NULL, NULL);
-	fail_unless(strcmp(pkgfile_get_data(file), BASIC_FILE) ==0, NULL);
 
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
