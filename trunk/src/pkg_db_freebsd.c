@@ -97,7 +97,7 @@ static void			 freebsd_format_cmd(char *, int, const char *,
 				const char *, const char *);
 
 /**
- * @defgroup PackageDBFreebsd FreeBSD Package Database handeling
+ * @defgroup PackageDBFreebsd FreeBSD Package Database handling
  * @ingroup PackageDB
  *
  * @{

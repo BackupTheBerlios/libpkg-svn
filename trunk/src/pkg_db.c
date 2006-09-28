@@ -125,7 +125,7 @@ pkg_action_null(int level __unused, const char *fmt __unused, ...)
 
 /**
  * @defgroup PackageDB Package database functions
- * @brief Package database handeling functions
+ * @brief Package database handling functions
  *
  * These are the functions to talk to a package database.
  * The database is created by a system dependent constructor.

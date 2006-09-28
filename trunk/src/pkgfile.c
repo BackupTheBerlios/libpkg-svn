@@ -164,7 +164,7 @@ pkgfile_get_type(struct pkgfile *file)
  */
 
 /**
- * @defgroup PackageFile Safe file handeling functions
+ * @defgroup PackageFile Safe file handling functions
  * @{
  */
 

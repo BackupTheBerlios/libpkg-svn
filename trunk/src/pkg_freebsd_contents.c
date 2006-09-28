@@ -41,7 +41,7 @@
 #include "pkg_freebsd_private.h"
 
 /**
- * @defgroup FreebsdContents FreeBSD +CONTENTS handeling
+ * @defgroup FreebsdContents FreeBSD +CONTENTS handling
  *
  * @{
  */
