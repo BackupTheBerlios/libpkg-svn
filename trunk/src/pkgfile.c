@@ -131,7 +131,7 @@ pkgfile_open_fd(struct pkgfile *file)
  * @return  0 on success
  * @return -1 on error
  */
-int
+static int
 pkgfile_get_type(struct pkgfile *file)
 {
 	assert(file != NULL);
@@ -479,6 +479,9 @@ pkgfile_unlink(struct pkgfile *file)
 	if (file == NULL)
 		return -1;
 
+	if (file->loc == pkgfile_loc_mem)
+		return -1;
+
 	assert(file->loc == pkgfile_loc_disk);
 
 	pkgfile_get_type(file);
@@ -499,8 +502,10 @@ pkgfile_seek(struct pkgfile *file, uint64_t position, int whence)
 	if (file == NULL)
 		return -1;
 
-	if (file->loc == pkgfile_loc_disk)
-		pkgfile_open_fd(file);
+	if (file->loc == pkgfile_loc_mem)
+		return -1;
+
+	pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
 	assert(file->type != pkgfile_hardlink);
@@ -552,7 +557,8 @@ pkgfile_remove_line(struct pkgfile *file, const char *line)
 	if (file == NULL || line == NULL)
 		return -1;
 
-	assert(file->type == pkgfile_regular);
+	if (file->type != pkgfile_regular)
+		return -1;
 
 	/* Read in the file */
 	pkgfile_get_data(file);
@@ -597,7 +603,8 @@ pkgfile_append(struct pkgfile *file, const char *data, uint64_t length)
 		return -1;
 
 	assert(file->loc == pkgfile_loc_mem);
-	assert(file->type == pkgfile_regular);
+	if (file->type != pkgfile_regular)
+		return -1;
 
 	assert(file->data != NULL);
 	if (file->data != NULL) {
