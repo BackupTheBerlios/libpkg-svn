@@ -64,11 +64,24 @@ basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
 			    NULL);
 		}
 	}
+
+	/* Test setting the file's mode */
+	fail_unless(pkgfile_set_mode(file, 100) == 0, NULL);
+	fail_unless(file->mode == (100 & ALLPERMS), NULL);
+	/* Reset it for later operations */
+	fail_unless(pkgfile_set_mode(file, 0) == 0, NULL);
+
+	/* This shouldn't make any sence on a file in memory */
+	fail_unless(pkgfile_seek(file, 0, SEEK_SET) == -1, NULL);
+	fail_unless(pkgfile_unlink(file) == -1, NULL);
 }
 
 static void
 test_checksums(struct pkgfile *file, const char *md5)
 {
+	/* Check if it fails with no md5 set */
+	fail_unless(pkgfile_compare_checksum_md5(file) == -1, NULL);
+
 	fail_unless(strlen(md5) == 32, NULL);
 	fail_unless(pkgfile_set_checksum_md5(file, md5) == 0, NULL);
 	fail_unless(strcmp(file->md5, md5) == 0, NULL);
@@ -397,6 +410,11 @@ START_TEST(pkgfile_symlink_good_test)
 	system("rm " BASIC_FILE);
 	CLEANUP_TESTDIR();
 
+	fail_unless(pkgfile_append(file, "1234567890", 10) == -1, NULL);
+	fail_unless(pkgfile_remove_line(file, "1234567890") == -1, NULL);
+	fail_unless(pkgfile_seek(file, 0, SEEK_SET) == -1, NULL);
+	fail_unless(pkgfile_unlink(file) == -1, NULL);
+
 	fail_unless(pkgfile_free(file) == 0, NULL);
 }
 END_TEST
@@ -618,22 +636,43 @@ START_TEST(pkgfile_directory_depth_test)
 }
 END_TEST
 
+START_TEST(pkgfile_misc_bad_args)
+{
+	fail_unless(pkgfile_get_size(NULL) == 0, NULL);
+	fail_unless(pkgfile_get_data(NULL) == NULL, NULL);
+	fail_unless(pkgfile_set_checksum_md5(NULL, NULL) == -1, NULL);
+	fail_unless(pkgfile_set_checksum_md5(NULL, "1234567890123456789012") == -1, NULL);
+	fail_unless(pkgfile_compare_checksum_md5(NULL) == -1, NULL);
+	fail_unless(pkgfile_unlink(NULL) == -1, NULL);
+	fail_unless(pkgfile_seek(NULL, 0, SEEK_SET) == -1, NULL);
+	fail_unless(pkgfile_set_mode(NULL, 1) == -1, NULL);
+	fail_unless(pkgfile_remove_line(NULL, NULL) == -1, NULL);
+	fail_unless(pkgfile_remove_line(NULL, "") == -1, NULL);
+	fail_unless(pkgfile_append(NULL, NULL, 0) == -1, NULL);
+	fail_unless(pkgfile_append(NULL, "1234567890", 10) == -1, NULL);
+	fail_unless(pkgfile_write(NULL) == -1, NULL);
+	fail_unless(pkgfile_free(NULL) == -1, NULL);
+}
+END_TEST
+
 Suite *
 pkgfile_suite()
 {
 	Suite *s;
-	TCase *tc_regular, *tc_symlink, *tc_hardlink, *tc_dir;
+	TCase *tc_regular, *tc_symlink, *tc_hardlink, *tc_dir, *tc_misc;
 
 	s = suite_create("pkgfile");
 	tc_regular = tcase_create("regular");
 	tc_symlink = tcase_create("symlink");
 	tc_hardlink = tcase_create("hardlink");
 	tc_dir = tcase_create("directory");
+	tc_misc = tcase_create("misc");
 
 	suite_add_tcase(s, tc_regular);
 	suite_add_tcase(s, tc_symlink);
 	suite_add_tcase(s, tc_hardlink);
 	suite_add_tcase(s, tc_dir);
+	suite_add_tcase(s, tc_misc);
 
 	tcase_add_test(tc_regular, pkgfile_regular_bad_test);
 	tcase_add_test(tc_regular, pkgfile_regular_empty_test);
@@ -656,6 +695,8 @@ pkgfile_suite()
 	tcase_add_test(tc_dir, pkgfile_directory_test);
 	tcase_add_test(tc_dir, pkgfile_directory_existing_test);
 	tcase_add_test(tc_dir, pkgfile_directory_depth_test);
+
+	tcase_add_test(tc_misc, pkgfile_misc_bad_args);
 
 	return s;
 }
