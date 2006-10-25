@@ -579,7 +579,7 @@ pkgfile_find_line(struct pkgfile *file, const char *line)
 /**
  * @brief Removes the first occurance of line from a file
  * @param file The file
- * @param file The line to remove
+ * @param line The line to remove
  * @return  1 on line not found
  * @return  0 on success
  * @return -1 on error
