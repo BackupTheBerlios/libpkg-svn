@@ -556,6 +556,7 @@ pkgfile_find_line(struct pkgfile *file, const char *line)
 	if (file == NULL || line == NULL)
 		return NULL;
 
+	pkgfile_get_type(file);
 	if (file->type != pkgfile_regular)
 		return NULL;
 
@@ -563,6 +564,7 @@ pkgfile_find_line(struct pkgfile *file, const char *line)
 	pkgfile_get_data(file);
 
 	buf = file->data;
+	/** @todo Change the length of the buffer left on each iteration */
 	while ((buf = memmem(buf, file->length, line, strlen(line))) != NULL) {
 		/* Check the found line is complete */
 		if ((buf == file->data || buf[-1] == '\n') &&
@@ -591,6 +593,7 @@ pkgfile_remove_line(struct pkgfile *file, const char *line)
 	if (file == NULL || line == NULL)
 		return -1;
 
+	pkgfile_get_type(file);
 	if (file->type != pkgfile_regular)
 		return -1;
 
