@@ -120,6 +120,46 @@ pkg_db_open_freebsd(const char *base)
  */
 
 /**
+ * @defgroup PackageDBFreebsdMatch FreeBSD package matching functions
+ * @ingroup PackageDBFreebsd
+ * @brief FreeBSD specific functions to be passed to
+ * 	pkg_db_get_installed_match()
+ *
+ * @{
+ */
+
+/**
+ * @brief A function to match all FreeBSD package that a given pakage depend on
+ * @param pkg The package to test
+ * @param pkg_name The name of the package to find the dependencies of
+ * @return 0 if pkg_name depends on pkg
+ * @return Non zero otherwise
+ */
+int
+pkg_db_freebsd_match_rdep(struct pkg *pkg, const void *pkg_name)
+{
+	struct pkgfile *file;
+
+	assert(pkg != NULL);
+	assert(pkg_name != NULL);
+
+	file = pkg_get_control_file(pkg, "+REQUIRED_BY");
+	if (file == NULL)
+		return 1;
+
+	if (pkgfile_find_line(file, (const char *)pkg_name) != NULL)
+		return 0;
+
+	printf("--> %s\n", pkg_get_name(pkg));
+
+	return 1;
+}
+
+/**
+ * @}
+ */
+
+/**
  * @defgroup PackageDBFreebsdCallback FreeBSD package database callbacks
  * @ingroup PackageDBFreebsd
  * @brief FreeBSD package database callback functions.
@@ -412,23 +452,17 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts __unus
 		return -1;
 	}
 
-	/** @todo Remove this package from other packages reverse dependencies */
-	deps = pkg_get_dependencies(real_pkg);
+
+	/* Remove the reverse dependencies */
+	deps = pkg_db_get_installed_match(db, pkg_db_freebsd_match_rdep,
+	    pkg_get_name(real_pkg));
 	if (deps != NULL) {
 		unsigned int pos;
-		for(pos = 0; deps[pos] != NULL; pos++) {
+		for (pos = 0; deps[pos] != NULL; pos++) {
 			struct pkgfile *file;
-			char require[FILENAME_MAX];
 
-			snprintf(require, FILENAME_MAX, "%s" DB_LOCATION
-			    "/%s/+REQUIRED_BY", db->db_base,
-			    pkg_get_name(deps[pos]));
-			pkg_remove_extra_slashes(require);
-
-			/* Remove the reverse dependency */
-			file = pkgfile_new_from_disk(require, 0);
+			file = pkg_get_control_file(deps[pos], "+REQUIRED_BY");
 			pkgfile_remove_line(file, pkg_get_name(real_pkg));
-			pkgfile_free(file);
 		}
 	}
 

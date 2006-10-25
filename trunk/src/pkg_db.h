@@ -64,8 +64,10 @@ int		  pkg_db_delete_package_action(struct pkg_db *, struct pkg *,
 			int, int, pkg_db_action *);
 int		  pkg_db_free(struct pkg_db *);
 
+/* Functions to be passed to pkg_db_get_installed_match() */
 int		  pkg_match_all(struct pkg *, const void *);
 int		  pkg_match_by_origin(struct pkg *, const void *);
 int		  pkg_match_by_file(struct pkg *, const void *);
+int		  pkg_db_freebsd_match_rdep(struct pkg *, const void *);
 
 #endif /* __LIBPKG_PKG_DB_H__ */
