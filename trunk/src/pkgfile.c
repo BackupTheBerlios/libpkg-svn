@@ -542,23 +542,22 @@ pkgfile_set_mode(struct pkgfile *file, mode_t mode)
 }
 
 /**
- * @brief Removes the first occurance of line from a file
+ * @brief Finds a given line in a file
  * @param file The file
- * @param file The line to remove
- * @return  1 on line not found
- * @return  0 on success
- * @return -1 on error
+ * @param line The line to remove
+ * @return A pointer to the start of the line
+ * @return NULL if the line was not found
  */
-int
-pkgfile_remove_line(struct pkgfile *file, const char *line)
+const char *
+pkgfile_find_line(struct pkgfile *file, const char *line)
 {
-	char *buf, *ptr;
+	char *buf;
 
 	if (file == NULL || line == NULL)
-		return -1;
+		return NULL;
 
 	if (file->type != pkgfile_regular)
-		return -1;
+		return NULL;
 
 	/* Read in the file */
 	pkgfile_get_data(file);
@@ -572,12 +571,35 @@ pkgfile_remove_line(struct pkgfile *file, const char *line)
 			break;
 		}
 	}
-	if (buf == NULL)
-		return 1;
+
+	return buf;
+}
+/**
+ * @brief Removes the first occurance of line from a file
+ * @param file The file
+ * @param file The line to remove
+ * @return  1 on line not found
+ * @return  0 on success
+ * @return -1 on error
+ */
+int
+pkgfile_remove_line(struct pkgfile *file, const char *line)
+{
+	union { const char *in; char *out; } buf;
+	char *ptr;
+
+	if (file == NULL || line == NULL)
+		return -1;
+
+	if (file->type != pkgfile_regular)
+		return -1;
+
+	/* Find the line in the file to remove */
+	buf.in = pkgfile_find_line(file, line);
 
 	/* Move the rest of the file */
-	ptr = buf + strlen(line) + 1;
-	memcpy(buf, ptr, file->length - (ptr - file->data));
+	ptr = buf.out + strlen(line) + 1;
+	memcpy(buf.out, ptr, file->length - (ptr - file->data));
 	file->length -= strlen(line) + 1;
 
 	if (file->loc == pkgfile_loc_disk) {

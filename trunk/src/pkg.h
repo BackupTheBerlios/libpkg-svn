@@ -60,6 +60,7 @@ int		 pkgfile_compare_checksum_md5(struct pkgfile *);
 int		 pkgfile_seek(struct pkgfile *, uint64_t, int);
 int		 pkgfile_set_mode(struct pkgfile *, mode_t);
 int		 pkgfile_append(struct pkgfile *, const char *, uint64_t);
+const char	*pkgfile_find_line(struct pkgfile *, const char *);
 int		 pkgfile_remove_line(struct pkgfile *, const char *);
 int		 pkgfile_write(struct pkgfile *);
 int		 pkgfile_unlink(struct pkgfile *);
