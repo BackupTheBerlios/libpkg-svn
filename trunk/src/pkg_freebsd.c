@@ -950,6 +950,7 @@ freebsd_run_script(struct pkg *pkg, const char *prefix, pkg_script script)
 
 	script_file = NULL;
 	arg[0] = '\0';
+	dir[0] = '\0';
 	switch (script) {
 	case pkg_script_pre:
 		script_file = pkg_get_control_file(pkg, "+PRE-INSTALL");
@@ -983,6 +984,7 @@ freebsd_run_script(struct pkg *pkg, const char *prefix, pkg_script script)
 		break;
 	case pkg_script_deinstall:
 		script_file = pkg_get_control_file(pkg, "+DEINSTALL");
+		snprintf(arg, FILENAME_MAX, "DEINSTALL");
 		break;
 	case pkg_script_noop:
 		return -1;
@@ -1019,31 +1021,28 @@ freebsd_run_script(struct pkg *pkg, const char *prefix, pkg_script script)
 	}
 	case pkg_script_pre:
 	case pkg_script_post:
+	case pkg_script_require:
+	case pkg_script_require_deinstall:
+	case pkg_script_pre_deinstall:
+	case pkg_script_post_deinstall:
+	case pkg_script_deinstall:
+		/* Check the script has the execute bit set */
 		pkg_exec("chmod u+x %s", pkgfile_get_name(script_file));
 
 		/* Execute the script */
 		ret = pkg_exec("%s/%s %s %s", dir,
 		    pkgfile_get_name(script_file), pkg_get_name(pkg), arg);
 		break;
-	case pkg_script_require:
-	case pkg_script_require_deinstall:
-		pkg_exec("chmod u+x %s", pkgfile_get_name(script_file));
-
-		ret = pkg_exec("%s/%s %s %s", dir,
-		    pkgfile_get_name(script_file), pkg_get_name(pkg), arg);
-		break;
-	case pkg_script_pre_deinstall:
-	case pkg_script_post_deinstall:
-	case pkg_script_deinstall:
-		assert(0);
 	case pkg_script_noop:
 		break;
 	}
 	unlink(pkgfile_get_name(script_file));
-	chdir(cwd);
-	free(cwd);
 
-	rmdir(dir);
+	if (fpkg->pkg_type == fpkg_from_file) {
+		chdir(cwd);
+		free(cwd);
+		rmdir(dir);
+	}
 	return ret;
 }
 
