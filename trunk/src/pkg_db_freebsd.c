@@ -150,8 +150,6 @@ pkg_db_freebsd_match_rdep(struct pkg *pkg, const void *pkg_name)
 	if (pkgfile_find_line(file, (const char *)pkg_name) != NULL)
 		return 0;
 
-	printf("--> %s\n", pkg_get_name(pkg));
-
 	return 1;
 }
 
@@ -452,6 +450,10 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts __unus
 		return -1;
 	}
 
+	if (pkg_run_script(real_pkg, NULL, pkg_script_deinstall) != 0) {
+		/* XXX */
+		return -1;
+	}
 
 	/* Remove the reverse dependencies */
 	deps = pkg_db_get_installed_match(db, pkg_db_freebsd_match_rdep,
@@ -478,6 +480,10 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts __unus
 	}
 
 	/** @todo Run +POST-DEINSTALL <pkg-name>/+DEINSTALL <pkg-name> POST-DEINSTALL */
+	if (pkg_run_script(real_pkg, NULL, pkg_script_post_deinstall) != 0) {
+		/* XXX */
+		return -1;
+	}
 
 	return -1;
 }
