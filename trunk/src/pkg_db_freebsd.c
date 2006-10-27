@@ -530,7 +530,8 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	}
 	pkg_remove_extra_slashes(install_data->directory);
 
-	pkg_action(PKG_DB_PACKAGE, "CWD to %s", install_data->directory);
+	pkg_action(PKG_DB_PACKAGE, "Change working directory to %s",
+	    install_data->directory);
 
 	if (!install_data->fake) {
 		pkg_dir_build(install_data->directory, 0);
@@ -618,7 +619,7 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	freebsd_format_cmd(the_cmd, FILENAME_MAX, cmd, install_data->directory,
 	    install_data->last_file);
 
-	pkg_action(PKG_DB_PACKAGE, "execute '%s'", the_cmd);
+	pkg_action(PKG_DB_PACKAGE, "Execute '%s'", the_cmd);
 	if (!install_data->fake) {
 		return pkg_exec(the_cmd);
 	}
