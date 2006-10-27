@@ -31,7 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 
-//#define verbosity_flag		(1)
+#define verbosity_flag		(1)
 //#define keep_file_flag		(1<<1)
 //#define no_run_flag		(1<<2)
 //#define force_flag		(1<<3)
@@ -41,7 +41,7 @@
 struct pkg_delete {
 	struct pkg_db	 *db;
 	struct pkg	**pkgs;
-//	int		  flags;
+	int		  flags;
 //	char		 *prefix;
 };
 
@@ -60,10 +60,10 @@ main (int argc, char *argv[])
 
 	delete.db = NULL;
 	delete.pkgs = NULL;
-	//add.flags = 0;
-	//add.chroot[0] = '\0';
-	//add.base_prefix = NULL;
-	//add.prefix = NULL;
+	delete.flags = 0;
+	//delete.chroot[0] = '\0';
+	//delete.base_prefix = NULL;
+	//delete.prefix = NULL;
 	while ((ch = getopt(argc, argv, options)) != -1) {
 		switch(ch) {
 		case 'a':
@@ -85,6 +85,7 @@ main (int argc, char *argv[])
 		case 'r':
 			break;
 		case 'v':
+			delete.flags |= verbosity_flag;
 			break;
 		case 'x':
 			break;
@@ -170,8 +171,13 @@ pkg_delete(struct pkg_delete delete)
 	assert(delete.pkgs != NULL);
 
 	for (i = 0; delete.pkgs[i] != NULL; i++) {
-		pkg_db_delete_package_action(delete.db, delete.pkgs[i], 0, 0,
-		    pkg_action);
+		if ((delete.flags & verbosity_flag) == verbosity_flag) {
+			pkg_db_delete_package_action(delete.db, delete.pkgs[i],
+			    0, 0, pkg_action);
+		} else {
+			pkg_db_delete_package_action(delete.db, delete.pkgs[i],
+			    0, 0, NULL);
+		}
 	}
 	return 1;
 }
