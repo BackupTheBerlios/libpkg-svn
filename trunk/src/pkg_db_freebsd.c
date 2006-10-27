@@ -575,10 +575,25 @@ freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  * @return -1 on error
  */
 static int
-freebsd_deinstall_file(struct pkg *pkg __unused, pkg_db_action *pkg_action __unused, void *data __unused,
+freebsd_deinstall_file(struct pkg *pkg __unused, pkg_db_action *pkg_action, void *data __unused,
 	struct pkgfile *file)
 {
+	const char *file_name;
+
 	assert(file != NULL);
+
+	file_name = pkgfile_get_name(file);
+	if (file_name[0] == '/') {
+		/* We have an absolute file */
+		pkg_action(PKG_DB_PACKAGE, "Delete %s %s",
+		    pkgfile_get_type_string(file), file_name);
+	} else {
+		char dir[FILENAME_MAX];
+
+		getcwd(dir, FILENAME_MAX);
+		pkg_action(PKG_DB_PACKAGE, "Delete %s %s/%s",
+		    pkgfile_get_type_string(file), dir, file_name);
+	}
 	return pkgfile_unlink(file);
 }
 /**
