@@ -48,6 +48,9 @@ static struct pkgfile	*pkgfile_new(const char *, pkgfile_type, pkgfile_loc);
 static int		 pkgfile_open_fd(struct pkgfile *);
 static int		 pkgfile_get_type(struct pkgfile *);
 
+static const char *pkgfile_types[] =
+	{ "none", "file", "hardlink", "symlink", "directory" };
+
 /**
  * @defgroup PackageFileInternal Internal file functions
  * Internal functions in the package module
@@ -398,6 +401,17 @@ pkgfile_get_data(struct pkgfile *file)
 	}
 	
 	return NULL;
+}
+
+/**
+ * @brief Gets a string containing a description of the type of the file
+ * @return A null terminated string with the name of the file type
+ */
+const char *
+pkgfile_get_type_string(struct pkgfile *file)
+{
+	pkgfile_get_type(file);
+	return pkgfile_types[file->type];
 }
 
 /**
