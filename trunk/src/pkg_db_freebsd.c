@@ -440,7 +440,7 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 		return -1;
 	}
 
-	if (scripts) {
+	if (!fake && scripts) {
 		if (pkg_run_script(real_pkg, NULL,
 		    pkg_script_require_deinstall) != 0) {
 			/* XXX */
@@ -459,6 +459,7 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 		}
 	}
 
+	if (!fake) {
 	/* Remove the reverse dependencies */
 	deps = pkg_db_get_installed_match(db, pkg_db_freebsd_match_rdep,
 	    pkg_get_name(real_pkg));
@@ -470,6 +471,7 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 			file = pkg_get_control_file(deps[pos], "+REQUIRED_BY");
 			pkgfile_remove_line(file, pkg_get_name(real_pkg));
 		}
+	}
 	}
 
 	/* Do the deinstall */
@@ -483,7 +485,7 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 		return -1;
 	}
 
-	if (scripts) {
+	if (!fake && scripts) {
 		/** @todo Run +POST-DEINSTALL <pkg-name>/+DEINSTALL <pkg-name> POST-DEINSTALL */
 		if (pkg_run_script(real_pkg, NULL, pkg_script_post_deinstall)
 		    != 0) {
@@ -713,7 +715,9 @@ freebsd_deregister(struct pkg *pkg, pkg_db_action *pkg_action __unused, void *da
 	assert(control[0] != NULL);
 	/* Remove the control files */
 	for (pos = 0; control[pos] != NULL; pos++) {
-		pkgfile_unlink(control[pos]);
+		if (!install_data->fake) {
+			pkgfile_unlink(control[pos]);
+		}
 	}
 
 	snprintf(db_dir, FILENAME_MAX, "%s" DB_LOCATION "/%s/",
@@ -722,7 +726,11 @@ freebsd_deregister(struct pkg *pkg, pkg_db_action *pkg_action __unused, void *da
 	dir = pkgfile_new_from_disk(db_dir, 0);
 	if (dir == NULL)
 		return -1;
-	return pkgfile_unlink(dir);
+	if (install_data->fake) {
+		return 0;
+	} else {
+		return pkgfile_unlink(dir);
+	}
 }
 
 #ifdef DEAD
