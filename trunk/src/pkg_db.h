@@ -64,6 +64,10 @@ int		  pkg_db_delete_package_action(struct pkg_db *, struct pkg *,
 			int, int, pkg_db_action *);
 int		  pkg_db_free(struct pkg_db *);
 
+/* Helper functions that use an internal callback for pkg_db_get_installed_match() */
+struct pkg	**pkg_db_match_regex(struct pkg_db *, const char **, int);
+struct pkg	**pkg_db_match_glob(struct pkg_db *, const char **, int);
+
 /* Functions to be passed to pkg_db_get_installed_match() */
 int		  pkg_match_all(struct pkg *, const void *);
 int		  pkg_match_by_origin(struct pkg *, const void *);

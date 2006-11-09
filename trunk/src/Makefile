@@ -16,7 +16,7 @@ SRCS		+= pkg_db.c pkg_db_freebsd.c
 
 # Package Repository
 SRCS		+= pkg_repo.c pkg_repo_files.c pkg_repo_ftp.c \
-			pkg_repo_local_freebsd.c
+			pkg_repo_local_freebsd.c pkg_db_match.c
 
 # Misc functions
 SRCS		+= pkg_util.c
