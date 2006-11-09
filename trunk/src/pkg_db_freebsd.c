@@ -51,6 +51,7 @@
 struct pkg_install_data {
 	int fake;
 	struct pkg_db *db;
+	const char *last_dir;
 	char last_file[FILENAME_MAX];
 	char directory[MAXPATHLEN];
 };
@@ -227,6 +228,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	/* Do the Install */
 	install_data.db = db;
 	install_data.fake = fake;
+	install_data.last_dir = NULL;
 	install_data.last_file[0] = '\0';
 	install_data.directory[0] = '\0';
 	if (pkg_install(pkg, prefix, reg, pkg_action, &install_data,
@@ -459,7 +461,6 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 		}
 	}
 
-	if (!fake) {
 	/* Remove the reverse dependencies */
 	deps = pkg_db_get_installed_match(db, pkg_db_freebsd_match_rdep,
 	    pkg_get_name(real_pkg));
@@ -468,15 +469,22 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 		for (pos = 0; deps[pos] != NULL; pos++) {
 			struct pkgfile *file;
 
-			file = pkg_get_control_file(deps[pos], "+REQUIRED_BY");
-			pkgfile_remove_line(file, pkg_get_name(real_pkg));
+			pkg_action(PKG_DB_INFO, "Trying to remove dependency "
+			    "on package '%s' with '%s' origin.",
+			    pkg_get_name(deps[pos]), pkg_get_origin(deps[pos]));
+			if (!fake) {
+				file = pkg_get_control_file(deps[pos],
+				    "+REQUIRED_BY");
+				pkgfile_remove_line(file,
+				    pkg_get_name(real_pkg));
+			}
 		}
-	}
 	}
 
 	/* Do the deinstall */
 	deinstall_data.db = db;
 	deinstall_data.fake = fake;
+	deinstall_data.last_dir = NULL;
 	deinstall_data.last_file[0] = '\0';
 	deinstall_data.directory[0] = '\0';
 	if (pkg_deinstall(real_pkg, pkg_action, &deinstall_data,
@@ -530,6 +538,13 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	assert(db != NULL);
 	assert(db->db_base != NULL);
 
+	/* If we are currently in the correct dir don't attempt to change */
+	if (install_data->last_dir != NULL &&
+	    strcmp(dir, install_data->last_dir) == 0) {
+		return 0;
+	}
+	install_data->last_dir = dir;
+
 	if (strcmp(dir, ".") == 0) {
 		snprintf(install_data->directory, MAXPATHLEN,
 		    "%s" DB_LOCATION "/%s", db->db_base, pkg_get_name(pkg));
@@ -539,8 +554,12 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	}
 	pkg_remove_extra_slashes(install_data->directory);
 
-	pkg_action(PKG_DB_PACKAGE, "Change working directory to %s",
-	    install_data->directory);
+	if (strcmp(dir, ".") == 0) {
+		pkg_action(PKG_DB_PACKAGE, "Change working directory to .");
+	} else {
+		pkg_action(PKG_DB_PACKAGE, "Change working directory to %s",
+		    install_data->directory);
+	}
 
 	if (!install_data->fake) {
 		pkg_dir_build(install_data->directory, 0);
