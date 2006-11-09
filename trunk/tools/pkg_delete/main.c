@@ -32,17 +32,19 @@
 #include <unistd.h>
 
 #define verbosity_flag		(1)
-//#define keep_file_flag		(1<<1)
-//#define no_run_flag		(1<<2)
-//#define force_flag		(1<<3)
-//#define no_run_script_flag	(1<<4)
-//#define no_record_install_flag	(1<<5)
+#define no_run_flag		(1<<1)
+#define force_flag		(1<<2)
+#define no_run_script_flag	(1<<3)
+#define remove_empty_dirs_flag	(1<<4)
+#define interactive_flag	(1<<5)
+#define recursive_flag		(1<<6)
 
 struct pkg_delete {
 	struct pkg_db	 *db;
 	struct pkg	**pkgs;
 	int		  flags;
-//	char		 *prefix;
+	pkg_db_match_t	  match_type;
+	char		 *prefix;
 };
 
 static char options[] = "adDfGhinp:rvxX";
@@ -56,40 +58,55 @@ main (int argc, char *argv[])
 	char ch;
 	struct pkg_delete delete;
 	int ret;
-	int i, j;
+	int i;
 
 	delete.db = NULL;
 	delete.pkgs = NULL;
 	delete.flags = 0;
-	//delete.chroot[0] = '\0';
-	//delete.base_prefix = NULL;
-	//delete.prefix = NULL;
+	delete.match_type = PKG_DB_MATCH_GLOB;
+	delete.prefix = NULL;
 	while ((ch = getopt(argc, argv, options)) != -1) {
 		switch(ch) {
 		case 'a':
+			delete.match_type = PKG_DB_MATCH_ALL;
 			break;
 		case 'd':
+			delete.flags |= remove_empty_dirs_flag;
+			assert(0);
 			break;
 		case 'D':
+			delete.flags |= no_run_script_flag;
 			break;
 		case 'f':
+			delete.flags |= force_flag;
+			assert(0);
 			break;
 		case 'G':
+			delete.match_type = PKG_DB_MATCH_EXACT;
 			break;
 		case 'i':
+			delete.flags |= interactive_flag;
+			assert(0);
 			break;
 		case 'n':
+			delete.flags |= no_run_flag;
 			break;
 		case 'p':
+			delete.prefix = optarg;
+			assert(0);
 			break;
 		case 'r':
+			delete.flags |= recursive_flag;
+			assert(0);
 			break;
 		case 'v':
 			delete.flags |= verbosity_flag;
 			break;
 		case 'x':
+			delete.match_type = PKG_DB_MATCH_REGEX;
 			break;
 		case 'X':
+			delete.match_type = PKG_DB_MATCH_EREGEX;
 			break;
 		case 'h':
 		case '?':
@@ -105,23 +122,13 @@ main (int argc, char *argv[])
 		delete.db = pkg_db_open_freebsd("/");
 	}
 
-	delete.pkgs = malloc(sizeof(struct pkg*) * (argc + 1));
-	if (delete.pkgs == NULL) {
-		perror("pkg_delete");
-		return 1;
-	}
+	delete.pkgs = NULL;
+	delete.pkgs = pkg_db_match_by_type(delete.db, (const char **)argv,
+	    delete.match_type);
 
-	/* Create an array of all packages to delete */
-	for (i = 0, j = 0; i < argc; i++) {
-		delete.pkgs[j] = pkg_db_get_package(delete.db, argv[i]);
-		if (delete.pkgs[j] != NULL)
-			j++;
-		else
-			fprintf(stderr,
-			    "pkg_delete: no such package '%s' installed\n",
-			    argv[i]);
-	}
-	if (delete.pkgs[0] == NULL) {
+	if (delete.pkgs == NULL) {
+		ret = 1;
+	} else if (delete.pkgs[0] == NULL) {
 		ret = 1;
 	} else {
 		/* Perform the deinstallation */
@@ -165,19 +172,21 @@ pkg_action(int level __unused, const char *fmt, ...)
 static int
 pkg_delete(struct pkg_delete delete)
 {
-	int i;
+	pkg_db_action *action;
+	int i, fake, scripts;
 
 	assert(delete.db != NULL);
 	assert(delete.pkgs != NULL);
 
+	fake = ((delete.flags & no_run_flag) == no_run_flag);
+	scripts = !((delete.flags & no_run_script_flag) == no_run_script_flag);
+	action = NULL;
+	if ((delete.flags & verbosity_flag) == verbosity_flag || fake)
+		action = pkg_action;
+
 	for (i = 0; delete.pkgs[i] != NULL; i++) {
-		if ((delete.flags & verbosity_flag) == verbosity_flag) {
-			pkg_db_delete_package_action(delete.db, delete.pkgs[i],
-			    0, 0, pkg_action);
-		} else {
-			pkg_db_delete_package_action(delete.db, delete.pkgs[i],
-			    0, 0, NULL);
-		}
+		pkg_db_delete_package_action(delete.db, delete.pkgs[i],
+		    scripts, fake, action);
 	}
 	return 1;
 }
