@@ -380,8 +380,8 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
  * @return -1 on fatal error
  */
 static int
-freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts __unused, int fake,
-	pkg_db_action *pkg_action)
+freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
+	int fake, pkg_db_action *pkg_action)
 {
 	struct pkg_install_data deinstall_data;
 	struct pkg *real_pkg;
@@ -440,19 +440,23 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts __unus
 		return -1;
 	}
 
-	if (pkg_run_script(real_pkg, NULL, pkg_script_require_deinstall) != 0) {
-		/* XXX */
-		return -1;
-	}
+	if (scripts) {
+		if (pkg_run_script(real_pkg, NULL,
+		    pkg_script_require_deinstall) != 0) {
+			/* XXX */
+			return -1;
+		}
 
-	if (pkg_run_script(real_pkg, NULL, pkg_script_pre_deinstall) != 0) {
-		/* XXX */
-		return -1;
-	}
+		if (pkg_run_script(real_pkg, NULL, pkg_script_pre_deinstall)
+		    != 0) {
+			/* XXX */
+			return -1;
+		}
 
-	if (pkg_run_script(real_pkg, NULL, pkg_script_deinstall) != 0) {
-		/* XXX */
-		return -1;
+		if (pkg_run_script(real_pkg, NULL, pkg_script_deinstall) != 0) {
+			/* XXX */
+			return -1;
+		}
 	}
 
 	/* Remove the reverse dependencies */
@@ -479,13 +483,16 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts __unus
 		return -1;
 	}
 
-	/** @todo Run +POST-DEINSTALL <pkg-name>/+DEINSTALL <pkg-name> POST-DEINSTALL */
-	if (pkg_run_script(real_pkg, NULL, pkg_script_post_deinstall) != 0) {
-		/* XXX */
-		return -1;
+	if (scripts) {
+		/** @todo Run +POST-DEINSTALL <pkg-name>/+DEINSTALL <pkg-name> POST-DEINSTALL */
+		if (pkg_run_script(real_pkg, NULL, pkg_script_post_deinstall)
+		    != 0) {
+			/* XXX */
+			return -1;
+		}
 	}
 
-	return -1;
+	return 0;
 }
 /**
  * @}
