@@ -55,6 +55,8 @@ typedef enum {
 /** @todo Reorder the struct to remove alignment gaps */
 struct pkgfile {
 	char		*name;
+	char		*cwd;
+	char		*real_name;
 	pkgfile_type	 type;
 	pkgfile_loc	 loc;
 	int		 follow_link;

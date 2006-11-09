@@ -576,26 +576,27 @@ freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  * @return -1 on error
  */
 static int
-freebsd_deinstall_file(struct pkg *pkg __unused, pkg_db_action *pkg_action, void *data __unused,
-	struct pkgfile *file)
+freebsd_deinstall_file(struct pkg *pkg __unused, pkg_db_action *pkg_action,
+	void *data, struct pkgfile *file)
 {
-	const char *file_name;
+	struct pkg_install_data *install_data;
 
+	assert(pkg != NULL);
+	assert(data != NULL);
 	assert(file != NULL);
 
-	file_name = pkgfile_get_name(file);
-	if (file_name[0] == '/') {
-		/* We have an absolute file */
-		pkg_action(PKG_DB_PACKAGE, "Delete %s %s",
-		    pkgfile_get_type_string(file), file_name);
-	} else {
-		char dir[FILENAME_MAX];
+	install_data = data;
 
-		getcwd(dir, FILENAME_MAX);
-		pkg_action(PKG_DB_PACKAGE, "Delete %s %s/%s",
-		    pkgfile_get_type_string(file), dir, file_name);
+	pkgfile_set_cwd(file, install_data->directory);
+	pkg_action(PKG_DB_PACKAGE, "Delete %s %s",
+	    pkgfile_get_type_string(file), pkgfile_get_name(file));
+
+	/* Only remove the files if this is a real deinstall */
+	if (install_data->fake) {
+		return 0;
+	} else {
+		return pkgfile_unlink(file);
 	}
-	return pkgfile_unlink(file);
 }
 /**
  * @brief The do_chdir callback of pkg_install() for the FreeBSD package

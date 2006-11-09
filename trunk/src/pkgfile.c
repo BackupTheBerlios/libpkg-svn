@@ -47,6 +47,7 @@
 static struct pkgfile	*pkgfile_new(const char *, pkgfile_type, pkgfile_loc);
 static int		 pkgfile_open_fd(struct pkgfile *);
 static int		 pkgfile_get_type(struct pkgfile *);
+static const char	*pkgfile_real_name(struct pkgfile *);
 
 static const char *pkgfile_types[] =
 	{ "none", "file", "hardlink", "symlink", "directory" };
@@ -77,6 +78,8 @@ pkgfile_new(const char *filename, pkgfile_type type, pkgfile_loc location)
 		return NULL;
 	}
 
+	file->cwd = NULL;
+	file->real_name = NULL;
 	file->type = type;
 	file->loc = location;
 	file->follow_link = 0;
@@ -144,7 +147,7 @@ pkgfile_get_type(struct pkgfile *file)
 	if (file->type == pkgfile_none) {
 		struct stat sb;
 
-		if (lstat(file->name, &sb) != 0)
+		if (lstat(pkgfile_real_name(file), &sb) != 0)
 			return -1;
 
 		if (S_ISREG(sb.st_mode) ||
@@ -160,6 +163,24 @@ pkgfile_get_type(struct pkgfile *file)
 		}
 	}
 	return 0;
+}
+
+static const char *
+pkgfile_real_name(struct pkgfile *file)
+{
+	assert(file != NULL);
+	assert(file->name != NULL);
+
+	if (file->real_name == NULL) {
+		if (file->name[0] != '/' && file->cwd != NULL) {
+			asprintf(&file->real_name, "%s/%s", file->cwd,
+			    file->name);
+		} else {
+			return file->name;
+		}
+	}
+
+	return file->real_name;
 }
 
 /**
@@ -300,7 +321,7 @@ pkgfile_get_name(struct pkgfile *file)
 {
 	if (file == NULL)
 		return NULL;
-	return file->name;
+	return pkgfile_real_name(file);
 }
 
 /**
@@ -415,6 +436,40 @@ pkgfile_get_type_string(struct pkgfile *file)
 }
 
 /**
+ * @brief Sets the current working directory for file access
+ * @return  0 on success
+ * @return -1 on failure
+ */
+int
+pkgfile_set_cwd(struct pkgfile *file, const char *cwd)
+{
+	if (file == NULL)
+		return -1;
+
+	if (cwd == NULL)
+		return -1;
+
+	/* Force the next call to pkgfile_real_name to rebuild the real name */
+	if (file->real_name != NULL) {
+		free(file->real_name);
+		file->real_name = NULL;
+	}
+
+	if (file->cwd != NULL)
+		free(file->cwd);
+
+	if (cwd == NULL) {
+		file->cwd = NULL;
+	} else {
+		file->cwd = strdup(cwd);
+		if (file->cwd == NULL)
+			return -1;
+	}
+
+	return 0;
+}
+
+/**
  * @brief Sets the expected md5 of a file
  * @return  0 on success
  * @return -1 on error
@@ -500,9 +555,9 @@ pkgfile_unlink(struct pkgfile *file)
 
 	pkgfile_get_type(file);
 	if (file->type == pkgfile_dir) {
-		return rmdir(file->name);
+		return rmdir(pkgfile_real_name(file));
 	} else {
-		return unlink(file->name);
+		return unlink(pkgfile_real_name(file));
 	}
 }
 
@@ -691,7 +746,7 @@ pkgfile_write(struct pkgfile *file)
 			FILE *fd;
 
 			assert(file->fd == NULL);
-			fd = fopen(file->name, "a");
+			fd = fopen(pkgfile_real_name(file), "a");
 			if (fd == NULL) {
 				char *dir_name;
 
@@ -699,9 +754,9 @@ pkgfile_write(struct pkgfile *file)
 				 * The open failed, try running mkdir -p
 				 * on the dir and opening again
 				 */
-				dir_name = dirname(file->name);
+				dir_name = dirname(pkgfile_real_name(file));
 				pkg_dir_build(dir_name, 0);
-				fd = fopen(file->name, "a");
+				fd = fopen(pkgfile_real_name(file), "a");
 				if (fd == NULL) {
 					return -1;
 				}
@@ -752,7 +807,7 @@ pkgfile_write(struct pkgfile *file)
 			if (errno != ENOENT)
 				return -1;
 
-			dir_name = dirname(file->name);
+			dir_name = dirname(pkgfile_real_name(file));
 			pkg_dir_build(dir_name, 0);
 			if (link(file->data, file->name) != 0)
 				return -1;
@@ -764,14 +819,14 @@ pkgfile_write(struct pkgfile *file)
 			if (errno != ENOENT)
 				return -1;
 
-			dir_name = dirname(file->name);
+			dir_name = dirname(pkgfile_real_name(file));
 			pkg_dir_build(dir_name, 0);
 			if (symlink(file->data, file->name) != 0)
 				return -1;
 		}
 		break;
 	case pkgfile_dir:
-		if (pkg_dir_build(file->name, file->mode) != 0)
+		if (pkg_dir_build(pkgfile_real_name(file), file->mode) != 0)
 			return -1;
 		break;
 	}
@@ -791,6 +846,12 @@ pkgfile_free(struct pkgfile *file)
 
 	if (file->name != NULL)
 		free(file->name);
+
+	if (file->cwd != NULL)
+		free(file->cwd);
+
+	if (file->real_name != NULL)
+		free(file->real_name);
 
 	if (file->fd != NULL)
 		fclose(file->fd);
