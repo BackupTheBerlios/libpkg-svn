@@ -65,6 +65,18 @@ int		  pkg_db_delete_package_action(struct pkg_db *, struct pkg *,
 int		  pkg_db_free(struct pkg_db *);
 
 /* Helper functions that use an internal callback for pkg_db_get_installed_match() */
+typedef enum {
+	PKG_DB_MATCH_ALL,
+	PKG_DB_MATCH_EXACT,
+	PKG_DB_MATCH_GLOB,
+	PKG_DB_MATCH_EREGEX,
+	PKG_DB_MATCH_REGEX
+} pkg_db_match_t;
+
+struct pkg	**pkg_db_match_by_type(struct pkg_db *, const char **,
+			pkg_db_match_t);
+struct pkg	**pkg_db_match_all(struct pkg_db *, const char **, int);
+struct pkg	**pkg_db_match_name(struct pkg_db *, const char **, int);
 struct pkg	**pkg_db_match_regex(struct pkg_db *, const char **, int);
 struct pkg	**pkg_db_match_glob(struct pkg_db *, const char **, int);
 
