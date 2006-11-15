@@ -47,11 +47,9 @@ enum pkg_action_level {
 	PKG_DB_INFO,	/* General info */
 	PKG_DB_PACKAGE,	/* Specific info from the package */
 };
-typedef		  void pkg_db_action(enum pkg_action_level, const char *, ...);
+typedef		  int pkg_db_action(enum pkg_action_level, int, const char *,				...);
 
 struct pkg_db	 *pkg_db_open_freebsd(const char *);
-int		  pkg_db_install_pkg(struct pkg_db *, struct pkg *,
-			const char *, int, int);
 int		  pkg_db_install_pkg_action(struct pkg_db *, struct pkg *,
 			const char *, int, int, int, pkg_db_action *);
 int		  pkg_db_is_installed(struct pkg_db *, struct pkg *);
@@ -61,8 +59,6 @@ struct pkg	**pkg_db_get_installed_match(struct pkg_db *, pkg_db_match *,
 struct pkg	**pkg_db_get_installed_match_count(struct pkg_db *,
 			pkg_db_match *, unsigned int, const void *);
 struct pkg	 *pkg_db_get_package(struct pkg_db *, const char *);
-int		  pkg_db_delete_package(struct pkg_db *, struct pkg *, int,
-			int, int);
 int		  pkg_db_delete_package_action(struct pkg_db *, struct pkg *,
 			int, int, int, pkg_db_action *);
 int		  pkg_db_free(struct pkg_db *);
@@ -82,6 +78,8 @@ struct pkg	**pkg_db_match_all(struct pkg_db *, const char **, int);
 struct pkg	**pkg_db_match_name(struct pkg_db *, const char **, int);
 struct pkg	**pkg_db_match_regex(struct pkg_db *, const char **, int);
 struct pkg	**pkg_db_match_glob(struct pkg_db *, const char **, int);
+
+int		  pkg_action_null(enum pkg_action_level, int, const char *,...);
 
 /* Functions to be passed to pkg_db_get_installed_match() */
 int		  pkg_match_all(struct pkg *, const void *);

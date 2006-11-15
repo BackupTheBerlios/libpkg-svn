@@ -109,15 +109,17 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
 }
 
 /**
- * @brief The package action used when NULL is passed in
+ * @brief The package action used when no output is required
+ * @todo Change to follow the interactive flag
  * 
  * This is a function that does nothing.
- * It is used for a pkg_action when no output is required
+ * It can be used for a pkg_action when no output is required
  */
-static void
-pkg_action_null(enum pkg_action_level level __unused, const char *fmt __unused,
-	...)
+int
+pkg_action_null(enum pkg_action_level level __unused, int interactive __unused,
+	const char *fmt __unused, ...)
 {
+	return 0;
 }
 
 /**
@@ -134,22 +136,6 @@ pkg_action_null(enum pkg_action_level level __unused, const char *fmt __unused,
  *
  * @{
  */
-
-/**
- * @brief Installs a package to the database
- * @param db The database to install to
- * @param pkg The package to install
- * @param prefix The prefix to use to install the package or NULL
- * @param reg If true register the package's installation
- * @param scripts If true run the packages scripts
- * @return 0 on success, -1 on error
- */
-int
-pkg_db_install_pkg(struct pkg_db *db, struct pkg *pkg, const char *prefix,
-	int reg, int scripts)
-{
-	return pkg_db_install_pkg_action(db, pkg, prefix, reg, scripts, 0,NULL);
-}
 
 /**
  * @brief Installs a package to the database
@@ -181,7 +167,7 @@ pkg_db_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	}
 
 	if (action == NULL)
-		action = pkg_action_null;
+		return -1;
 
 	return db->pkg_install(db, pkg, prefix, reg, scripts, fake, action);
 }
@@ -273,20 +259,6 @@ pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
 }
 
 /**
- * @brief Removes a package from the package database and filesystem
- * @param db The database to deinstall from
- * @param pkg The package to deinstall
- * @param scripts If true run the package's scripts
- * @param fake If true don't deinstall but run through the procedure
- */
-int
-pkg_db_delete_package(struct pkg_db *db, struct pkg *pkg, int scripts, int fake,
-	int force)
-{
-	return pkg_db_delete_package_action(db, pkg, scripts, fake, force,NULL);
-}
-
-/**
  * @brief Removes a package and it's files from a database
  * @param db The database to deinstall from
  * @param pkg The package to deinstall
@@ -305,7 +277,7 @@ pkg_db_delete_package_action(struct pkg_db *db, struct pkg *pkg, int scripts,
 		return -1;
 
 	if (action == NULL)
-		action = pkg_action_null;
+		return -1;
 
 	if (db->pkg_deinstall != NULL)
 		return db->pkg_deinstall(db, pkg, scripts, fake, force, action);
