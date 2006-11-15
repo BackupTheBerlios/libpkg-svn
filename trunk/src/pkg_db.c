@@ -279,9 +279,10 @@ pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
  * @param fake If true don't deinstall but run through the procedure
  */
 int
-pkg_db_delete_package(struct pkg_db *db, struct pkg *pkg, int scripts, int fake)
+pkg_db_delete_package(struct pkg_db *db, struct pkg *pkg, int scripts, int fake,
+	int force)
 {
-	return pkg_db_delete_package_action(db, pkg, scripts, fake, NULL);
+	return pkg_db_delete_package_action(db, pkg, scripts, fake, force,NULL);
 }
 
 /**
@@ -297,7 +298,7 @@ pkg_db_delete_package(struct pkg_db *db, struct pkg *pkg, int scripts, int fake)
  */
 int
 pkg_db_delete_package_action(struct pkg_db *db, struct pkg *pkg, int scripts,
-	int fake, pkg_db_action *action)
+	int fake, int force, pkg_db_action *action)
 {
 	if (db == NULL || pkg == NULL)
 		return -1;
@@ -306,7 +307,7 @@ pkg_db_delete_package_action(struct pkg_db *db, struct pkg *pkg, int scripts,
 		action = pkg_action_null;
 
 	if (db->pkg_deinstall != NULL)
-		return db->pkg_deinstall(db, pkg, scripts, fake, action);
+		return db->pkg_deinstall(db, pkg, scripts, fake, force, action);
 	return -1;
 }
 

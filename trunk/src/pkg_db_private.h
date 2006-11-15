@@ -38,7 +38,7 @@ typedef struct pkg	 *pkg_db_get_package_callback(struct pkg_db *,
 typedef struct pkg	**pkg_db_get_installed_match_callback(struct pkg_db *,
 				pkg_db_match *, unsigned int, const void *);
 typedef int	pkg_db_deinstall_pkg_callback(struct pkg_db *, struct pkg *,
-			int, int, pkg_db_action *);
+			int, int, int, pkg_db_action *);
 
 
 struct pkg_db	*pkg_db_open(const char *, pkg_db_install_pkg_callback *,
