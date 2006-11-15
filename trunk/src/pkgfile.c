@@ -405,7 +405,7 @@ pkgfile_get_data(struct pkgfile *file)
 	case pkgfile_regular:
 		if (file->loc == pkgfile_loc_disk) {
 			/* Load the file to the data pointer */
-			if (file->data == NULL) {
+			if (file->data == NULL && file->length > 0) {
 				file->data = malloc(file->length);
 				if (file->data == NULL)
 					return NULL;
