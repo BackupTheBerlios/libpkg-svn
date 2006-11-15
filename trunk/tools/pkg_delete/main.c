@@ -160,13 +160,27 @@ pkg_action(enum pkg_action_level level __unused, int interactive,
 {
 	va_list ap;
 
-	/* The interactive flag is ignored for now */
-	assert(interactive == 0);
-
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
 	putchar('\n');
 	va_end(ap);
+
+	if (interactive) {
+		int first, ch;
+
+		/* Read the first character in the string */
+		first = getchar();
+		ch = first;
+
+		/* Read the rest of the line and ignore it */
+		while (ch != '\n' && ch != EOF) {
+			ch = getchar();
+		}
+
+		if (tolower(first) == 'y') {
+			return 1;
+		}
+	}
 
 	return 0;
 }
