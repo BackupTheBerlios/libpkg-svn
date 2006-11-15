@@ -232,7 +232,7 @@ pkg_add(struct pkg_add add)
  * Only used when -v is set
  */
 static void
-pkg_action(int level, const char *fmt, ...)
+pkg_action(enum pkg_action_level level, const char *fmt, ...)
 {
 	va_list ap;
 

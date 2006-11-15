@@ -155,7 +155,7 @@ usage()
  * Only used when -v is set
  */
 static void
-pkg_action(int level __unused, const char *fmt, ...)
+pkg_action(enum pkg_action_level level __unused, const char *fmt, ...)
 {
 	va_list ap;
 
