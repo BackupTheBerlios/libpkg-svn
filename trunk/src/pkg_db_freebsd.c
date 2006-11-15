@@ -205,10 +205,10 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	} else
 		setenv("PKG_PREFIX", prefix, 1);
 
-	pkg_action(PKG_DB_PACKAGE, 0, "Package name is %s", pkg_get_name(pkg));
+	pkg_action(PKG_DB_PACKAGE, "Package name is %s", pkg_get_name(pkg));
 
 	/* Run +REQUIRE */
-	pkg_action(PKG_DB_INFO, 0, "Running ... for %s..",
+	pkg_action(PKG_DB_INFO, "Running ... for %s..",
 	    pkg_get_name(pkg));
 
 	if (!fake) {
@@ -219,7 +219,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	}
 
 	/* Run Pre-install */
-	pkg_action(PKG_DB_INFO, 0, "Running pre-install for %s..",
+	pkg_action(PKG_DB_INFO, "Running pre-install for %s..",
 	    pkg_get_name(pkg));
 
 	if (!fake && scripts)
@@ -238,13 +238,13 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	}
 
 	/* Extract the +MTREE */
-	pkg_action(PKG_DB_INFO, 0, "Running mtree for %s..", pkg_get_name(pkg));
+	pkg_action(PKG_DB_INFO, "Running mtree for %s..", pkg_get_name(pkg));
 
 	if (!fake)
 		pkg_run_script(pkg, prefix, pkg_script_mtree);
 
 	/* Run post-install */
-	pkg_action(PKG_DB_INFO, 0, "Running post-install for %s..",
+	pkg_action(PKG_DB_INFO, "Running post-install for %s..",
 	    pkg_get_name(pkg));
 
 	if (!fake && scripts)
@@ -397,7 +397,7 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 	real_pkg = freebsd_get_package(db, pkg_get_name(the_pkg));
 	/* Check if the package is installed */
 	if (real_pkg == NULL) {
-		pkg_action(PKG_DB_INFO, 0, "No such package '%s' installed",
+		pkg_action(PKG_DB_INFO, "No such package '%s' installed",
 		    pkg_get_name(the_pkg));
 		return -1;
 	}
@@ -414,7 +414,7 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 		buf_size = 1024;
 		buf = malloc(buf_size);
 		if (buf == NULL) {
-			pkg_action(PKG_DB_INFO, 0,
+			pkg_action(PKG_DB_INFO,
 			    "package '%s' is required by other packages and "
 			    "may not be deinstalled however an error occured "
 			    "while retrieving the list of packages",
@@ -440,12 +440,12 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 		 * message when the force flag is set
 		 */
 		if (force) {
-			pkg_action(PKG_DB_INFO, 0,
+			pkg_action(PKG_DB_INFO,
 			    "package '%s' is required by these other packages "
 			    "and may not be deinstalled (but I'll delete it "
 			    "anyway):\n%s", pkg_get_name(real_pkg), buf);
 		} else {
-			pkg_action(PKG_DB_INFO, 0,
+			pkg_action(PKG_DB_INFO,
 			    "package '%s' is required by these other packages "
 			    "and may not be deinstalled:\n%s",
 			    pkg_get_name(real_pkg), buf);
@@ -485,7 +485,7 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 		for (pos = 0; deps[pos] != NULL; pos++) {
 			struct pkgfile *file;
 
-			pkg_action(PKG_DB_INFO, 0, "Trying to remove "
+			pkg_action(PKG_DB_INFO, "Trying to remove "
 			    "dependency on package '%s' with '%s' origin.",
 			    pkg_get_name(deps[pos]), pkg_get_origin(deps[pos]));
 			if (!fake) {
@@ -571,9 +571,9 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	pkg_remove_extra_slashes(install_data->directory);
 
 	if (strcmp(dir, ".") == 0) {
-		pkg_action(PKG_DB_PACKAGE, 0, "Change working directory to .");
+		pkg_action(PKG_DB_PACKAGE, "Change working directory to .");
 	} else {
-		pkg_action(PKG_DB_PACKAGE, 0, "Change working directory to %s",
+		pkg_action(PKG_DB_PACKAGE, "Change working directory to %s",
 		    install_data->directory);
 	}
 
@@ -606,7 +606,7 @@ freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	snprintf(install_data->last_file, FILENAME_MAX, "%s",
 	    pkgfile_get_name(file));
 
-	pkg_action(PKG_DB_PACKAGE, 0, "%s/%s", install_data->directory,
+	pkg_action(PKG_DB_PACKAGE, "%s/%s", install_data->directory,
 	    pkgfile_get_name(file));
 	if (!install_data->fake)
 		return pkgfile_write(file);
@@ -632,7 +632,7 @@ freebsd_deinstall_file(struct pkg *pkg __unused, pkg_db_action *pkg_action,
 	install_data = data;
 
 	pkgfile_set_cwd(file, install_data->directory);
-	pkg_action(PKG_DB_PACKAGE, 0, "Delete %s %s",
+	pkg_action(PKG_DB_PACKAGE, "Delete %s %s",
 	    pkgfile_get_type_string(file), pkgfile_get_name(file));
 
 	/* Only remove the files if this is a real deinstall */
@@ -664,7 +664,7 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	freebsd_format_cmd(the_cmd, FILENAME_MAX, cmd, install_data->directory,
 	    install_data->last_file);
 
-	pkg_action(PKG_DB_PACKAGE, 0, "Execute '%s'", the_cmd);
+	pkg_action(PKG_DB_PACKAGE, "Execute '%s'", the_cmd);
 	if (!install_data->fake) {
 		return pkg_exec(the_cmd);
 	}
@@ -695,7 +695,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	assert(install_data->db);
 	db = install_data->db;
 
-	pkg_action(PKG_DB_INFO, 0,
+	pkg_action(PKG_DB_INFO,
 	    "Attempting to record package into " DB_LOCATION "/%s..",
 	    pkg_get_name(pkg));
 	for (pos = 0; control[pos] != NULL; pos++) {
@@ -723,7 +723,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	}
 	pkg_list_free(deps);
 	
-	pkg_action(PKG_DB_INFO, 0, "Package %s registered in %s" DB_LOCATION
+	pkg_action(PKG_DB_INFO, "Package %s registered in %s" DB_LOCATION
 	    "/%s", pkg_get_name(pkg), db->db_base, pkg_get_name(pkg));
 	return -1;
 }

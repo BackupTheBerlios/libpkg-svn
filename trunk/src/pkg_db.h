@@ -47,7 +47,7 @@ enum pkg_action_level {
 	PKG_DB_INFO,	/* General info */
 	PKG_DB_PACKAGE,	/* Specific info from the package */
 };
-typedef		  int pkg_db_action(enum pkg_action_level, int, const char *,				...);
+typedef		  int pkg_db_action(enum pkg_action_level, const char *, ...);
 
 struct pkg_db	 *pkg_db_open_freebsd(const char *);
 int		  pkg_db_install_pkg_action(struct pkg_db *, struct pkg *,
