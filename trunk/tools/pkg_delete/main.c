@@ -72,32 +72,32 @@ main (int argc, char *argv[])
 			break;
 		case 'd':
 			delete.flags |= remove_empty_dirs_flag;
-			assert(0);
+			errx(1, "Unsupported argument");
 			break;
 		case 'D':
 			delete.flags |= no_run_script_flag;
 			break;
 		case 'f':
 			delete.flags |= force_flag;
-			assert(0);
+			errx(1, "Unsupported argument");
 			break;
 		case 'G':
 			delete.match_type = PKG_DB_MATCH_EXACT;
 			break;
 		case 'i':
 			delete.flags |= interactive_flag;
-			assert(0);
+			errx(1, "Unsupported argument");
 			break;
 		case 'n':
 			delete.flags |= no_run_flag;
 			break;
 		case 'p':
 			delete.prefix = optarg;
-			assert(0);
+			errx(1, "Unsupported argument");
 			break;
 		case 'r':
 			delete.flags |= recursive_flag;
-			assert(0);
+			errx(1, "Unsupported argument");
 			break;
 		case 'v':
 			delete.flags |= verbosity_flag;
