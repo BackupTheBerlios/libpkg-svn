@@ -392,9 +392,6 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 	assert(db != NULL);
 	assert(the_pkg != NULL);
 
-	/** @todo listen to the force flag correctly */
-	assert(force == 0);
-
 	/* Get the real package. The one supplyed may be an empty one */
 	/** @todo Check if the package suplyed is a valid package or not */
 	real_pkg = freebsd_get_package(db, pkg_get_name(the_pkg));
@@ -437,28 +434,44 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 			strlcat(buf, "\n", buf_size);
 			buf_used += len + 1;
 		}
-		pkg_action(PKG_DB_INFO,
-		    "package '%s' is required by these other packages "
-		    "and may not be deinstalled:\n%s",
-		    pkg_get_name(real_pkg), buf);
+
+		/*
+		 * There is a sligntly different
+		 * message when the force flag is set
+		 */
+		if (force) {
+			pkg_action(PKG_DB_INFO,
+			    "package '%s' is required by these other packages "
+			    "and may not be deinstalled (but I'll delete it "
+			    "anyway):\n%s", pkg_get_name(real_pkg), buf);
+		} else {
+			pkg_action(PKG_DB_INFO,
+			    "package '%s' is required by these other packages "
+			    "and may not be deinstalled:\n%s",
+			    pkg_get_name(real_pkg), buf);
+		}
 		free(buf);
-		return -1;
+
+		/* Only return when the not being forced to */
+		if (!force)
+			return -1;
 	}
 
 	if (!fake && scripts) {
 		if (pkg_run_script(real_pkg, NULL,
-		    pkg_script_require_deinstall) != 0) {
+		    pkg_script_require_deinstall) != 0 && !force) {
 			/* XXX */
 			return -1;
 		}
 
 		if (pkg_run_script(real_pkg, NULL, pkg_script_pre_deinstall)
-		    != 0) {
+		    != 0  && !force) {
 			/* XXX */
 			return -1;
 		}
 
-		if (pkg_run_script(real_pkg, NULL, pkg_script_deinstall) != 0) {
+		if (pkg_run_script(real_pkg, NULL, pkg_script_deinstall) != 0
+		    && !force) {
 			/* XXX */
 			return -1;
 		}
@@ -492,14 +505,14 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 	deinstall_data.directory[0] = '\0';
 	if (pkg_deinstall(real_pkg, pkg_action, &deinstall_data,
 	    freebsd_do_chdir, freebsd_deinstall_file,
-	    freebsd_do_exec, freebsd_deregister) != 0) {
+	    freebsd_do_exec, freebsd_deregister) != 0 && !force) {
 		return -1;
 	}
 
 	if (!fake && scripts) {
 		/** @todo Run +POST-DEINSTALL <pkg-name>/+DEINSTALL <pkg-name> POST-DEINSTALL */
 		if (pkg_run_script(real_pkg, NULL, pkg_script_post_deinstall)
-		    != 0) {
+		    != 0 && !force) {
 			/* XXX */
 			return -1;
 		}
