@@ -231,10 +231,13 @@ pkg_add(struct pkg_add add)
  * Print the message from fmt
  * Only used when -v is set
  */
-static void
-pkg_action(enum pkg_action_level level, const char *fmt, ...)
+static int
+pkg_action(enum pkg_action_level level, int interactive, const char *fmt, ...)
 {
 	va_list ap;
+
+	/* The interactive flag is ignored for now */
+	assert(interactive == 0);
 
 	va_start(ap, fmt);
 	if (level == PKG_DB_PACKAGE)
@@ -242,6 +245,8 @@ pkg_action(enum pkg_action_level level, const char *fmt, ...)
 	vprintf(fmt, ap);
 	putchar('\n');
 	va_end(ap);
+
+	return 0;
 }
 
 /*
@@ -252,7 +257,8 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		const char *base_prefix, const char *prefix, int flags)
 {
 	unsigned int i;
-	int ret;
+	int ret, run, scripts, record, verbose;
+	pkg_db_action *action;
 	struct pkg **deps;
 	struct pkg_list *cur;
 
@@ -275,6 +281,25 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 	/* Don't install a package that has been registered in the db */
 	if (pkg_db_is_installed(db, pkg) == 0) {
 		return 0;
+	}
+
+	record = ((flags & no_record_install_flag) != no_record_install_flag);
+	scripts = ((flags & no_run_script_flag) == no_run_script_flag);
+	run = ((flags & no_run_flag) != no_run_flag);
+	verbose = (flags & verbosity_flag) == verbosity_flag;
+
+	/*
+	 * Deside which pkg_db_action to use. If neither is
+	 * set then we won't be installing any packages
+	 * (ie. nothing will happen with !verbose and !run)
+	 */
+	action = NULL;
+	if (verbose) {
+		/* Use our pkg_db_action */
+		action = pkg_action;
+	} else if (run) {
+		/* Use the no output pkg_action */
+		action = pkg_action_null;
 	}
 
 	/* Get the package's dependencies */
@@ -304,17 +329,13 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 
 	ret = -1;
 	/* Install the package */
-	if ((flags & verbosity_flag) == verbosity_flag) {
-		/* Install with a verbose output */
-		printf("extract: Package name is %s\n", pkg_get_name(pkg));
-		ret = pkg_db_install_pkg_action(db, pkg, base_prefix,
-		    ((flags & no_record_install_flag)!= no_record_install_flag),
-		    ((flags & no_run_script_flag) == no_run_script_flag),
-		    ((flags & no_run_flag) != no_run_flag), pkg_action);
-	} else if ((flags & no_run_flag) == 0) {
-		ret = pkg_db_install_pkg(db, pkg, base_prefix,
-		    ((flags & no_record_install_flag)!=no_record_install_flag),
-		    ((flags & no_run_script_flag) != no_run_script_flag));
+	if (action != NULL) {
+		if (verbose) {
+			printf("extract: Package name is %s\n",
+			    pkg_get_name(pkg));
+		}
+		ret = pkg_db_install_pkg_action(db, pkg, base_prefix, record,
+		    scripts, run, action);
 	}
 	/*
 	 * Insert the installed package in a linked

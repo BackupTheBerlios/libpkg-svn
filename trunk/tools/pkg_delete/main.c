@@ -154,15 +154,21 @@ usage()
  * Print the message from fmt
  * Only used when -v is set
  */
-static void
-pkg_action(enum pkg_action_level level __unused, const char *fmt, ...)
+static int
+pkg_action(enum pkg_action_level level __unused, int interactive,
+	const char *fmt, ...)
 {
 	va_list ap;
+
+	/* The interactive flag is ignored for now */
+	assert(interactive == 0);
 
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
 	putchar('\n');
 	va_end(ap);
+
+	return 0;
 }
 
 /*
