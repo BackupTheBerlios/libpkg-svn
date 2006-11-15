@@ -115,11 +115,10 @@ pkg_db_open(const char *base, pkg_db_install_pkg_callback *install_pkg,
  * This is a function that does nothing.
  * It can be used for a pkg_action when no output is required
  */
-int
-pkg_action_null(enum pkg_action_level level __unused, int interactive __unused,
-	const char *fmt __unused, ...)
+void
+pkg_action_null(enum pkg_action_level level __unused, const char *fmt __unused,
+	...)
 {
-	return 0;
 }
 
 /**

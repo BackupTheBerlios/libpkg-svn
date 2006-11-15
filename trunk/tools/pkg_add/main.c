@@ -231,7 +231,7 @@ pkg_add(struct pkg_add add)
  * Print the message from fmt
  * Only used when -v is set
  */
-static int
+static void
 pkg_action(enum pkg_action_level level, const char *fmt, ...)
 {
 	va_list ap;
@@ -242,8 +242,6 @@ pkg_action(enum pkg_action_level level, const char *fmt, ...)
 	vprintf(fmt, ap);
 	putchar('\n');
 	va_end(ap);
-
-	return 0;
 }
 
 /*

@@ -47,7 +47,7 @@ enum pkg_action_level {
 	PKG_DB_INFO,	/* General info */
 	PKG_DB_PACKAGE,	/* Specific info from the package */
 };
-typedef		  int pkg_db_action(enum pkg_action_level, const char *, ...);
+typedef		  void pkg_db_action(enum pkg_action_level, const char *, ...);
 
 struct pkg_db	 *pkg_db_open_freebsd(const char *);
 int		  pkg_db_install_pkg_action(struct pkg_db *, struct pkg *,
@@ -79,7 +79,7 @@ struct pkg	**pkg_db_match_name(struct pkg_db *, const char **, int);
 struct pkg	**pkg_db_match_regex(struct pkg_db *, const char **, int);
 struct pkg	**pkg_db_match_glob(struct pkg_db *, const char **, int);
 
-int		  pkg_action_null(enum pkg_action_level, int, const char *,...);
+void		  pkg_action_null(enum pkg_action_level, const char *, ...);
 
 /* Functions to be passed to pkg_db_get_installed_match() */
 int		  pkg_match_all(struct pkg *, const void *);
