@@ -79,7 +79,6 @@ main (int argc, char *argv[])
 			break;
 		case 'f':
 			delete.flags |= force_flag;
-			errx(1, "Unsupported argument");
 			break;
 		case 'G':
 			delete.match_type = PKG_DB_MATCH_EXACT;
@@ -179,8 +178,12 @@ pkg_delete(struct pkg_delete delete)
 	assert(delete.pkgs != NULL);
 
 	fake = ((delete.flags & no_run_flag) == no_run_flag);
+	/*
+	 * The scripts flag logic is reversed as
+	 * it is set for no scripts to be run
+	 */
 	scripts = !((delete.flags & no_run_script_flag) == no_run_script_flag);
-	force = 0;
+	force = ((delete.flags & force_flag) == force_flag);
 	action = NULL;
 	if ((delete.flags & verbosity_flag) == verbosity_flag || fake)
 		action = pkg_action;
