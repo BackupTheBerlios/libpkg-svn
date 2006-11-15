@@ -232,12 +232,9 @@ pkg_add(struct pkg_add add)
  * Only used when -v is set
  */
 static int
-pkg_action(enum pkg_action_level level, int interactive, const char *fmt, ...)
+pkg_action(enum pkg_action_level level, const char *fmt, ...)
 {
 	va_list ap;
-
-	/* The interactive flag is ignored for now */
-	assert(interactive == 0);
 
 	va_start(ap, fmt);
 	if (level == PKG_DB_PACKAGE)

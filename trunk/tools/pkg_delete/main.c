@@ -85,7 +85,6 @@ main (int argc, char *argv[])
 			break;
 		case 'i':
 			delete.flags |= interactive_flag;
-			errx(1, "Unsupported argument");
 			break;
 		case 'n':
 			delete.flags |= no_run_flag;
@@ -154,9 +153,8 @@ usage()
  * Print the message from fmt
  * Only used when -v is set
  */
-static int
-pkg_action(enum pkg_action_level level __unused, int interactive,
-	const char *fmt, ...)
+static void
+pkg_action(enum pkg_action_level level __unused, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -164,25 +162,6 @@ pkg_action(enum pkg_action_level level __unused, int interactive,
 	vprintf(fmt, ap);
 	putchar('\n');
 	va_end(ap);
-
-	if (interactive) {
-		int first, ch;
-
-		/* Read the first character in the string */
-		first = getchar();
-		ch = first;
-
-		/* Read the rest of the line and ignore it */
-		while (ch != '\n' && ch != EOF) {
-			ch = getchar();
-		}
-
-		if (tolower(first) == 'y') {
-			return 1;
-		}
-	}
-
-	return 0;
 }
 
 /*
@@ -209,6 +188,10 @@ pkg_delete(struct pkg_delete delete)
 		action = pkg_action;
 
 	for (i = 0; delete.pkgs[i] != NULL; i++) {
+		if (((delete.flags & interactive_flag) == interactive_flag)) {
+			fprintf(stderr, "delete %s? ",
+			    pkg_get_name(delete.pkgs[i]));
+		}
 		pkg_db_delete_package_action(delete.db, delete.pkgs[i],
 		    scripts, fake, force, action);
 	}
