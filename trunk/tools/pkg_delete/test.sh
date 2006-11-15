@@ -10,7 +10,7 @@ do_test() {
 	while [ $i -le 4 ] ; do
 		chroot ${BASE_DIR}/base /run.sh ${PACKAGE} ${i} > ${RUN}.stdout.${i} 2> ${RUN}.stderr.${i}
 		# Get the mtree file to use to compare the filesystems
-		mtree -c -p ${BASE_DIR}/base | grep -v "^\#[[:space:]]*date:" | sed "s/time=[^ ]*//" > ${RUN}.mtree.${i}
+		mtree -c -p ${BASE_DIR}/base | grep -v "^\#[[:space:]]*date:" | sed "s/time=[^ ]*//" | grep -v "^[ ]*pkg_delete" > ${RUN}.mtree.${i}
 		# Create a tarball of the important dir's to compare later
 		rm ${BASE_DIR}/${RUN}-${i}.tar
 		tar -cf ${BASE_DIR}/${RUN}-${i}.tar ${BASE_DIR}/base/var/db/pkg ${BASE_DIR}/base/usr/local
