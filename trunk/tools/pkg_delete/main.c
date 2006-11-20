@@ -95,7 +95,6 @@ main (int argc, char *argv[])
 			break;
 		case 'r':
 			delete.flags |= recursive_flag;
-			errx(1, "Unsupported argument");
 			break;
 		case 'v':
 			delete.flags |= verbosity_flag;
@@ -183,17 +182,51 @@ pkg_delete(struct pkg_delete delete)
 	 */
 	scripts = !((delete.flags & no_run_script_flag) == no_run_script_flag);
 	force = ((delete.flags & force_flag) == force_flag);
-	action = NULL;
+	action = pkg_action_null;
 	if ((delete.flags & verbosity_flag) == verbosity_flag || fake)
 		action = pkg_action;
 
 	for (i = 0; delete.pkgs[i] != NULL; i++) {
+		if (pkg_db_is_installed(delete.db, delete.pkgs[i]) != 0)
+			continue;
+
+		/* Delete the packages that depend on this package */
+		if ((delete.flags & recursive_flag) == recursive_flag) {
+			struct pkg *real_pkg;
+			struct pkg **deps;
+			int ret = 0;
+
+			/* Find the packages to delete */
+			real_pkg = pkg_db_get_package(delete.db,
+			    pkg_get_name(delete.pkgs[i]));
+			deps = pkg_get_reverse_dependencies(real_pkg);
+
+			/* Copy the packages and deinstall them */
+			if (deps != NULL && deps[0] != NULL) {
+				struct pkg_delete new_delete;
+
+				memcpy(&new_delete, &delete,
+				    sizeof(struct pkg_delete));
+
+				new_delete.pkgs = deps;
+				if (pkg_delete(new_delete) != 0) {
+					ret = 1;
+					break;
+				}
+			}
+			pkg_free(real_pkg);
+
+			/* The delete failed so return a failure */
+			if (ret != 0)
+				return ret;
+		}
 		if (((delete.flags & interactive_flag) == interactive_flag)) {
 			fprintf(stderr, "delete %s? ",
 			    pkg_get_name(delete.pkgs[i]));
 		}
-		pkg_db_delete_package_action(delete.db, delete.pkgs[i],
-		    scripts, fake, force, action);
+		if (pkg_db_delete_package_action(delete.db, delete.pkgs[i],
+		    scripts, fake, force, action) != 0)
+			return 1;
 	}
-	return 1;
+	return 0;
 }
