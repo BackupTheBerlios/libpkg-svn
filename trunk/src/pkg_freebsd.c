@@ -904,21 +904,24 @@ freebsd_get_rdeps(struct pkg *pkg)
 	}
 
 		data = pkgfile_get_data(control[pos]);
-		str1 = data;
-		while ((str2 = strchr(str1, '\n')) != NULL) {
-			unsigned int len = str2-str1;
-			strncpy(pkg_name, str1, len);
-			pkg_name[len] = '\0';
-			addPkg(pkg_name);
-			str1 = str2+1;
-		}
+		if (data != NULL) {
+			str1 = data;
+			/* @todo Write comment on what this does */
+			while ((str2 = strchr(str1, '\n')) != NULL) {
+				unsigned int len = str2-str1;
+				strncpy(pkg_name, str1, len);
+				pkg_name[len] = '\0';
+				addPkg(pkg_name);
+				str1 = str2+1;
+			}
 
-		size = pkgfile_get_size(control[pos]);
-		if ((unsigned int)(str1 - data) != size) {
-			unsigned int len = data + size - str1;
-			strncpy(pkg_name, str1, len);
-			pkg_name[len] = '\0';
-			addPkg(pkg_name);
+			size = pkgfile_get_size(control[pos]);
+			if ((unsigned int)(str1 - data) != size) {
+				unsigned int len = data + size - str1;
+				strncpy(pkg_name, str1, len);
+				pkg_name[len] = '\0';
+				addPkg(pkg_name);
+			}
 		}
 #undef addPkg
 		return ret;
