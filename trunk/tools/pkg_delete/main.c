@@ -170,7 +170,7 @@ static int
 pkg_delete(struct pkg_delete delete)
 {
 	pkg_db_action *action;
-	int i, fake, scripts, force;
+	int i, fake, scripts, force, empty_dirs;
 
 	assert(delete.db != NULL);
 	assert(delete.pkgs != NULL);
@@ -182,6 +182,8 @@ pkg_delete(struct pkg_delete delete)
 	 */
 	scripts = !((delete.flags & no_run_script_flag) == no_run_script_flag);
 	force = ((delete.flags & force_flag) == force_flag);
+	empty_dirs = ((delete.flags & remove_empty_dirs_flag) ==
+	    remove_empty_dirs_flag);
 	action = pkg_action_null;
 	if ((delete.flags & verbosity_flag) == verbosity_flag || fake)
 		action = pkg_action;
@@ -225,7 +227,7 @@ pkg_delete(struct pkg_delete delete)
 			    pkg_get_name(delete.pkgs[i]));
 		}
 		if (pkg_db_delete_package_action(delete.db, delete.pkgs[i],
-		    scripts, fake, force, action) != 0)
+		    scripts, fake, force, empty_dirs, action) != 0)
 			return 1;
 	}
 	return 0;

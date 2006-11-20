@@ -263,6 +263,8 @@ pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
  * @param pkg The package to deinstall
  * @param scripts If true run the package's scripts
  * @param fake If true don't deinstall but run through the removal procedure
+ * @param force Force the removal even if parts fail
+ * @param clean_dir Remove any empty directories when removing files
  * @param action A callback that is used to inform the user the status
  *     of the installation
  * @return  0 on success
@@ -270,7 +272,7 @@ pkg_db_get_package(struct pkg_db *db, const char *pkg_name)
  */
 int
 pkg_db_delete_package_action(struct pkg_db *db, struct pkg *pkg, int scripts,
-	int fake, int force, pkg_db_action *action)
+	int fake, int force, int clean_dirs, pkg_db_action *action)
 {
 	if (db == NULL || pkg == NULL)
 		return -1;
@@ -279,7 +281,8 @@ pkg_db_delete_package_action(struct pkg_db *db, struct pkg *pkg, int scripts,
 		return -1;
 
 	if (db->pkg_deinstall != NULL)
-		return db->pkg_deinstall(db, pkg, scripts, fake, force, action);
+		return db->pkg_deinstall(db, pkg, scripts, fake, force,
+		    clean_dirs, action);
 	return -1;
 }
 

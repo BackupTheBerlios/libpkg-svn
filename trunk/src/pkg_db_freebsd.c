@@ -78,7 +78,7 @@ static struct pkg	**freebsd_get_installed_match(struct pkg_db *,
 				pkg_db_match *, unsigned int, const void *);
 static struct pkg	 *freebsd_get_package(struct pkg_db *, const char *);
 static int		  freebsd_deinstall_pkg(struct pkg_db *, struct pkg *,
-				int, int, int, pkg_db_action *);
+				int, int, int, int, pkg_db_action *);
 
 /* pkg_(install|deinstall) callbacks */
 static int	freebsd_do_chdir(struct pkg *, pkg_db_action *, void *,
@@ -383,7 +383,7 @@ freebsd_get_package(struct pkg_db *db, const char *pkg_name)
  */
 static int
 freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
-	int fake, int force, pkg_db_action *pkg_action)
+	int fake, int force, int clean_dirs, pkg_db_action *pkg_action)
 {
 	struct pkg_install_data deinstall_data;
 	struct pkg *real_pkg;
@@ -391,6 +391,8 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 
 	assert(db != NULL);
 	assert(the_pkg != NULL);
+
+	assert(clean_dirs == 0);
 
 	/* Get the real package. The one supplyed may be an empty one */
 	/** @todo Check if the package suplyed is a valid package or not */
