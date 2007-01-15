@@ -34,8 +34,10 @@ __FBSDID("$FreeBSD$");
 #include <sys/stat.h>
 
 #include <assert.h>
+#include <dirent.h>
 #include <err.h>
 #include <errno.h>
+#include <libgen.h>
 #include <md5.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -107,6 +109,36 @@ pkg_dir_build(const char *path, mode_t mode)
 	}
 	free(str);
 	return (retval);
+}
+
+/**
+ * @brief Walks from the a child directory to the root removing all empty directories
+ * @param child The directory to start from
+ * @return  0 on success
+ * @return -1 on failure
+ */
+int
+pkg_dir_clean(const char *child)
+{
+	char cur_dir[MAXPATHLEN];
+
+	assert(child[0] == '/');
+
+	strlcpy(cur_dir, child, MAXPATHLEN);
+
+	/* Remove all empty directories */
+	errno = 0;
+	while(strcmp(cur_dir, "/") != 0) {
+		if (rmdir(cur_dir) != 0)
+			break;
+
+		/* Move to the parent directory */
+		strlcpy(cur_dir, dirname(cur_dir), MAXPATHLEN);
+	}
+	if (errno != 0 && errno != ENOTEMPTY)
+		return -1;
+
+	return 0;
 }
 
 /**
