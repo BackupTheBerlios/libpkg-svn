@@ -210,12 +210,12 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	pkg_action(PKG_DB_PACKAGE, "Package name is %s", pkg_get_name(pkg));
 
 	/* Run +REQUIRE */
-	pkg_action(PKG_DB_INFO, "Running ... for %s..",
-	    pkg_get_name(pkg));
+	pkg_action(PKG_DB_INFO, "Running ... for %s..", pkg_get_name(pkg));
 
 	if (!fake) {
 		/** @todo Check if the force flag is set */
 		if (pkg_run_script(pkg, prefix, pkg_script_require) != 0) {
+			chdir(cwd);
 			return -1;
 		}
 	}
@@ -236,6 +236,7 @@ freebsd_install_pkg_action(struct pkg_db *db, struct pkg *pkg,
 	if (pkg_install(pkg, prefix, reg, pkg_action, &install_data,
 	    freebsd_do_chdir, freebsd_install_file, freebsd_do_exec,
 	    freebsd_register) != 0) {
+		chdir(cwd);
 		return -1;
 	}
 
@@ -714,8 +715,12 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	    real_dir);
 
 	pkg_dir_build(real_dir, 0755);
+	/*
+	 * Install the control file's. Use pkg_action_null
+	 * as we dont need any output from this.
+	 */
 	for (pos = 0; control[pos] != NULL; pos++) {
-		freebsd_install_file(pkg, pkg_action, data, control[pos]);
+		freebsd_install_file(pkg, pkg_action_null, data, control[pos]);
 	}
 
 	/* Register reverse dependency */
@@ -724,6 +729,10 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		char required_by[FILENAME_MAX];
 		const char *name;
 		FILE *fd;
+
+		pkg_action(PKG_DB_INFO, "Trying to record dependency on "
+		    "package '%s' with '%s' origin.", pkg_get_name(pkg),
+		    pkg_get_origin(deps[pos]));
 
 		snprintf(required_by, FILENAME_MAX, "%s" DB_LOCATION
 		    "/%s/+REQUIRED_BY", db->db_base, pkg_get_name(deps[pos]));
