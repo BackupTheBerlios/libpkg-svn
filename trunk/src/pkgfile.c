@@ -141,7 +141,10 @@ static int
 pkgfile_get_type(struct pkgfile *file)
 {
 	assert(file != NULL);
-	assert(file->loc == pkgfile_loc_disk);
+
+	/* If this is a file from a buffer it will already have a type */
+	if (file->loc != pkgfile_loc_disk)
+		return 0;
 
 	/* Find the file type */
 	if (file->type == pkgfile_none) {
