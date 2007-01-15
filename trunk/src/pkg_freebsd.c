@@ -67,7 +67,7 @@ static int		  freebsd_deinstall(struct pkg *,
 				pkg_db_exec *, pkg_db_register *);
 static struct pkg	**freebsd_get_deps(struct pkg *);
 static struct pkg	**freebsd_get_rdeps(struct pkg *);
-static int		  freebsd_run_script(struct pkg *, const char *,
+static int		  freebsd_run_script(struct pkg *,const char *,
 				pkg_script);
 static int		  freebsd_free(struct pkg *);
 
@@ -456,7 +456,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	struct pkgfile **control;
 	struct pkgfile *contents_file;
 	struct pkg_freebsd_contents *contents;
-	const char *file_data;
+	const char *file_data, *cwd;
 	int chdir_first = 1;
 	int only_control_files = 0;
 
@@ -469,6 +469,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 
 	ret = -1;
 	contents = NULL;
+	cwd = NULL;
 
 	/* Get the control files from the package */
 	control = pkg_get_control_files(pkg);
@@ -531,8 +532,10 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 					dir = contents->lines[pos].data;
 				chdir_first = 0;
 			}
-			if (dir != NULL)
+			if (dir != NULL) {
+				cwd = dir;
 				db_chdir(pkg, pkg_action, data, dir);
+			}
 
 
 			break;
@@ -570,6 +573,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 				pkgfile_set_checksum_md5(file, p);
 				if (pkgfile_compare_checksum_md5(file) == 0) {
 					if (!ignore) {
+						pkgfile_set_cwd(file, cwd);
 						install_file(pkg, pkg_action,
 						    data, file);
 					}

@@ -35,6 +35,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +51,7 @@
 
 struct pkg_install_data {
 	int fake;
+	int empty_dirs;		/* Used in the removal of files */
 	struct pkg_db *db;
 	const char *last_dir;
 	char last_file[FILENAME_MAX];
@@ -291,7 +293,7 @@ freebsd_is_installed(struct pkg_db *db, struct pkg *pkg)
 	if (pkg_get_origin(pkg) != NULL) {
 		pkgs = freebsd_get_installed_match(db, pkg_match_by_origin,
 		    0, (const void *)pkg_get_origin(pkg));
-		if (pkgs[0] != NULL)
+		if (pkgs != NULL && pkgs[0] != NULL)
 			is_installed = 0;
 		pkg_list_free(pkgs);
 	}
@@ -391,8 +393,6 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 
 	assert(db != NULL);
 	assert(the_pkg != NULL);
-
-	assert(clean_dirs == 0);
 
 	/* Get the real package. The one supplyed may be an empty one */
 	/** @todo Check if the package suplyed is a valid package or not */
@@ -502,6 +502,7 @@ freebsd_deinstall_pkg(struct pkg_db *db, struct pkg *the_pkg, int scripts,
 	/* Do the deinstall */
 	deinstall_data.db = db;
 	deinstall_data.fake = fake;
+	deinstall_data.empty_dirs = clean_dirs;
 	deinstall_data.last_dir = NULL;
 	deinstall_data.last_file[0] = '\0';
 	deinstall_data.directory[0] = '\0';
@@ -608,8 +609,7 @@ freebsd_install_file(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	snprintf(install_data->last_file, FILENAME_MAX, "%s",
 	    pkgfile_get_name(file));
 
-	pkg_action(PKG_DB_PACKAGE, "%s/%s", install_data->directory,
-	    pkgfile_get_name(file));
+	pkg_action(PKG_DB_PACKAGE, "%s", pkgfile_get_name(file));
 	if (!install_data->fake)
 		return pkgfile_write(file);
 	return 0;
@@ -641,11 +641,16 @@ freebsd_deinstall_file(struct pkg *pkg __unused, pkg_db_action *pkg_action,
 	if (install_data->fake) {
 		return 0;
 	} else {
-		return pkgfile_unlink(file);
+		if (pkgfile_unlink(file) != 0)
+			return -1;
+		if (install_data->empty_dirs)
+			if (pkg_dir_clean(dirname(pkgfile_get_name(file))) != 0)
+				return -1;
+		return 0;
 	}
 }
 /**
- * @brief The do_chdir callback of pkg_install() for the FreeBSD package
+ * @brief The db_exec callback of pkg_install() for the FreeBSD package
  *     database
  * @return 0 on success or -1 on error
  */
@@ -687,6 +692,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	struct pkg_install_data *install_data;
 	struct pkg_db *db;
 	struct pkg **deps;
+	char dir[PATH_MAX], *real_dir;
 
 	assert(pkg != NULL);
 	assert(pkg_action != NULL);
@@ -697,9 +703,17 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	assert(install_data->db);
 	db = install_data->db;
 
-	pkg_action(PKG_DB_INFO,
-	    "Attempting to record package into " DB_LOCATION "/%s..",
+	snprintf(dir, PATH_MAX, DB_LOCATION "%s/%s", db->db_base,
 	    pkg_get_name(pkg));
+
+	real_dir = pkg_abspath(dir);
+	if (real_dir == NULL)
+		real_dir = dir;
+
+	pkg_action(PKG_DB_INFO, "Attempting to record package into %s..",
+	    real_dir);
+
+	pkg_dir_build(real_dir, 0755);
 	for (pos = 0; control[pos] != NULL; pos++) {
 		freebsd_install_file(pkg, pkg_action, data, control[pos]);
 	}
@@ -725,9 +739,13 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	}
 	pkg_list_free(deps);
 	
-	pkg_action(PKG_DB_INFO, "Package %s registered in %s" DB_LOCATION
-	    "/%s", pkg_get_name(pkg), db->db_base, pkg_get_name(pkg));
-	return -1;
+	pkg_action(PKG_DB_INFO, "Package %s registered in %s",
+	    pkg_get_name(pkg), real_dir);
+
+	if (real_dir != NULL && real_dir != dir)
+		free(real_dir);
+
+	return 0;
 }
 
 /**
