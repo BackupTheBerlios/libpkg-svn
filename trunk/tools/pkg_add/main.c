@@ -313,6 +313,11 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		pkg_free(deps[i]);
 		deps[i] = new_pkg;
 
+		action(PKG_DB_INFO,
+		    "Package '%s' depends on '%s' with '%s' origin.",
+		    pkg_get_name(pkg), pkg_get_name(deps[i]),
+		    pkg_get_origin(deps[i]));
+
 		/* Install the dependency */
 		if (install_package(deps[i], repo, db, prefix, prefix, flags)
 		    != 0 && (flags & force_flag) != force_flag) {
@@ -325,10 +330,6 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 	ret = -1;
 	/* Install the package */
 	if (action != NULL) {
-		if (verbose) {
-			printf("extract: Package name is %s\n",
-			    pkg_get_name(pkg));
-		}
 		ret = pkg_db_install_pkg_action(db, pkg, base_prefix, record,
 		    scripts, !run, action);
 	}
