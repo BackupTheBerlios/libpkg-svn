@@ -330,7 +330,7 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 			    pkg_get_name(pkg));
 		}
 		ret = pkg_db_install_pkg_action(db, pkg, base_prefix, record,
-		    scripts, run, action);
+		    scripts, !run, action);
 	}
 	/*
 	 * Insert the installed package in a linked
