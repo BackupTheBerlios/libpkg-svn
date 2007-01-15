@@ -428,7 +428,7 @@ pkg_get_version(struct pkg *pkg)
 /**
  * @brief Runs the named script from the package
  * @param pkg The package
- * @param prefix Thh prefix to pass to the script or NULL fro the default
+ * @param prefix The prefix to pass to the script or NULL for the default
  * @param script The script to run
  * @return The return value of the script, or -1
  */
@@ -436,7 +436,7 @@ int
 pkg_run_script(struct pkg *pkg, const char *prefix, pkg_script script)
 {
 	if (pkg == NULL)
-			return -1;
+		return -1;
 
 	if (pkg->pkg_run_script == NULL)
 		return -1;
