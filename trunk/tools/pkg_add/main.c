@@ -279,7 +279,7 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 	}
 
 	record = ((flags & no_record_install_flag) != no_record_install_flag);
-	scripts = ((flags & no_run_script_flag) == no_run_script_flag);
+	scripts = ((flags & no_run_script_flag) != no_run_script_flag);
 	run = ((flags & no_run_flag) != no_run_flag);
 	verbose = (flags & verbosity_flag) == verbosity_flag;
 
