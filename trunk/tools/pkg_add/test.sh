@@ -5,9 +5,14 @@
 # Rins the tests for either the libpkg or cvs version of pkg_add
 do_test() {
 	RUN=$1
+	LIBPKG=$2
 
 	i=1
-	while [ $i -le 2 ] ; do
+	while [ $i -le 4 ] ; do
+		build_chroot
+		if [ "X$LIBPKG" != "X" ]; then
+			cp pkg_add ${BASE_DIR}/base/usr/sbin/pkg_add
+		fi
 		chroot ${BASE_DIR}/base /run.sh ${PACKAGE} ${i} > ${RUN}.stdout.${i} 2> ${RUN}.stderr.${i}
 		# Get the mtree file to use to compare the filesystems
 		mtree -c -p ${BASE_DIR}/base | grep -v "^\#[[:space:]]*date:" | sed "s/time=[^ ]*//" | grep -v "^[ ]*pkg_add" > ${RUN}.mtree.${i}
@@ -25,14 +30,11 @@ do_test() {
 run_test() {
 
 	# Get the reference data from the FreeBSD cvs pkg_add
-	build_chroot
 	do_test cvs
 
 	# Get the test data from out pkg_add
-	build_chroot
 	build_tool
-	cp pkg_add ${BASE_DIR}/base/usr/sbin/pkg_add
-	do_test libpkg
+	do_test libpkg true
 }
 
 CWD=`pwd`
