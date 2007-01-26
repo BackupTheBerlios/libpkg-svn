@@ -283,18 +283,11 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 	run = ((flags & no_run_flag) != no_run_flag);
 	verbose = (flags & verbosity_flag) == verbosity_flag;
 
-	/*
-	 * Deside which pkg_db_action to use. If neither is
-	 * set then we won't be installing any packages
-	 * (ie. nothing will happen with !verbose and !run)
-	 */
-	action = NULL;
+	/* Use the no output pkg_action by default */
+	action = pkg_action_null;
 	if (verbose) {
-		/* Use our pkg_db_action */
+		/* Use our pkg_db_action when in verbose mode */
 		action = pkg_action;
-	} else if (run) {
-		/* Use the no output pkg_action */
-		action = pkg_action_null;
 	}
 
 	/* Get the package's dependencies */
