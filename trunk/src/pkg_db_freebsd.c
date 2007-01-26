@@ -714,13 +714,17 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	pkg_action(PKG_DB_INFO, "Attempting to record package into %s..",
 	    real_dir);
 
-	pkg_dir_build(real_dir, 0755);
-	/*
-	 * Install the control file's. Use pkg_action_null
-	 * as we dont need any output from this.
-	 */
-	for (pos = 0; control[pos] != NULL; pos++) {
-		freebsd_install_file(pkg, pkg_action_null, data, control[pos]);
+	if (!install_data->fake) {
+		pkg_dir_build(real_dir, 0755);
+
+		/*
+		 * Install the control file's. Use pkg_action_null
+		 * as we don't need any output from this.
+		 */
+		for (pos = 0; control[pos] != NULL; pos++) {
+			freebsd_install_file(pkg, pkg_action_null, data,
+			    control[pos]);
+		}
 	}
 
 	/* Register reverse dependency */
@@ -733,6 +737,10 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		pkg_action(PKG_DB_INFO, "Trying to record dependency on "
 		    "package '%s' with '%s' origin.", pkg_get_name(pkg),
 		    pkg_get_origin(deps[pos]));
+
+		/* Skip writing to +REQUIRED_BY when in a faked run */
+		if (install_data->fake)
+			continue;
 
 		snprintf(required_by, FILENAME_MAX, "%s" DB_LOCATION
 		    "/%s/+REQUIRED_BY", db->db_base, pkg_get_name(deps[pos]));
