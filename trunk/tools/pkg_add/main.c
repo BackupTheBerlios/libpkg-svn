@@ -252,7 +252,7 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		const char *base_prefix, const char *prefix, int flags)
 {
 	unsigned int i;
-	int ret, run, scripts, record, verbose;
+	int extras, force, record, ret, run, scripts, verbose;
 	pkg_db_action *action;
 	struct pkg **deps;
 	struct pkg_list *cur;
@@ -278,9 +278,10 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		return 0;
 	}
 
+	force = ((flags & force_flag) == force_flag);
 	record = ((flags & no_record_install_flag) != no_record_install_flag);
-	scripts = ((flags & no_run_script_flag) != no_run_script_flag);
 	run = ((flags & no_run_flag) != no_run_flag);
+	scripts = ((flags & no_run_script_flag) != no_run_script_flag);
 	verbose = (flags & verbosity_flag) == verbosity_flag;
 
 	/* Use the no output pkg_action by default */
@@ -292,7 +293,7 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 
 	/* Get the package's dependencies */
 	deps = pkg_get_dependencies(pkg);
-	for (i=0; deps[i] != NULL; i++) {
+	for (i = 0, extras = 0; deps[i] != NULL; i++) {
 		struct pkg *new_pkg;
 
 		/* Replace the empty package with one from disk */
@@ -311,21 +312,41 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 		    pkg_get_name(pkg), pkg_get_name(deps[i]),
 		    pkg_get_origin(deps[i]));
 
-		/* Install the dependency */
-		if (install_package(deps[i], repo, db, prefix, prefix, flags)
-		    != 0 && (flags & force_flag) != force_flag) {
-			pkg_list_free(deps);
-			return -1;
+		/* Skip installed packages */
+		if (pkg_db_is_installed(db, deps[i]) == 0)
+			continue;
+
+		if (run) {
+			/* Install the dependency */
+			if (install_package(deps[i], repo, db, prefix, prefix,
+			    flags) != 0 && (flags & force_flag) != force_flag) {
+				pkg_list_free(deps);
+				return -1;
+			}
+		} else {
+			extras++;
+			if (verbose) {
+				action(PKG_DB_INFO, "and was not found.");
+			} else {
+				printf("Package dependency %s for %s "
+				    "not found%s\n", pkg_get_name(deps[i]),
+				    pkg_get_name(pkg),
+				    force ? " (proceeding anyway)" : "!");
+			}
 		}
 	}
 	pkg_list_free(deps);
 
 	ret = -1;
+
 	/* Install the package */
-	if (action != NULL) {
+	if (run) {
 		ret = pkg_db_install_pkg_action(db, pkg, base_prefix, record,
 		    scripts, !run, action);
+	} else if (verbose && extras != 0) {
+		warnx("%u package addition(s) failed", extras);
 	}
+
 	/*
 	 * Insert the installed package in a linked
 	 * list to stop it being installed again.
