@@ -317,9 +317,13 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 			continue;
 
 		if (run) {
-			/* Install the dependency */
+			/*
+			 * Install the dependency. The record flag
+			 * is not passed down to be compatible
+			 */
 			if (install_package(deps[i], repo, db, prefix, prefix,
-			    flags) != 0 && (flags & force_flag) != force_flag) {
+			    flags & ~(no_record_install_flag)) != 0 &&
+			    (flags & force_flag) != force_flag) {
 				pkg_list_free(deps);
 				return -1;
 			}
