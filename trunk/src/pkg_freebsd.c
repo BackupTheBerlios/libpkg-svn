@@ -598,8 +598,11 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 			    contents->lines[pos].data);
 		}
 	}
-	/* Register the package */
-	pkg_register(pkg, pkg_action, data, control);
+
+	if (reg) {
+		/* Register the package */
+		pkg_register(pkg, pkg_action, data, control);
+	}
 
 	/* Set the return to 0 as we have fully installed the package */
 	ret = 0;
