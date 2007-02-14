@@ -11,4 +11,6 @@ WARNS=	6
 test: all
 	cd ${.OBJDIR} && MALLOC_OPTIONS=AJ ./tests
 
+SUBDIR=		fbsd_contents
+
 .include <bsd.prog.mk>
