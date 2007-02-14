@@ -5,6 +5,9 @@
 TEST_NO=$1
 shift
 
+TEST_MAX=9
+TOOL_NAME=pkg_add
+
 do_test() {
 	i=$1
 	RUN=$2
@@ -12,11 +15,11 @@ do_test() {
 
 	build_chroot
 	if [ "X$LIBPKG" != "X" ]; then
-		cp pkg_add ${BASE_DIR}/base/usr/sbin/pkg_add
+		cp ${TOOL_NAME} ${BASE_DIR}/base/usr/sbin/${TOOL_NAME}
 	fi
 	chroot ${BASE_DIR}/base /run.sh ${PACKAGE} ${i} > ${RUN}.stdout.${i} 2> ${RUN}.stderr.${i}
 	# Get the mtree file to use to compare the filesystems
-	mtree -c -p ${BASE_DIR}/base | grep -v "^\#[[:space:]]*date:" | sed "s/time=[^ ]*//" | grep -v "^[ ]*pkg_add[^\.]" > ${RUN}.mtree.${i}
+	mtree -c -p ${BASE_DIR}/base | grep -v "^\#[[:space:]]*date:" | sed "s/time=[^ ]*//" | grep -v "^[ ]*${TOOL_NAME}[^\.]" > ${RUN}.mtree.${i}
 	# Create a tarball of the important dir's to compare later
 	rm ${BASE_DIR}/${RUN}-${i}.tar
 	tar -cf ${BASE_DIR}/${RUN}-${i}.tar ${BASE_DIR}/base/var/db/pkg ${BASE_DIR}/base/usr/local ${BASE_DIR}/base/usr/pkg
@@ -24,13 +27,13 @@ do_test() {
 	rm -fr ${BASE_DIR}/base/var/db/pkg ${BASE_DIR}/base/usr/local ${BASE_DIR}/base/usr/pkg
 }
 
-# Rins the tests for either the libpkg or cvs version of pkg_add
+# Runs the tests for either the libpkg or cvs version of pkg_add
 do_tests() {
 	RUN=$1
 	LIBPKG=$2
 
 	i=1
-	while [ $i -le 9 ] ; do
+	while [ $i -le $TEST_MAX ] ; do
 		do_test $i $RUN $LIBPKG
 		i=$((i+1))
 	done
