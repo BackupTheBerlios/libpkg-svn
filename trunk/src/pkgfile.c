@@ -703,7 +703,7 @@ pkgfile_append(struct pkgfile *file, const char *data, uint64_t length)
 	if (file->type != pkgfile_regular)
 		return -1;
 
-	assert(file->data != NULL);
+	assert(file->length == 0 || file->data != NULL);
 	if (file->data != NULL) {
 		char *new_data;
 
@@ -713,10 +713,15 @@ pkgfile_append(struct pkgfile *file, const char *data, uint64_t length)
 
 		/* Update the internal pointer and copy the new data */
 		file->data = new_data;
-		memcpy(file->data + file->length, data, length);
-		file->length += length;
-		
+	} else {
+		file->data = malloc(length);
+		if (file->data == NULL) {
+			return -1;
+		}
 	}
+	/* Append the data to the file */
+	memcpy(file->data + file->length, data, length);
+	file->length += length;
 
 	return 0;
 }
