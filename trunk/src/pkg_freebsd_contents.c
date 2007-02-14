@@ -150,6 +150,12 @@ pkg_freebsd_contents_new(const char *contents, uint64_t length)
 		while (pos < cont->line_count) {
 			char *space;
 
+			if (cont->lines[pos].line[0] != '@') {
+				cont->lines[pos].line_type = PKG_LINE_FILE;
+				assert(cont->lines[pos].data == NULL);
+				pos++;
+				continue;
+			}
 			space = strchr(cont->lines[pos].line, ' ');
 			if (space && space[0] != '\0') {
 				space[0] = '\0';
@@ -159,10 +165,7 @@ pkg_freebsd_contents_new(const char *contents, uint64_t length)
 			}
 
 			/* Get the correct line type for the line */
-			if (cont->lines[pos].line[0] != '@') {
-				cont->lines[pos].line_type = PKG_LINE_FILE;
-				assert(cont->lines[pos].data == NULL);
-			} else if (!strcmp(cont->lines[pos].line, "@comment")) {
+			if (!strcmp(cont->lines[pos].line, "@comment")) {
 				cont->lines[pos].line_type = PKG_LINE_COMMENT;
 			} else if (!strcmp(cont->lines[pos].line, "@name")) {
 				cont->lines[pos].line_type = PKG_LINE_NAME;
