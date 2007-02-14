@@ -1,3 +1,32 @@
+/*
+ * Copyright (C) 2006, 2007 Andrew Turner, All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer
+ *    in this position and unchanged.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. The name(s) of the author(s) may not be used to endorse or promote
+ *    products derived from this software without specific prior written
+ *    permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
 #include "test.h"
 
 #include <sys/param.h>
@@ -50,18 +79,20 @@ basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
 
 	/* Test the data */
 	if (data != NULL) {
-		fail_unless(pkgfile_get_data(file) != NULL, NULL);
 		fail_unless(strncmp(pkgfile_get_data(file), data, length) == 0,
 		    NULL);
+		if (length > 0) {
+			fail_unless(pkgfile_get_data(file) != NULL, NULL);
 
-		if (file->type != pkgfile_dir) {
-			fail_unless(file->data != NULL, NULL);
-			fail_unless(strncmp(file->data, data, length) == 0,
-			    NULL);
-		} else {
-			fail_unless(file->data == NULL, NULL);
-			fail_unless(strncmp(file->name, data, length) == 0,
-			    NULL);
+			if (file->type != pkgfile_dir) {
+				fail_unless(file->data != NULL, NULL);
+				fail_unless(strncmp(file->data, data, length)
+				    == 0, NULL);
+			} else {
+				fail_unless(file->data == NULL, NULL);
+				fail_unless(strncmp(file->name, data, length)
+				    == 0, NULL);
+			}
 		}
 	}
 
@@ -300,7 +331,7 @@ START_TEST(pkgfile_regular_data_test)
 }
 END_TEST
 
-START_TEST(pkgfile_regular_existing_test)
+START_TEST(pkgfile_regular_existing_regular_test)
 {
 	struct pkgfile *file;
 
@@ -308,11 +339,23 @@ START_TEST(pkgfile_regular_existing_test)
 	file = pkgfile_new_regular(BASIC_FILE, "0123456789", 10);
 	existing_regular_test(file);
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_regular_existing_symlink_test)
+{
+	struct pkgfile *file;
 
 	/* Test if pkgfile_write will fail with a symlink */
 	file = pkgfile_new_regular(BASIC_FILE, "0123456789", 10);
 	existing_symlink_test(file);
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_regular_existing_directory_test)
+{
+	struct pkgfile *file;
 
 	/* Test if pkgfile_write will fail with a directory */
 	file = pkgfile_new_regular(BASIC_FILE, "0123456789", 10);
@@ -337,6 +380,12 @@ START_TEST(pkgfile_regular_depth_test)
 	system("rmdir " DEPTH_DIR);
 	CLEANUP_TESTDIR();
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_regular_depth_exists_test)
+{
+	struct pkgfile *file;
 
 	/* Test pkg_write will fail when it can't create a parent directory */
 	file = pkgfile_new_regular(DEPTH_FILE, "0123456789", 10);
@@ -384,6 +433,22 @@ START_TEST(pkgfile_regular_modify_test)
 }
 END_TEST
 
+START_TEST(pkgfile_regular_modify_empty_test)
+{
+	/* Test if an empty file can be modified */
+	struct pkgfile *file;
+	char *data;
+
+	file = pkgfile_new_regular(DEPTH_FILE, "", 0);
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, "", 0);
+	fail_unless(pkgfile_append(file, "67890", 5) == 0, NULL);
+	sprintf(data, "67890");
+	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 5);
+	free(data);
+	pkgfile_free(file);
+}
+END_TEST
+
 /* Tests on creating a symlink from a buffer */
 START_TEST(pkgfile_symlink_bad_test)
 {
@@ -419,7 +484,7 @@ START_TEST(pkgfile_symlink_good_test)
 }
 END_TEST
 
-START_TEST(pkgfile_symlink_existing_test)
+START_TEST(pkgfile_symlink_existing_regular_test)
 {
 	struct pkgfile *file;
 
@@ -427,11 +492,23 @@ START_TEST(pkgfile_symlink_existing_test)
 	file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET);
 	existing_regular_test(file);
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_symlink_existing_symlink_test)
+{
+	struct pkgfile *file;
 
 	/* Test if pkgfile_write will fail with a symlink */
 	file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET);
 	existing_symlink_test(file);
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_symlink_existing_directory_test)
+{
+	struct pkgfile *file;
 
 	/* Test if pkgfile_write will fail with a directory */
 	file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET);
@@ -456,6 +533,12 @@ START_TEST(pkgfile_symlink_depth_test)
 	system("rmdir " DEPTH_DIR);
 	CLEANUP_TESTDIR();
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_symlink_depth_exists_test)
+{
+	struct pkgfile *file;
 
 	/*
 	 * Check pkgfile_write fails when there
@@ -509,7 +592,7 @@ START_TEST(pkgfile_hardlink_test)
 }
 END_TEST
 
-START_TEST(pkgfile_hardlink_existing_test)
+START_TEST(pkgfile_hardlink_existing_regular_test)
 {
 	struct pkgfile *file;
 
@@ -517,11 +600,23 @@ START_TEST(pkgfile_hardlink_existing_test)
 	file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET);
 	existing_regular_test(file);
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_hardlink_existing_symlink_test)
+{
+	struct pkgfile *file;
 
 	/* Test if pkgfile_write will fail with a symlink */
 	file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET);
 	existing_symlink_test(file);
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_hardlink_existing_directory_test)
+{
+	struct pkgfile *file;
 
 	/* Test if pkgfile_write will fail with a directory */
 	file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET);
@@ -548,6 +643,12 @@ START_TEST(pkgfile_hardlink_depth_test)
 	system("rm " LINK_TARGET);
 	CLEANUP_TESTDIR();
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_hardlink_depth_exists_test)
+{
+	struct pkgfile *file;
 
 	/*
 	 * Check pkgfile_write fails when there
@@ -593,7 +694,7 @@ START_TEST(pkgfile_directory_test)
 }
 END_TEST
 
-START_TEST(pkgfile_directory_existing_test)
+START_TEST(pkgfile_directory_existing_regular_test)
 {
 	struct pkgfile *file;
 
@@ -601,6 +702,12 @@ START_TEST(pkgfile_directory_existing_test)
 	file = pkgfile_new_directory(BASIC_FILE);
 	existing_regular_test(file);
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_directory_existing_symlink_test)
+{
+	struct pkgfile *file;
 
 	/* Test if pkgfile_write should fail with a symlink */
 	file = pkgfile_new_directory(BASIC_FILE);
@@ -625,6 +732,12 @@ START_TEST(pkgfile_directory_depth_test)
 	system("rmdir " DEPTH_DIR);
 	CLEANUP_TESTDIR();
 	pkgfile_free(file);
+}
+END_TEST
+
+START_TEST(pkgfile_directory_depth_exists_test)
+{
+	struct pkgfile *file;
 
 	/*
 	 * Check pkgfile_write fails when there
@@ -659,44 +772,68 @@ Suite *
 pkgfile_suite()
 {
 	Suite *s;
-	TCase *tc_regular, *tc_symlink, *tc_hardlink, *tc_dir, *tc_misc;
+	TCase *tc;
 
 	s = suite_create("pkgfile");
-	tc_regular = tcase_create("regular");
-	tc_symlink = tcase_create("symlink");
-	tc_hardlink = tcase_create("hardlink");
-	tc_dir = tcase_create("directory");
-	tc_misc = tcase_create("misc");
 
-	suite_add_tcase(s, tc_regular);
-	suite_add_tcase(s, tc_symlink);
-	suite_add_tcase(s, tc_hardlink);
-	suite_add_tcase(s, tc_dir);
-	suite_add_tcase(s, tc_misc);
+	tc = tcase_create("regular");
+	tcase_add_test(tc, pkgfile_regular_bad_test);
+	tcase_add_test(tc, pkgfile_regular_empty_test);
+	tcase_add_test(tc, pkgfile_regular_data_test);
 
-	tcase_add_test(tc_regular, pkgfile_regular_bad_test);
-	tcase_add_test(tc_regular, pkgfile_regular_empty_test);
-	tcase_add_test(tc_regular, pkgfile_regular_data_test);
-	tcase_add_test(tc_regular, pkgfile_regular_existing_test);
-	tcase_add_test(tc_regular, pkgfile_regular_depth_test);
-	tcase_add_test(tc_regular, pkgfile_regular_modify_test);
+	tcase_add_test(tc, pkgfile_regular_existing_regular_test);
+	tcase_add_test(tc, pkgfile_regular_existing_symlink_test);
+	tcase_add_test(tc, pkgfile_regular_existing_directory_test);
 
-	tcase_add_test(tc_symlink, pkgfile_symlink_bad_test);
-	tcase_add_test(tc_symlink, pkgfile_symlink_good_test);
-	tcase_add_test(tc_symlink, pkgfile_symlink_existing_test);
-	tcase_add_test(tc_symlink, pkgfile_symlink_depth_test);
+	tcase_add_test(tc, pkgfile_regular_depth_test);
+	tcase_add_test(tc, pkgfile_regular_depth_exists_test);
 
-	tcase_add_test(tc_hardlink, pkgfile_hardlink_bad_test);
-	tcase_add_test(tc_hardlink, pkgfile_hardlink_test);
-	tcase_add_test(tc_hardlink, pkgfile_hardlink_depth_test);
-	tcase_add_test(tc_hardlink, pkgfile_hardlink_existing_test);
+	tcase_add_test(tc, pkgfile_regular_modify_test);
+	tcase_add_test(tc, pkgfile_regular_modify_empty_test);
+	suite_add_tcase(s, tc);
 
-	tcase_add_test(tc_dir, pkgfile_directory_bad_test);
-	tcase_add_test(tc_dir, pkgfile_directory_test);
-	tcase_add_test(tc_dir, pkgfile_directory_existing_test);
-	tcase_add_test(tc_dir, pkgfile_directory_depth_test);
 
-	tcase_add_test(tc_misc, pkgfile_misc_bad_args);
+	tc = tcase_create("symlink");
+	tcase_add_test(tc, pkgfile_symlink_bad_test);
+	tcase_add_test(tc, pkgfile_symlink_good_test);
+
+	tcase_add_test(tc, pkgfile_symlink_existing_regular_test);
+	tcase_add_test(tc, pkgfile_symlink_existing_symlink_test);
+	tcase_add_test(tc, pkgfile_symlink_existing_directory_test);
+
+	tcase_add_test(tc, pkgfile_symlink_depth_test);
+	tcase_add_test(tc, pkgfile_symlink_depth_exists_test);
+	suite_add_tcase(s, tc);
+
+
+	tc = tcase_create("hardlink");
+	tcase_add_test(tc, pkgfile_hardlink_bad_test);
+	tcase_add_test(tc, pkgfile_hardlink_test);
+
+	tcase_add_test(tc, pkgfile_hardlink_existing_regular_test);
+	tcase_add_test(tc, pkgfile_hardlink_existing_symlink_test);
+	tcase_add_test(tc, pkgfile_hardlink_existing_directory_test);
+
+	tcase_add_test(tc, pkgfile_hardlink_depth_test);
+	tcase_add_test(tc, pkgfile_hardlink_depth_exists_test);
+	suite_add_tcase(s, tc);
+
+
+	tc = tcase_create("directory");
+	tcase_add_test(tc, pkgfile_directory_bad_test);
+	tcase_add_test(tc, pkgfile_directory_test);
+
+	tcase_add_test(tc, pkgfile_directory_existing_regular_test);
+	tcase_add_test(tc, pkgfile_directory_existing_symlink_test);
+
+	tcase_add_test(tc, pkgfile_directory_depth_test);
+	tcase_add_test(tc, pkgfile_directory_depth_exists_test);
+	suite_add_tcase(s, tc);
+
+
+	tc = tcase_create("misc");
+	tcase_add_test(tc, pkgfile_misc_bad_args);
+	suite_add_tcase(s, tc);
 
 	return s;
 }
