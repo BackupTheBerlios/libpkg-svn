@@ -35,6 +35,9 @@ struct pkg_freebsd_contents {
 	unsigned int	 line_count;
 	unsigned int	 line_size;
 	struct pkg_freebsd_contents_line *lines;
+
+	char		*cnts_prefix;
+	struct pkgfile	*cnts_file;
 };
 
 #endif /* __LIBPKG_PKG_FREEBSD_PRIVATE_H__ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, Andrew Turner, All rights reserved.
+ * Copyright (C) 2005, 2007 Andrew Turner, All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,6 +78,9 @@ pkg_freebsd_contents_new(const char *contents, uint64_t length)
 	cont = malloc(sizeof(struct pkg_freebsd_contents));
 	if (!cont)
 		return NULL;
+
+	cont->cnts_file = NULL;
+	cont->cnts_prefix = NULL;
 
 	if (contents == NULL) {
 		cont->file = NULL;
@@ -235,6 +238,10 @@ pkg_freebsd_contents_add_line(struct pkg_freebsd_contents *contents, int type,
 	}
 	contents->line_count++;
 
+	if (contents->cnts_file != NULL) {
+		pkgfile_free(contents->cnts_file);
+		contents->cnts_file = NULL;
+	}
 	return 0;
 }
 
@@ -268,6 +275,10 @@ pkg_freebsd_contents_add_dependency(struct pkg_freebsd_contents *contents,
 		free(data);
 	}	
 
+	if (contents->cnts_file != NULL) {
+		pkgfile_free(contents->cnts_file);
+		contents->cnts_file = NULL;
+	}
 	return -1;
 }
 
@@ -299,6 +310,10 @@ pkg_freebsd_contents_add_file(struct pkg_freebsd_contents *contents,
 		return -1;
 	}
 
+	if (contents->cnts_file != NULL) {
+		pkgfile_free(contents->cnts_file);
+		contents->cnts_file = NULL;
+	}
 	return 0;
 }
 
@@ -316,6 +331,67 @@ pkg_freebsd_contents_get_line(struct pkg_freebsd_contents *contents,
 		return NULL;
 
 	return &contents->lines[line];
+}
+
+int
+pkg_freebsd_contents_update_prefix(struct pkg_freebsd_contents *contents,
+    const char *prefix)
+{
+	unsigned int pos;
+
+	if (contents == NULL)
+		return -1;
+
+	/* Find the package prefix and change it */
+	for (pos = 0; pos < contents->line_count; pos++) {
+		if (contents->lines[pos].line_type == PKG_LINE_CWD) {
+			if (contents->cnts_prefix != NULL) {
+				free(contents->cnts_prefix);
+			}
+			contents->cnts_prefix = strdup(prefix);
+			contents->lines[pos].data = contents->cnts_prefix;
+			break;
+		}
+	}
+	if (contents->cnts_file != NULL) {
+		pkgfile_free(contents->cnts_file);
+		contents->cnts_file = NULL;
+	}
+	return 0;
+}
+
+struct pkgfile *
+pkg_freebsd_contents_get_file(struct pkg_freebsd_contents *contents)
+{
+	unsigned int pos;
+
+	if (contents == NULL)
+		return NULL;
+
+	if (contents->cnts_file == NULL) {
+		contents->cnts_file = pkgfile_new_regular("+CONTENTS", "", 0);
+		if (contents->cnts_file == NULL)
+			return NULL;
+
+		for (pos = 0; pos < contents->line_count; pos++) {
+			struct pkg_freebsd_contents_line *line;
+			char *data;
+
+			line = &contents->lines[pos];
+			if (line->data == NULL) {
+				pkgfile_append(contents->cnts_file, line->line,
+				    strlen(line->line));
+				pkgfile_append(contents->cnts_file, "\n", 1);
+			} else {
+				asprintf(&data, "%s %s\n",
+				    line->line,line->data);
+				pkgfile_append(contents->cnts_file, data,
+				    strlen(data));
+				free(data);
+			}
+		}
+	}
+	return contents->cnts_file;
 }
 
 /**
