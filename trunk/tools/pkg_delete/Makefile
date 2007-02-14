@@ -19,7 +19,7 @@ WARNS	?= 6
 
 .for run in libpkg cvs
 . for type in mtree stdout stderr
-.  for i in 1 2 3 4 5
+.  for i in 1 2 3 4 5 6 7
 CLEANFILES	+= ${run}.${type}.${i}
 .  endfor
 . endfor

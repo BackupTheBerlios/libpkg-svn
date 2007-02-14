@@ -39,4 +39,18 @@ elif [ ${TESTNO} -eq 5 ] ; then
 	fi
 	pkg_delete -r libiconv-1.9.2_1
 	exit $?
+elif [ ${TESTNO} -eq 6 ] ; then
+	pkg_add ./${PACKAGE}.tbz
+	if [ $? -ne 0 ] ; then
+		exit 1
+	fi
+	pkg_delete -d ${PACKAGE}
+	exit $?
+elif [ ${TESTNO} -eq 7 ] ; then
+	pkg_add ./${PACKAGE}.tbz
+	if [ $? -ne 0 ] ; then
+		exit 1
+	fi
+	pkg_delete -rd libiconv-1.9.2_1
+	exit $?
 fi
