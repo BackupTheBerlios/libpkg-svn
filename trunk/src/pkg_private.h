@@ -109,14 +109,16 @@ typedef int		  pkg_db_install_file(struct pkg *, pkg_db_action *,
 typedef int		  pkg_db_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
 typedef int		  pkg_db_register(struct pkg *, pkg_db_action *, void *,
-				struct pkgfile **);
+				struct pkgfile **, const char *);
+typedef int		  pkg_db_deregister(struct pkg *, pkg_db_action *,
+				void *,	struct pkgfile **);
 typedef int	  	  pkg_install_callback(struct pkg *, const char *, int,
 				pkg_db_action *, void *, pkg_db_chdir *,
 				pkg_db_install_file *, pkg_db_exec *,
 				pkg_db_register *);
 typedef int		  pkg_deinstall_callback(struct pkg *, pkg_db_action *,
 				void *, pkg_db_chdir *, pkg_db_install_file *,
-				pkg_db_exec *, pkg_db_register *);
+				pkg_db_exec *, pkg_db_deregister *);
 typedef struct pkgfile	 *pkg_get_next_file_callback(struct pkg *);
 typedef int		  pkg_run_script_callback(struct pkg *, const char *,
 				pkg_script);
@@ -133,7 +135,7 @@ int			  pkg_install(struct pkg *, const char *, int,
 int			  pkg_deinstall(struct pkg *,
 				pkg_db_action *, void *, pkg_db_chdir *,
 				pkg_db_install_file *, pkg_db_exec *,
-				pkg_db_register *);
+				pkg_db_deregister *);
 
 struct pkg {
 	void	*data;

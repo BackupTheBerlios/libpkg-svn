@@ -50,12 +50,12 @@
 #define DB_LOCATION	"/var/db/pkg"
 
 struct pkg_install_data {
-	int fake;
-	int empty_dirs;		/* Used in the removal of files */
-	struct pkg_db *db;
-	const char *last_dir;
-	char last_file[FILENAME_MAX];
-	char directory[MAXPATHLEN];
+	int		 fake;
+	int		 empty_dirs;	/* Used in the removal of files */
+	struct pkg_db	*db;
+	const char	*last_dir;
+	char		 last_file[FILENAME_MAX];
+	char		 directory[MAXPATHLEN];
 };
 
 /*
@@ -92,7 +92,7 @@ static int	freebsd_deinstall_file(struct pkg *, pkg_db_action *, void *,
 static int	freebsd_do_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
 static int	freebsd_register(struct pkg *, pkg_db_action *, void *,
-				struct pkgfile **);
+				struct pkgfile **, const char *);
 static int	freebsd_deregister(struct pkg *, pkg_db_action *, void *,
 				struct pkgfile **);
 /* Internal */
@@ -687,7 +687,7 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  */
 static int
 freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
-		struct pkgfile **control)
+		struct pkgfile **control, const char *prefix)
 {
 	unsigned int pos;
 	struct pkg_install_data *install_data;
@@ -722,6 +722,18 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		 * as we don't need any output from this.
 		 */
 		for (pos = 0; control[pos] != NULL; pos++) {
+			if (prefix != NULL &&
+			    strcmp(pkgfile_get_name(control[pos]),
+			    "+CONTENTS") == 0) {
+				struct pkg_freebsd_contents *contents;
+				contents = pkg_freebsd_get_contents(pkg);
+
+				pkg_freebsd_contents_update_prefix(contents,
+				    prefix);
+				pkgfile_free(control[pos]);
+				control[pos] = pkg_freebsd_contents_get_file(
+				    contents);
+			}
 			freebsd_install_file(pkg, pkg_action_null, data,
 			    control[pos]);
 		}

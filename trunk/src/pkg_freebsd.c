@@ -64,7 +64,7 @@ static int		  freebsd_install(struct pkg *, const char *,
 static int		  freebsd_deinstall(struct pkg *,
 				pkg_db_action *, void *,
 				pkg_db_chdir *, pkg_db_install_file *,
-				pkg_db_exec *, pkg_db_register *);
+				pkg_db_exec *, pkg_db_deregister *);
 static struct pkg	**freebsd_get_deps(struct pkg *);
 static struct pkg	**freebsd_get_rdeps(struct pkg *);
 static int		  freebsd_run_script(struct pkg *,const char *,
@@ -601,7 +601,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 
 	if (reg) {
 		/* Register the package */
-		pkg_register(pkg, pkg_action, data, control);
+		pkg_register(pkg, pkg_action, data, control, prefix);
 	}
 
 	/* Set the return to 0 as we have fully installed the package */
@@ -622,7 +622,7 @@ exit:
 static int
 freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		pkg_db_chdir *db_chdir, pkg_db_install_file *deinstall_file,
-		pkg_db_exec *do_exec, pkg_db_register *pkg_deregister)
+		pkg_db_exec *do_exec, pkg_db_deregister *pkg_deregister)
 {
 	int ret;
 	unsigned int pos;

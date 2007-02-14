@@ -541,7 +541,7 @@ pkg_install(struct pkg *pkg, const char *prefix, int reg,
 int
 pkg_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		pkg_db_chdir *db_chdir,	pkg_db_install_file *deinstall_file,
-		pkg_db_exec *do_exec, pkg_db_register *pkg_deregister)
+		pkg_db_exec *do_exec, pkg_db_deregister *pkg_deregister)
 {
 	if (pkg == NULL || data == NULL || db_chdir == NULL ||
 	    deinstall_file == NULL || do_exec == NULL || pkg_deregister == NULL)
