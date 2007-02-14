@@ -72,7 +72,6 @@ main (int argc, char *argv[])
 			break;
 		case 'd':
 			delete.flags |= remove_empty_dirs_flag;
-			errx(1, "Unsupported argument");
 			break;
 		case 'D':
 			delete.flags |= no_run_script_flag;
