@@ -83,7 +83,7 @@ int		 pkgfile_free(struct pkgfile *);
  */
 
 /**
- * @brief The basic struct to use when interacting with a Package
+ * @brief The basic struct to use when interacting with a package
  * @struct pkg pkg.h <pkg.h>
  */
 struct pkg;
@@ -91,16 +91,16 @@ struct pkg;
 /**
  * @brief An enum of all possible scripts that can be run by pkg_run_script()
  */
-typedef enum {
-	pkg_script_noop, /**< Noop */
-	pkg_script_pre, /**< Pre-install */
-	pkg_script_post, /**< Post-install */
-	pkg_script_mtree, /**< Mtree */
-	pkg_script_require, /**< Requirement check */
-	pkg_script_require_deinstall, /**< Removal Requirement check */
-	pkg_script_deinstall, /**< Deinstall check */
-	pkg_script_pre_deinstall, /**< Pre-removal */
-	pkg_script_post_deinstall /**< Post-removal */
+typedef enum _pkg_script {
+	pkg_script_noop,		/**< Noop */
+	pkg_script_pre,			/**< Pre-install */
+	pkg_script_post,		/**< Post-install */
+	pkg_script_mtree,		/**< Mtree */
+	pkg_script_require,		/**< Requirement check */
+	pkg_script_require_deinstall,	/**< Removal Requirement check */
+	pkg_script_deinstall,		/**< Deinstall check */
+	pkg_script_pre_deinstall,	/**< Pre-removal */
+	pkg_script_post_deinstall	/**< Post-removal */
 } pkg_script;
 
 struct pkg		 *pkg_new_empty(const char *);
@@ -129,6 +129,77 @@ int			  pkg_free(struct pkg *);
 /**
  * @}
  */
+
+/**
+ * @addtogroup PackageManifestItem
+ *
+ * @{
+ */
+
+/**
+ * @brief The basic struct to use when describing an item within a package manifest
+ * @struct pkg_manifest_item pkg.h <pkg.h>
+ */
+struct pkg_manifest_item;
+
+/**
+ * @brief The type of manifest item this is
+ */
+typedef enum _pkg_manifest_item_type {
+	pmt_other = 0,	/**< The item is package format dependent */
+	pmt_file,	/**< The item is a file */
+	pmt_dir,	/**< The item is a directory */
+	pmt_dirlist,	/**< The item is a list of directories and files, eg. mtree */
+	pmt_chdir,	/**< The item indicates a new directory to change to */
+	pmt_output,	/**< The item indicates some message to display to the user */
+	pmt_comment,	/**< The item is a comment */
+	pmt_pkgname,	/**< The item is the name of the package */
+	pmt_conflict,	/**< The item is a name of a conflicting package */
+	pmt_dependency,	/**< The item is the name of a dependent package */
+	pmt_execute	/**< The item is a program to execute */
+} pkg_manifest_item_type;
+
+/**
+ * @brief Possible attributes that can be set on an item
+ */
+typedef enum _pkg_manifest_item_attr {
+	pmia_other = 0,		/**< Package dependent item */
+	pmia_ignore,		/**< Ignore the current item */
+	pmia_deinstall,		/**< The item is for deinstall rather than install */
+	pmia_md5,		/**< Set the MD5 checksum of an item */
+} pkg_manifest_item_attr;
+
+struct pkg_manifest_item *pkg_manifest_item_new(pkg_manifest_item_type,
+	    const char *);
+int	pkg_manifest_item_free(struct pkg_manifest_item *);
+int	pkg_manifest_item_set_attr(struct pkg_manifest_item *,
+	    pkg_manifest_item_attr, char *);
+
+/**
+ * @}
+ */
+
+/**
+ * @addtogroup PackageManifest
+ *
+ * @{
+ */
+
+/**
+ * @brief The basic struct to use when describing with a package manifest
+ * @struct pkg_manifest pkg.h <pkg.h>
+ */
+struct pkg_manifest;
+
+struct pkg_manifest	*pkg_manifest_new(void);
+int			 pkg_manifest_free(struct pkg_manifest *);
+int			 pkg_manifest_append_item(struct pkg_manifest *,
+			    struct pkg_manifest_item *);
+
+/**
+ * @}
+ */
+
 char	*pkg_abspath(const char *);
 
 #endif /* __LIBPKG_PKG_H__ */
