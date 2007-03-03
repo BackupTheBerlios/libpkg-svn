@@ -437,14 +437,13 @@ START_TEST(pkgfile_regular_modify_empty_test)
 {
 	/* Test if an empty file can be modified */
 	struct pkgfile *file;
-	char *data;
+	char data[6];
 
 	file = pkgfile_new_regular(DEPTH_FILE, "", 0);
 	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, "", 0);
 	fail_unless(pkgfile_append(file, "67890", 5) == 0, NULL);
 	sprintf(data, "67890");
 	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 5);
-	free(data);
 	pkgfile_free(file);
 }
 END_TEST
