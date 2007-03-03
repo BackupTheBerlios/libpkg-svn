@@ -8,6 +8,8 @@ LDADD+=		${.OBJDIR}/../src/libpkg.a /usr/lib/libmd.a
 MAN=
 WARNS=	6
 
+CLEANFILES=	tests.core
+
 test: all
 	cd ${.OBJDIR} && MALLOC_OPTIONS=AJ ./tests
 
