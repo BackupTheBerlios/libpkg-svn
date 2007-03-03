@@ -31,6 +31,7 @@
 
 #include <pkg.h>
 #include <pkg_freebsd.h>
+#include <pkg_freebsd_private.h>
 
 #include <string.h>
 
@@ -40,6 +41,17 @@ START_TEST(pkg_freebsd_contents_empty_test)
 
 	contents = pkg_freebsd_contents_new("", 0);
 	fail_unless(contents == NULL, NULL);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_empty_ignore_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@ignore\n@ignore\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents != NULL, NULL);
 	pkg_freebsd_contents_free(contents);
 }
 END_TEST
@@ -55,7 +67,372 @@ START_TEST(pkg_freebsd_contents_good_basic_test)
 
 	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
 	fail_unless(contents != NULL, NULL);
+	fail_unless(contents->line_count == 4, NULL);
+	fail_unless(contents->lines[0].line_type == PKG_LINE_COMMENT, NULL);
+	fail_unless(contents->lines[1].line_type == PKG_LINE_NAME, NULL);
+	fail_unless(contents->lines[2].line_type == PKG_LINE_COMMENT, NULL);
+	fail_unless(contents->lines[3].line_type == PKG_LINE_CWD, NULL);
+
+	fail_unless(strcmp(contents->lines[0].line, "@comment") == 0, NULL);
+	fail_unless(strcmp(contents->lines[1].line, "@name") == 0, NULL);
+	fail_unless(strcmp(contents->lines[2].line, "@comment") == 0, NULL);
+	fail_unless(strcmp(contents->lines[3].line, "@cwd") == 0, NULL);
+
+	fail_unless(strcmp(contents->lines[0].data, "PKG_FORMAT_REVISION:1.1")
+	    == 0, NULL);
+	fail_unless(strcmp(contents->lines[1].data, "package_name-1.0") == 0,
+	    NULL);
+	fail_unless(strcmp(contents->lines[2].data, "ORIGIN:package/origin")
+	    == 0, NULL);
+	fail_unless(strcmp(contents->lines[3].data, "/usr/local") == 0, NULL);
 	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+static const char *pkg_freebsd_contents_line_str[] = {
+	"",
+	"",
+	"@comment",
+	"@name",
+	"@cwd",
+	"@pkgdep",
+	"@conflicts",
+	"@exec",
+	"@unexec",
+	"@ignore",
+	"@dirrm",
+	"@mtree",
+	"@display",
+	NULL
+};
+
+static void
+check_good_command(struct pkg_freebsd_contents *contents, int line_type)
+{
+	fail_unless(contents != NULL, NULL);
+	fail_unless(contents->line_count == 2, NULL);
+	fail_unless(contents->lines[1].line_type == line_type, NULL);
+	fail_unless(strcmp(contents->lines[1].line,
+	    pkg_freebsd_contents_line_str[line_type]) == 0, NULL);
+	fail_unless(strcmp(contents->lines[1].data, "data") == 0, NULL);
+}
+
+/*
+ * Check a command with no data fails
+ */
+START_TEST(pkg_freebsd_contents_good_comment_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@comment data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_COMMENT);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_name_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@name data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_NAME);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_cwd_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@cwd data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_CWD);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_pkgdep_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@pkgdep data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_PKGDEP);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_conflicts_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@conflicts data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_CONFLICTS);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_exec_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@exec data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_EXEC);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_unexec_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@unexec data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_UNEXEC);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_dirrm_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@dirrm data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_DIRRM);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_mtree_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@mtree data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_MTREE);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_good_display_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@display data\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	check_good_command(contents, PKG_LINE_DISPLAY);
+	pkg_freebsd_contents_free(contents);
+}
+END_TEST
+
+/*
+ * Check a command with no data fails
+ */
+START_TEST(pkg_freebsd_contents_bad_empty_comment_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@comment\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_name_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@name\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_cwd_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@cwd\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_pkgdep_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@pkgdep\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_conflicts_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@conflicts\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_exec_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@exec\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_unexec_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@unexec\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_dirrm_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@dirrm\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_mtree_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@mtree\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty_display_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@display\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+/*
+ * Test if a command on the second line with no contents fails
+ */
+START_TEST(pkg_freebsd_contents_bad_empty2_comment_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@comment\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_name_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@name\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_cwd_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@cwd\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_pkgdep_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@pkgdep\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_conflicts_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@conflicts\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_exec_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@exec\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_unexec_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@unexec\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_dirrm_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@dirrm\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_mtree_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@mtree\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
+}
+END_TEST
+
+START_TEST(pkg_freebsd_contents_bad_empty2_display_test)
+{
+	struct pkg_freebsd_contents *contents;
+	const char *pkg_data = "@comment PKG_FORMAT_REVISION:1.1\n@ignore\n@display\n";
+
+	contents = pkg_freebsd_contents_new(pkg_data, strlen(pkg_data));
+	fail_unless(contents == NULL, NULL);
 }
 END_TEST
 
@@ -73,7 +450,43 @@ pkg_freebsd_contents_suite()
 
 
 	tc = tcase_create("good");
+	tcase_add_test(tc, pkg_freebsd_contents_good_empty_ignore_test);
 	tcase_add_test(tc, pkg_freebsd_contents_good_basic_test);
+
+	tcase_add_test(tc, pkg_freebsd_contents_good_comment_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_name_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_cwd_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_pkgdep_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_conflicts_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_exec_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_unexec_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_dirrm_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_mtree_test);
+	tcase_add_test(tc, pkg_freebsd_contents_good_display_test);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("bad");
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_comment_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_name_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_cwd_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_pkgdep_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_conflicts_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_exec_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_unexec_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_dirrm_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_mtree_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty_display_test);
+
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_comment_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_name_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_cwd_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_pkgdep_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_conflicts_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_exec_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_unexec_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_dirrm_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_mtree_test);
+	tcase_add_test(tc, pkg_freebsd_contents_bad_empty2_display_test);
 	suite_add_tcase(s, tc);
 
 	return s;
