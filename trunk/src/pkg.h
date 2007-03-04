@@ -55,11 +55,12 @@ struct pkgfile	*pkgfile_new_directory(const char *);
 const char	*pkgfile_get_name(struct pkgfile *);
 uint64_t	 pkgfile_get_size(struct pkgfile *);
 const char	*pkgfile_get_data(struct pkgfile *);
+FILE		*pkgfile_get_fileptr(struct pkgfile *);
 const char	*pkgfile_get_type_string(struct pkgfile *);
 int		 pkgfile_set_cwd(struct pkgfile *, const char *);
 int		 pkgfile_set_checksum_md5(struct pkgfile *, const char *);
 int		 pkgfile_compare_checksum_md5(struct pkgfile *);
-int		 pkgfile_seek(struct pkgfile *, uint64_t, int);
+int		 pkgfile_seek(struct pkgfile *, int64_t, int);
 int		 pkgfile_set_mode(struct pkgfile *, mode_t);
 int		 pkgfile_append(struct pkgfile *, const char *, uint64_t);
 const char	*pkgfile_find_line(struct pkgfile *, const char *);
@@ -192,6 +193,7 @@ int	pkg_manifest_item_set_attr(struct pkg_manifest_item *,
 struct pkg_manifest;
 
 struct pkg_manifest	*pkg_manifest_new(void);
+struct pkg_manifest	*pkg_manifest_new_freebsd_pkgfile(struct pkgfile *);
 int			 pkg_manifest_free(struct pkg_manifest *);
 int			 pkg_manifest_append_item(struct pkg_manifest *,
 			    struct pkg_manifest_item *);
