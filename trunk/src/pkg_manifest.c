@@ -56,6 +56,10 @@ struct pkg_manifest {
 	size_t		 item_size;
 };
 
+/* These are used by the FreeBSD parser */
+extern FILE *pkg_freebsd_in;
+int pkg_freebsd_parse(struct pkg_manifest **);
+
 /**
  * @defgroup PackageManifest Package manifest functions
  * 
@@ -84,6 +88,25 @@ pkg_manifest_new()
 	manifest->items = NULL;
 	manifest->item_count = 0;
 	manifest->item_size = 0;
+
+	return manifest;
+}
+
+/**
+ * @brief Creates a new FreeBSD package manifest from a struct pkgfile
+ * @param file The file to create the manifest from
+ * @return A new package manifest
+ * @return NULL on error
+ * @todo Check if pkg_freebsd_parse is thread safe
+ */
+struct pkg_manifest *
+pkg_manifest_new_freebsd_pkgfile(struct pkgfile *file)
+{
+	struct pkg_manifest *manifest;
+
+	pkgfile_seek(file, 0, SEEK_SET);
+	pkg_freebsd_in = pkgfile_get_fileptr(file);
+	pkg_freebsd_parse(&manifest);
 
 	return manifest;
 }
