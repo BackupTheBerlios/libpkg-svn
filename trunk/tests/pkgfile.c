@@ -32,6 +32,7 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,8 +103,51 @@ basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
 	/* Reset it for later operations */
 	fail_unless(pkgfile_set_mode(file, 0) == 0, NULL);
 
-	/* This shouldn't make any sence on a file in memory */
-	fail_unless(pkgfile_seek(file, 0, SEEK_SET) == -1, NULL);
+	if (type == pkgfile_regular && length == 0) {
+		/* Not all seek tests will work with an empty file */
+		fail_unless(pkgfile_seek(file, 0, SEEK_SET) == 0, NULL);
+		fail_unless(file->offset == 0, NULL);
+	} else if (type == pkgfile_regular) {
+		int pos;
+		/* Test to see if seting a valid position works */
+		fail_unless(pkgfile_seek(file, 0, SEEK_SET) == 0, NULL);
+		fail_unless(file->offset == 0, NULL);
+		fail_unless(pkgfile_seek(file, 1, SEEK_SET) == 0, NULL);
+		fail_unless(file->offset == 1, NULL);
+		/* Test an invalid position is ignored */
+		errno = 0;
+		fail_unless(pkgfile_seek(file, -1, SEEK_SET) == -1, NULL);
+		fail_unless(errno == EINVAL, NULL);
+		fail_unless(file->offset == 1, NULL);
+		/* Test positive movement is correct */
+		fail_unless(pkgfile_seek(file, 1, SEEK_CUR) == 0, NULL);
+		fail_unless(file->offset == 2, NULL);
+		/* Test a valid negative is correct */
+		fail_unless(pkgfile_seek(file, -1, SEEK_CUR) == 0, NULL);
+		fail_unless(file->offset == 1, NULL);
+
+		/* Test if a negative large value will move to offset 0 */
+		errno = 0;
+		fail_unless(pkgfile_seek(file, -10, SEEK_CUR) == -1, NULL);
+		fail_unless(errno == EINVAL, NULL);
+		fail_unless(file->offset == 0, NULL);
+
+		/* Test seeking relative to the end */
+		fail_unless(pkgfile_seek(file, 0, SEEK_END) == 0, NULL);
+		fail_unless(file->offset == length, NULL);
+		fail_unless(pkgfile_seek(file, -1, SEEK_END) == 0, NULL);
+		fail_unless(file->offset == (length - 1), NULL);
+
+		/* Test if a negative large value will move to offset 0 */
+		errno = 0;
+		pos = length * -2;
+		fail_unless(pkgfile_seek(file, pos, SEEK_END) == -1,
+		    NULL);
+		fail_unless(errno == EINVAL, NULL);
+		fail_unless(file->offset == 0, NULL);
+	} else {
+		fail_unless(pkgfile_seek(file, 0, SEEK_SET) == -1, NULL);
+	}
 	fail_unless(pkgfile_unlink(file) == -1, NULL);
 }
 

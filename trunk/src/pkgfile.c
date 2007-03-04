@@ -86,6 +86,7 @@ pkgfile_new(const char *filename, pkgfile_type type, pkgfile_loc location)
 	file->fd = NULL;
 	file->data = NULL;
 	file->length = 0;
+	file->offset = 0;
 	file->mode = 0;
 	file->md5[0] = '\0';
 
@@ -168,6 +169,11 @@ pkgfile_get_type(struct pkgfile *file)
 	return 0;
 }
 
+/**
+ * @brief Gets the real name of a file including it's full directory
+ * @param file The file to find the name for
+ * @return The file's name
+ */
 static const char *
 pkgfile_real_name(struct pkgfile *file)
 {
@@ -186,6 +192,34 @@ pkgfile_real_name(struct pkgfile *file)
 	return file->real_name;
 }
 
+/**
+ * @brief funopen callback used to read with a FILE pointer
+ * @param pkgfile The file to read
+ * @param buf The buffer to read to
+ * @param len The length of data to read
+ */
+static int
+pkgfile_fileptr_read(void *pkgfile, char *buf, int len)
+{
+	struct pkgfile *file;
+
+	if (len <= 0 || file->offset >= file->length)
+		return 0;
+
+	/* Read in the data */
+	file = pkgfile;
+	pkgfile_get_data(file);
+
+	/* Stop reading past the end of the file */
+	if (file->offset + len > file->length)
+		len = file->length - file->offset;
+
+	/* Fill the buffer with the data */
+	memcpy(buf, file->data + file->offset, len);
+	file->offset += len;
+
+	return len;
+}
 /**
  * @}
  */
@@ -428,6 +462,26 @@ pkgfile_get_data(struct pkgfile *file)
 }
 
 /**
+ * @brief Creates a FILE pointer to be passed to things like fread
+ * @param file The pkgfile to read from
+ * @return A FILE pointer
+ * @return NULL on error
+ */
+FILE *
+pkgfile_get_fileptr(struct pkgfile *file)
+{
+	if (file == NULL)
+		return NULL;
+
+	if (file->loc == pkgfile_loc_disk)
+		pkgfile_open_fd(file);
+
+	assert(file->type != pkgfile_none);
+
+	return fropen(file, pkgfile_fileptr_read);
+}
+
+/**
  * @brief Gets a string containing a description of the type of the file
  * @return A null terminated string with the name of the file type
  */
@@ -569,29 +623,59 @@ pkgfile_unlink(struct pkgfile *file)
  * @return 0 on success or -1 on error
  */
 int
-pkgfile_seek(struct pkgfile *file, uint64_t position, int whence)
+pkgfile_seek(struct pkgfile *file, int64_t position, int whence)
 {
 	if (file == NULL)
 		return -1;
 
-	if (file->loc == pkgfile_loc_mem)
-		return -1;
-
-	pkgfile_open_fd(file);
+	if (file->loc == pkgfile_loc_disk)
+		pkgfile_open_fd(file);
 
 	assert(file->type != pkgfile_none);
-	assert(file->type != pkgfile_hardlink);
-	assert(file->type != pkgfile_symlink);
-	assert(file->type != pkgfile_dir);
 
 	if (file->type == pkgfile_regular) {
-		assert(file->loc == pkgfile_loc_disk);
-		if (file->fd != NULL) {
-			if (fseek(file->fd, position, whence) != 0)
+		if (file->loc == pkgfile_loc_disk) {
+			if (file->fd != NULL) {
+				if (fseek(file->fd, position, whence) != 0)
+					return -1;
+			} else {
 				return -1;
+			}
 		} else {
-			return -1;
+			switch (whence) {
+			case SEEK_SET:
+				if (position >= 0) {
+					file->offset = position;
+				} else {
+					errno = EINVAL;
+					return -1;
+				}
+				break;
+			case SEEK_CUR:
+				if (position < 0 &&
+				    (uint64_t)(-position) > file->offset) {
+					file->offset = 0;
+					errno = EINVAL;
+					return -1;
+				}
+				file->offset += position;
+				break;
+			case SEEK_END:
+				if (position < 0 &&
+				    (uint64_t)(-position) > file->length) {
+					file->offset = 0;
+					errno = EINVAL;
+					return -1;
+				}
+				file->offset = file->length + position;
+				break;
+			}
+			if (file->offset > file->length) {
+				file->offset = file->length;
+			}
 		}
+	} else {
+		return -1;
 	}
 	return 0;
 }
