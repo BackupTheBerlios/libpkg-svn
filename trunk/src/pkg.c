@@ -90,6 +90,7 @@ pkg_new(const char *pkg_name,
 	/* Set the other callbacks to NULL */
 	pkg->pkg_get_version = NULL;
 	pkg->pkg_get_origin = NULL;
+	pkg->pkg_set_origin = NULL;
 	pkg->pkg_add_depend = NULL;
 	pkg->pkg_add_file = NULL;
 	pkg->pkg_get_next_file = NULL;
@@ -110,18 +111,22 @@ pkg_new(const char *pkg_name,
  * @param pkg The package returned by pkg_new()
  * @param get_version A callback to be used by pkg_get_version()
  * @param get_origin A callback to be used by pkg_get_origin()
- * @return 0 on success, -1 on error.
+ * @param set_origin A callback to be used by pkg_set_origin()
+ * @return  0 on success
+ * @return -1 on error
  */
 int
 pkg_add_callbacks_data(struct pkg *pkg,
 		pkg_get_version_callback *get_version,
-		pkg_get_origin_callback *get_origin)
+		pkg_get_origin_callback *get_origin,
+		pkg_set_origin_callback *set_origin)
 {
 	if (pkg == NULL)
 		return -1;
 
 	pkg->pkg_get_version = get_version;
 	pkg->pkg_get_origin = get_origin;
+	pkg->pkg_set_origin = set_origin;
 	return 0;
 }
 
@@ -403,6 +408,29 @@ pkg_get_origin(struct pkg *pkg)
 		return pkg->pkg_get_origin(pkg);
 
 	return NULL;
+}
+
+/**
+ * @brief Gets a packages origin
+ * @param pkg The package
+ * @param origin The new origin
+ *
+ * This is used to set the package's origin.
+ * It is intended to be used for empty packages and building a new package.
+ * Not all package formats have an origin.
+ * @return  0 on success
+ * @return -1 on failure
+ */
+int
+pkg_set_origin(struct pkg *pkg, const char *origin)
+{
+	if (pkg == NULL || origin == NULL)
+		return -1;
+
+	if (pkg->pkg_set_origin)
+		return pkg->pkg_set_origin(pkg, origin);
+
+	return -1;
 }
 
 /**

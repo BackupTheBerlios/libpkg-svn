@@ -48,6 +48,7 @@
 /* Callbacks */
 static const char	 *freebsd_get_version(struct pkg *);
 static const char	 *freebsd_get_origin(struct pkg *);
+static int		  freebsd_set_origin(struct pkg *, const char *);
 #ifdef NOT_YET
 static int		  freebsd_add_depend(struct pkg *,struct pkg *);
 static int		  freebsd_add_file(struct pkg *,
@@ -91,7 +92,7 @@ struct freebsd_package {
 	struct archive *archive;
 	char *db_dir;
 	const char *version;
-	const char *origin;
+	char *origin;
 	struct pkgfile **control;
 	struct pkg_freebsd_contents *contents;
 	struct pkgfile *next_file;
@@ -164,7 +165,8 @@ pkg_new_freebsd_from_file(FILE *fd)
 		/** @todo cleanup */
 		return NULL;
 	}
-	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin);
+	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin,
+	    freebsd_set_origin);
 	pkg_add_callbacks_install(pkg, freebsd_install, NULL,
 	    freebsd_get_next_file, freebsd_run_script);
 	pkg->data = fpkg;
@@ -209,9 +211,10 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	    freebsd_free);
 	if (pkg == NULL)
 		return NULL;
-	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin);
+	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin,
+	    freebsd_set_origin);
 	pkg_add_callbacks_install(pkg, NULL, freebsd_deinstall,
-	   freebsd_get_next_file, freebsd_run_script);
+	    freebsd_get_next_file, freebsd_run_script);
 
 	fpkg = freebsd_package_new();
 	if (fpkg == NULL) {
@@ -230,7 +233,6 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	return pkg;
 }
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 /**
  * @brief Creates an empty FreeBSD package to add files to
  * @param pkg_name The name of the package
@@ -241,12 +243,33 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
  * @return A package object or NULL
  */
 struct pkg *
-pkg_new_freebsd_empty(const char *pkg_name __unused)
+pkg_new_freebsd_empty(const char *pkg_name)
 {
-	assert(0);
-	return NULL;
+	struct pkg *pkg;
+	struct freebsd_package *fpkg;
+
+	/* Create the package */
+	pkg = pkg_new(pkg_name, freebsd_get_control_files,
+	    freebsd_get_control_file, freebsd_get_deps, freebsd_get_rdeps,
+	    freebsd_free);
+	if (pkg == NULL)
+		return NULL;
+
+	/* Add the data callbacks */
+	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin,
+	    freebsd_set_origin);
+
+	/* Create the FreeBSD data and add it to the package */
+	fpkg = freebsd_package_new();
+	if (fpkg == NULL) {
+		pkg_free(pkg);
+		return NULL;
+	}
+	pkg->data = fpkg;
+	fpkg->pkg_type = fpkg_from_empty;
+
+	return pkg;
 }
-#endif
 
 /**
  * @brief Gets the contents struct from a package
@@ -337,7 +360,10 @@ freebsd_get_origin(struct pkg *pkg)
 	fpkg = pkg->data;
 	assert(fpkg != NULL);
 	assert(fpkg->pkg_type != fpkg_unknown);
-	assert(fpkg->pkg_type != fpkg_from_empty);
+
+	/* The origin must be set previously on an empty package */
+	if (fpkg->pkg_type == fpkg_from_empty)
+		return fpkg->origin;
 
 	/* Find the origin line and cache it */
 	if (fpkg->origin == NULL) {
@@ -364,6 +390,34 @@ freebsd_get_origin(struct pkg *pkg)
 		}
 	}
 	return fpkg->origin;
+}
+
+/**
+ * @brief Callback for pkg_get_origin()
+ * @param pkg The package to set the origin for
+ * @param origin The new origin to set
+ * @return  0 on success
+ * @return -1 on error
+ */
+static int
+freebsd_set_origin(struct pkg *pkg, const char *origin)
+{
+	struct freebsd_package *fpkg;
+
+	assert(pkg != NULL);
+
+	fpkg = pkg->data;
+	assert(fpkg != NULL);
+	assert(fpkg->pkg_type != fpkg_unknown);
+
+	if (fpkg->origin != NULL)
+		free(fpkg->origin);
+
+	fpkg->origin = strdup(origin);
+	if (fpkg->origin == NULL)
+		return -1;
+
+	return 0;
 }
 
 #ifdef NOT_YET
@@ -1070,6 +1124,9 @@ freebsd_free(struct pkg *pkg)
 	if (fpkg) {
 		if (fpkg->db_dir != NULL)
 			free(fpkg->db_dir);
+
+		if (fpkg->origin != NULL)
+			free(fpkg->origin);
 
 		if (fpkg->next_file != NULL)
 			pkgfile_free(fpkg->next_file);

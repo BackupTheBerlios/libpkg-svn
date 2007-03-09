@@ -6,7 +6,7 @@ SRCS		 = archive_read_open_stream.c
 SRCS		+= pkg.c pkg_freebsd.c
 
 # Package Manifest handeling
-SRCS		+= pkg_manifest.c
+SRCS		+= pkg_manifest.c pkg_manifest_freebsd.c
 
 # Handle FreeBSD +CONTENTS files
 SRCS		+= pkg_freebsd_contents.c pkg_freebsd_parser.c pkg_freebsd_lexer.c

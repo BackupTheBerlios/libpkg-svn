@@ -30,6 +30,7 @@
 #ifndef __LIBPKG_PKG_PRIVATE_H__
 #define __LIBPKG_PKG_PRIVATE_H__
 
+#include <sys/queue.h>
 #include <archive.h>
 #include "pkg_db.h"
 
@@ -69,6 +70,51 @@ struct pkgfile {
 };
 
 /*
+ * Package Manifest Item Object
+ */
+struct pkg_manifest_item {
+	pkg_manifest_item_type type;
+	void		*data;
+
+	char **attrs;
+};
+
+/*
+ * Package Manifest Object
+ */
+
+typedef struct pkgfile	*pkg_manifest_get_file_callback(struct pkg_manifest *);
+
+/* List objects for the dependencies, conflicts and items */
+struct pkgm_deps {
+	STAILQ_ENTRY(pkgm_deps) list;
+	struct pkg	*pkg;
+};
+
+struct pkgm_conflicts {
+	STAILQ_ENTRY(pkgm_conflicts) list;
+	char		*conflict;
+};
+
+struct pkgm_items {
+	STAILQ_ENTRY(pkgm_items) list;
+	struct pkg_manifest_item *item;
+};
+struct pkg_manifest {
+	void		*data;
+
+	struct pkgfile	*file;
+	char		*name;
+
+	char		*attrs[pkgm_max];
+	STAILQ_HEAD(, pkgm_deps) deps;
+	STAILQ_HEAD(, pkgm_conflicts) conflicts;
+	STAILQ_HEAD(, pkgm_items) items;
+
+	pkg_manifest_get_file_callback	*manifest_get_file;
+};
+
+/*
  * Package Object
  */
 
@@ -89,9 +135,11 @@ struct pkg		 *pkg_new(const char *,
 /* Callbacks to get data from a package, eg. the description */
 typedef const char	 *pkg_get_version_callback(struct pkg *);
 typedef const char	 *pkg_get_origin_callback(struct pkg *);
+typedef int		  pkg_set_origin_callback(struct pkg *, const char *);
 int			  pkg_add_callbacks_data(struct pkg *,
 				pkg_get_version_callback *,
-				pkg_get_origin_callback *);
+				pkg_get_origin_callback *,
+				pkg_set_origin_callback *);
 
 /* Callbacks used with empty packages to add files to */
 typedef int		  pkg_add_dependency_callback(struct pkg *,
@@ -153,6 +201,7 @@ struct pkg {
 
 	pkg_get_version_callback	*pkg_get_version;
 	pkg_get_origin_callback		*pkg_get_origin;
+	pkg_set_origin_callback		*pkg_set_origin;
 
 	/* Callbacks usally used with empty packages */
 	pkg_add_dependency_callback	*pkg_add_depend;

@@ -35,6 +35,10 @@
 
 #include <stdio.h>	/* FILE */
 
+#ifndef __unused
+#define __unused
+#endif
+
 /**
  * @addtogroup PackageFile
  *
@@ -63,6 +67,7 @@ int		 pkgfile_compare_checksum_md5(struct pkgfile *);
 int		 pkgfile_seek(struct pkgfile *, int64_t, int);
 int		 pkgfile_set_mode(struct pkgfile *, mode_t);
 int		 pkgfile_append(struct pkgfile *, const char *, uint64_t);
+int		 pkgfile_append_string(struct pkgfile *, const char *, ...);
 const char	*pkgfile_find_line(struct pkgfile *, const char *);
 int		 pkgfile_remove_line(struct pkgfile *, const char *);
 int		 pkgfile_write(struct pkgfile *);
@@ -107,9 +112,7 @@ typedef enum _pkg_script {
 struct pkg		 *pkg_new_empty(const char *);
 struct pkg		 *pkg_new_freebsd_from_file(FILE *);
 struct pkg		 *pkg_new_freebsd_installed(const char *, const char *);
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 struct pkg		 *pkg_new_freebsd_empty(const char *);
-#endif
 int			  pkg_compare(const void *, const void *);
 int			  pkg_set_prefix(struct pkg *, const char *);
 const char		 *pkg_get_prefix(struct pkg *);
@@ -120,6 +123,7 @@ struct pkg		**pkg_get_reverse_dependencies(struct pkg *);
 const char		 *pkg_get_name(struct pkg *);
 struct pkgfile		 *pkg_get_next_file(struct pkg *);
 const char		 *pkg_get_origin(struct pkg *);
+int			  pkg_set_origin(struct pkg *, const char *);
 const char		 *pkg_get_version(struct pkg *);
 int			  pkg_run_script(struct pkg *, const char *,pkg_script);
 int			  pkg_add_dependency(struct pkg *, struct pkg *);
@@ -154,9 +158,6 @@ typedef enum _pkg_manifest_item_type {
 	pmt_chdir,	/**< The item indicates a new directory to change to */
 	pmt_output,	/**< The item indicates some message to display to the user */
 	pmt_comment,	/**< The item is a comment */
-	pmt_pkgname,	/**< The item is the name of the package */
-	pmt_conflict,	/**< The item is a name of a conflicting package */
-	pmt_dependency,	/**< The item is the name of a dependent package */
 	pmt_execute	/**< The item is a program to execute */
 } pkg_manifest_item_type;
 
@@ -168,13 +169,15 @@ typedef enum _pkg_manifest_item_attr {
 	pmia_ignore,		/**< Ignore the current item */
 	pmia_deinstall,		/**< The item is for deinstall rather than install */
 	pmia_md5,		/**< Set the MD5 checksum of an item */
+	pmia_max		/**< The largest possible attribute */
 } pkg_manifest_item_attr;
 
 struct pkg_manifest_item *pkg_manifest_item_new(pkg_manifest_item_type,
 	    const char *);
 int	pkg_manifest_item_free(struct pkg_manifest_item *);
 int	pkg_manifest_item_set_attr(struct pkg_manifest_item *,
-	    pkg_manifest_item_attr, char *);
+	    pkg_manifest_item_attr, const char *);
+int	pkg_manifest_item_set_data(struct pkg_manifest_item *, const char *);
 
 /**
  * @}
@@ -192,11 +195,27 @@ int	pkg_manifest_item_set_attr(struct pkg_manifest_item *,
  */
 struct pkg_manifest;
 
+typedef enum _pkg_manifest_attr {
+	pkgm_other = 0,	/**< Package dependant attribute */
+	pkgm_origin,	/**< The package's origin */
+	pkgm_prefix,	/**< Where the package will install files to */
+	pkgm_max	/**< The largest attribute */
+} pkg_manifest_attr;
+
 struct pkg_manifest	*pkg_manifest_new(void);
 struct pkg_manifest	*pkg_manifest_new_freebsd_pkgfile(struct pkgfile *);
 int			 pkg_manifest_free(struct pkg_manifest *);
+int			 pkg_manifest_add_dependency(struct pkg_manifest *,
+			    struct pkg *);
+int			 pkg_manifest_add_conflict(struct pkg_manifest *,
+			    const char *);
+int			 pkg_manifest_set_name(struct pkg_manifest *,
+			    const char *);
+int			 pkg_manifest_set_attr(struct pkg_manifest *,
+			    pkg_manifest_attr, const char *);
 int			 pkg_manifest_append_item(struct pkg_manifest *,
 			    struct pkg_manifest_item *);
+struct pkgfile		*pkg_manifest_get_file(struct pkg_manifest *);
 
 /**
  * @}

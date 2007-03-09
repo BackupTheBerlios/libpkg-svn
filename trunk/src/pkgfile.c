@@ -36,6 +36,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <md5.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -203,11 +204,11 @@ pkgfile_fileptr_read(void *pkgfile, char *buf, int len)
 {
 	struct pkgfile *file;
 
+	file = pkgfile;
 	if (len <= 0 || file->offset >= file->length)
 		return 0;
 
 	/* Read in the data */
-	file = pkgfile;
 	pkgfile_get_data(file);
 
 	/* Stop reading past the end of the file */
@@ -774,6 +775,14 @@ pkgfile_remove_line(struct pkgfile *file, const char *line)
 	return 0;
 }
 
+/**
+ * @brief Appends data to the end of a file
+ * @param file The file to append data to
+ * @param data The data to append
+ * @param length The length of the data to append
+ * @return  0 on success
+ * @return -1 on error
+ */
 int
 pkgfile_append(struct pkgfile *file, const char *data, uint64_t length)
 {
@@ -808,6 +817,36 @@ pkgfile_append(struct pkgfile *file, const char *data, uint64_t length)
 	file->length += length;
 
 	return 0;
+}
+
+/**
+ * @brief Appends a null terminated string to the end of a file
+ * @param file The file to append
+ * @param format A printf(3) like format string
+ * @return  0 on success
+ * @return -1 on failure
+ */
+int
+pkgfile_append_string(struct pkgfile *file, const char *format, ...)
+{
+	char *buf;
+	int len, ret;
+	va_list ap;
+
+	if (file == NULL || format == NULL)
+		return -1;
+
+	/* Build a buffer from the format string */
+	va_start(ap, format);
+	len = vasprintf(&buf, format, ap);
+	if (buf == NULL)
+		return -1;
+	va_end(ap);
+
+	ret = pkgfile_append(file, buf, len);
+	free(buf);
+
+	return ret;
 }
 
 /**
