@@ -120,6 +120,7 @@ struct pkgfile		**pkg_get_control_files(struct pkg *);
 struct pkgfile		 *pkg_get_control_file(struct pkg *, const char *);
 struct pkg		**pkg_get_dependencies(struct pkg *);
 struct pkg		**pkg_get_reverse_dependencies(struct pkg *);
+struct pkg_manifest	 *pkg_get_manifest(struct pkg *);
 const char		 *pkg_get_name(struct pkg *);
 struct pkgfile		 *pkg_get_next_file(struct pkg *);
 const char		 *pkg_get_origin(struct pkg *);

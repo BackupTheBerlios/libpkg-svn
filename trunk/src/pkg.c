@@ -80,6 +80,9 @@ pkg_new(const char *pkg_name,
 		return NULL;
 	}
 
+	/* Set the manifest to NULL */
+	pkg->pkg_manifest = NULL;
+
 	/* Add the given callbacks to the struct */
 	pkg->pkg_get_control_files = control_files;
 	pkg->pkg_get_control_file = control_file;
@@ -352,6 +355,21 @@ pkg_get_reverse_dependencies(struct pkg *pkg)
 		return pkg->pkg_get_rdeps(pkg);
 
 	return NULL;
+}
+
+/**
+ * @brief Gets the package's manifest
+ * @param pkg The package
+ * @return The package's manifest
+ * @return NULL on error
+ */
+struct pkg_manifest *
+pkg_get_manifest(struct pkg *pkg)
+{
+	if (pkg == NULL)
+		return NULL;
+	
+	return pkg->pkg_manifest;
 }
 
 /**

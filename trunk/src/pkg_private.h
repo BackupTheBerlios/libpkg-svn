@@ -100,6 +100,7 @@ struct pkgm_items {
 	STAILQ_ENTRY(pkgm_items) list;
 	struct pkg_manifest_item *item;
 };
+
 struct pkg_manifest {
 	void		*data;
 
@@ -191,6 +192,8 @@ struct pkg {
 
 	char	*pkg_name;
 	char	*pkg_prefix;
+
+	struct pkg_manifest		*pkg_manifest;
 
 	/* Main callbacks */
 	pkg_get_control_files_callback	*pkg_get_control_files;
