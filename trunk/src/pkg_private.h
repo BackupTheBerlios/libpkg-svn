@@ -102,15 +102,19 @@ struct pkgm_items {
 };
 
 struct pkg_manifest {
-	void		*data;
+	void		 *data;
 
-	struct pkgfile	*file;
-	char		*name;
+	struct pkgfile	 *file;
+	char		 *name;
 
-	char		*attrs[pkgm_max];
+	char		 *attrs[pkgm_max];
 	STAILQ_HEAD(, pkgm_deps) deps;
 	STAILQ_HEAD(, pkgm_conflicts) conflicts;
 	STAILQ_HEAD(, pkgm_items) items;
+
+	/* These are used as caches */
+	char		**conflict_list;
+	struct pkg_manifest_item **item_list;
 
 	pkg_manifest_get_file_callback	*manifest_get_file;
 };
@@ -124,11 +128,13 @@ typedef struct pkg	**pkg_get_dependencies_callback(struct pkg *);
 typedef struct pkgfile	**pkg_get_control_files_callback(struct pkg *);
 typedef struct pkgfile   *pkg_get_control_file_callback(struct pkg *,
 				const char *);
+typedef struct pkg_manifest *pkg_get_manifest_callback(struct pkg *);
 typedef int		  pkg_free_callback(struct pkg *);
 
 struct pkg		 *pkg_new(const char *,
 				pkg_get_control_files_callback *,
 				pkg_get_control_file_callback *,
+				pkg_get_manifest_callback *,
 				pkg_get_dependencies_callback *,
 				pkg_get_dependencies_callback *,
 				pkg_free_callback *);
@@ -198,6 +204,7 @@ struct pkg {
 	/* Main callbacks */
 	pkg_get_control_files_callback	*pkg_get_control_files;
 	pkg_get_control_file_callback	*pkg_get_control_file;
+	pkg_get_manifest_callback	*pkg_get_manifest;
 	pkg_get_dependencies_callback	*pkg_get_deps;
 	pkg_get_dependencies_callback	*pkg_get_rdeps;
 	pkg_free_callback		*pkg_free;

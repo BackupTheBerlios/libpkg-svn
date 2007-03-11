@@ -64,6 +64,8 @@ pkg_manifest_new()
 	manifest->data = NULL;
 	manifest->file = NULL;
 	manifest->name = NULL;
+	manifest->conflict_list = NULL;
+	manifest->item_list = NULL;
 
 	for (pos = 0; pos < pkgm_max; pos++) {
 		manifest->attrs[pos] = NULL;
@@ -111,6 +113,12 @@ pkg_manifest_free(struct pkg_manifest *manifest)
 		pkg_manifest_item_free(item->item);
 		free(item);
 	}
+
+	if (manifest->conflict_list != NULL)
+		free(manifest->conflict_list);
+
+	if (manifest->item_list != NULL)
+		free(manifest->item_list);
 
 	for (pos = 0; pos < pkgm_max; pos++) {
 		if (manifest->attrs[pos] != NULL &&
@@ -275,6 +283,48 @@ pkg_manifest_append_item(struct pkg_manifest *manifest,
 }
 
 /**
+ * @brief Gets an array of strings containing packages this package will conflict with
+ * @param manifest The manifest to read
+ * @return A null terminated array of conflict strings
+ * @return NULL on none or error
+ */
+const char **
+pkg_manifest_get_conflicts(struct pkg_manifest *manifest)
+{
+	struct pkgm_conflicts *conflict;
+	unsigned int count;
+
+	if (manifest == NULL)
+		return NULL;
+
+	if (manifest->conflict_list != NULL)
+		return (const char **)manifest->conflict_list;
+
+	/* Find out how much space is needed */
+	count = 0;
+	STAILQ_FOREACH(conflict, &manifest->conflicts, list) {
+		count++;
+	}
+	if (count == 0)
+		return NULL;
+
+	/* Allocate the space for the conflict list */
+	manifest->conflict_list = malloc((count + 1) * sizeof(char *));
+	if (manifest->conflict_list == NULL)
+		return NULL;
+
+	/* Populate the conflict list */
+	count = 0;
+	STAILQ_FOREACH(conflict, &manifest->conflicts, list) {
+		manifest->conflict_list[count] = conflict->conflict;
+		count++;
+	}
+	manifest->conflict_list[count] = NULL;
+
+	return (const char **)manifest->conflict_list;
+}
+
+/**
  * @brief Gets a pkgfile of the given manifest
  * @param manifest The manifest to read
  * @return A pkgfile containing the manifest
@@ -292,6 +342,49 @@ pkg_manifest_get_file(struct pkg_manifest *manifest)
 	}
 
 	return manifest->file;
+}
+
+/**
+ * @brief Gets the manifest items from a manifest
+ * @param manifest The manifest
+ * @return The manifest items
+ * @return NULL on error
+ */
+struct pkg_manifest_item **
+pkg_manifest_get_items(struct pkg_manifest *manifest)
+{
+	unsigned int count;
+	struct pkgm_items *item;
+
+	if (manifest == NULL)
+		return NULL;
+
+	if (manifest->item_list != NULL)
+		return manifest->item_list;
+
+	/* Find out how much space is needed */
+	count = 0;
+	STAILQ_FOREACH(item, &manifest->items, list) {
+		count++;
+	}
+	if (count == 0)
+		return NULL;
+
+	/* Allocate the space for the conflict list */
+	manifest->item_list = malloc((count + 1) *
+	    sizeof(struct pkg_manifest_itemi *));
+	if (manifest->item_list == NULL)
+		return NULL;
+
+	/* Populate the conflict list */
+	count = 0;
+	STAILQ_FOREACH(item, &manifest->items, list) {
+		manifest->item_list[count] = item->item;
+		count++;
+	}
+	manifest->item_list[count] = NULL;
+
+	return manifest->item_list;
 }
 
 /**
@@ -367,6 +460,36 @@ pkg_manifest_item_free(struct pkg_manifest_item *item)
 }
 
 /**
+ * @brief Gets an item's data
+ * @param item The item
+ * @return The item's data
+ * @return NULL on error
+ */
+const void *
+pkg_manifest_item_get_data(struct pkg_manifest_item *item)
+{
+	if (item == NULL)
+		return NULL;
+	
+	return item->data;
+}
+
+/**
+ * @brief Gets the type of an item
+ * @param item The item
+ * @return The item type
+ * @return pmt_error on error
+ */
+pkg_manifest_item_type
+pkg_manifest_item_get_type(struct pkg_manifest_item *item)
+{
+	if (item == NULL)
+		return pmt_error;
+
+	return item->type;
+}
+
+/**
  * @brief Sets the given attribute on the item
  * @param item The package item
  * @param attr The attribute to set
@@ -404,6 +527,25 @@ pkg_manifest_item_set_attr(struct pkg_manifest_item *item,
 	return 0;
 }
 
+/**
+ * @brief Gets the given attribute from an item
+ * @param item The item to get the attribute from
+ * @param attr The attribute to get
+ * @return The value of the attribute
+ * @return NULL on unset attribute or error
+ */
+const char *
+pkg_manifest_item_get_attr(struct pkg_manifest_item *item,
+    pkg_manifest_item_attr attr)
+{
+	if (item == NULL)
+		return NULL;
+
+	if (item->attrs == NULL)
+		return NULL;
+
+	return item->attrs[attr];
+}
 /**
  * @brief Sets the data of the given item
  * @param item The manifest item

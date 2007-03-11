@@ -57,6 +57,7 @@ static int		  freebsd_add_file(struct pkg *,
 static struct pkgfile	**freebsd_get_control_files(struct pkg *);
 static struct pkgfile	 *freebsd_get_control_file(struct pkg *,
 					const char *);
+static struct pkg_manifest *freebsd_get_manifest(struct pkg *);
 static struct pkgfile	 *freebsd_get_next_file(struct pkg *);
 static int		  freebsd_install(struct pkg *, const char *,
 				int, pkg_db_action *, void *,
@@ -160,7 +161,8 @@ pkg_new_freebsd_from_file(FILE *fd)
 
 	pkg_name = fpkg->contents->lines[1].data;
 	pkg = pkg_new(pkg_name, freebsd_get_control_files,
-	    freebsd_get_control_file, freebsd_get_deps, NULL, freebsd_free);
+	    freebsd_get_control_file, freebsd_get_manifest, freebsd_get_deps,
+	    NULL, freebsd_free);
 	if (pkg == NULL) {
 		/** @todo cleanup */
 		return NULL;
@@ -207,8 +209,8 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 		return NULL;
 
 	pkg = pkg_new(pkg_name, freebsd_get_control_files,
-	    freebsd_get_control_file, freebsd_get_deps, freebsd_get_rdeps,
-	    freebsd_free);
+	    freebsd_get_control_file, freebsd_get_manifest, freebsd_get_deps,
+	    freebsd_get_rdeps, freebsd_free);
 	if (pkg == NULL)
 		return NULL;
 	pkg_add_callbacks_data(pkg, freebsd_get_version, freebsd_get_origin,
@@ -250,8 +252,8 @@ pkg_new_freebsd_empty(const char *pkg_name)
 
 	/* Create the package */
 	pkg = pkg_new(pkg_name, freebsd_get_control_files,
-	    freebsd_get_control_file, freebsd_get_deps, freebsd_get_rdeps,
-	    freebsd_free);
+	    freebsd_get_control_file, freebsd_get_manifest, freebsd_get_deps,
+	    freebsd_get_rdeps, freebsd_free);
 	if (pkg == NULL)
 		return NULL;
 
@@ -378,8 +380,7 @@ freebsd_get_origin(struct pkg *pkg)
 		/* Find the line with the origin */
 		for (line = 0; line < fpkg->contents->line_count; line++) {
 			if (fpkg->contents->lines[line].line_type ==
-			    PKG_LINE_COMMENT)
-			    {
+			    PKG_LINE_COMMENT) {
 				if (strncmp("ORIGIN:",
 				    fpkg->contents->lines[line].data, 7) == 0) {
 					fpkg->origin =
@@ -493,6 +494,32 @@ freebsd_get_control_file(struct pkg *pkg, const char *filename)
 			return fpkg->control[pos];
 	}
 	return NULL;
+}
+
+/**
+ * @brief Callback for pkg_get_manifest
+ * @param pkg The package to get the manifest from
+ * @return The packages manifest
+ * @return NULL if the manifest is bad
+ */
+static struct pkg_manifest *
+freebsd_get_manifest(struct pkg *pkg)
+{
+	struct freebsd_package *fpkg;
+	struct pkgfile *contents_file;
+
+	assert(pkg != NULL);
+	assert(pkg->pkg_manifest == NULL);
+
+	/* Get the +CONTENTS file */
+	fpkg = pkg->data;
+	assert(fpkg != NULL);
+	freebsd_parse_contents(fpkg);
+	contents_file = pkg_get_control_file(pkg, "+CONTENTS");
+
+	pkg->pkg_manifest = pkg_manifest_new_freebsd_pkgfile(contents_file);
+
+	return pkg->pkg_manifest;
 }
 
 /**
@@ -1125,8 +1152,9 @@ freebsd_free(struct pkg *pkg)
 		if (fpkg->db_dir != NULL)
 			free(fpkg->db_dir);
 
-		if (fpkg->origin != NULL)
-			free(fpkg->origin);
+		/** @todo Fix this to only call free when required */
+		/* if (fpkg->origin != NULL)
+			free(fpkg->origin); */
 
 		if (fpkg->next_file != NULL)
 			pkgfile_free(fpkg->next_file);
@@ -1400,6 +1428,7 @@ freebsd_parse_contents(struct freebsd_package *fpkg)
 	file_data = pkgfile_get_data(contents_file);
 	fpkg->contents = pkg_freebsd_contents_new(file_data,
 	    pkgfile_get_size(contents_file));
+
 	return 0;
 }
 

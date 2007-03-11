@@ -116,6 +116,7 @@ struct pkg		 *pkg_new_freebsd_empty(const char *);
 int			  pkg_compare(const void *, const void *);
 int			  pkg_set_prefix(struct pkg *, const char *);
 const char		 *pkg_get_prefix(struct pkg *);
+const char		**pkg_get_conflicts(struct pkg *);
 struct pkgfile		**pkg_get_control_files(struct pkg *);
 struct pkgfile		 *pkg_get_control_file(struct pkg *, const char *);
 struct pkg		**pkg_get_dependencies(struct pkg *);
@@ -152,7 +153,8 @@ struct pkg_manifest_item;
  * @brief The type of manifest item this is
  */
 typedef enum _pkg_manifest_item_type {
-	pmt_other = 0,	/**< The item is package format dependent */
+	pmt_error = 0,	/**< An error occured */
+	pmt_other,	/**< The item is package format dependent */
 	pmt_file,	/**< The item is a file */
 	pmt_dir,	/**< The item is a directory */
 	pmt_dirlist,	/**< The item is a list of directories and files, eg. mtree */
@@ -176,8 +178,12 @@ typedef enum _pkg_manifest_item_attr {
 struct pkg_manifest_item *pkg_manifest_item_new(pkg_manifest_item_type,
 	    const char *);
 int	pkg_manifest_item_free(struct pkg_manifest_item *);
+pkg_manifest_item_type pkg_manifest_item_get_type(struct pkg_manifest_item *);
+const void *pkg_manifest_item_get_data(struct pkg_manifest_item *);
 int	pkg_manifest_item_set_attr(struct pkg_manifest_item *,
 	    pkg_manifest_item_attr, const char *);
+const char *pkg_manifest_item_get_attr(struct pkg_manifest_item *,
+	    pkg_manifest_item_attr);
 int	pkg_manifest_item_set_data(struct pkg_manifest_item *, const char *);
 
 /**
@@ -203,20 +209,22 @@ typedef enum _pkg_manifest_attr {
 	pkgm_max	/**< The largest attribute */
 } pkg_manifest_attr;
 
-struct pkg_manifest	*pkg_manifest_new(void);
-struct pkg_manifest	*pkg_manifest_new_freebsd_pkgfile(struct pkgfile *);
-int			 pkg_manifest_free(struct pkg_manifest *);
-int			 pkg_manifest_add_dependency(struct pkg_manifest *,
+struct pkg_manifest	 *pkg_manifest_new(void);
+struct pkg_manifest	 *pkg_manifest_new_freebsd_pkgfile(struct pkgfile *);
+int			  pkg_manifest_free(struct pkg_manifest *);
+int			  pkg_manifest_add_dependency(struct pkg_manifest *,
 			    struct pkg *);
-int			 pkg_manifest_add_conflict(struct pkg_manifest *,
+int			  pkg_manifest_add_conflict(struct pkg_manifest *,
 			    const char *);
-int			 pkg_manifest_set_name(struct pkg_manifest *,
+int			  pkg_manifest_set_name(struct pkg_manifest *,
 			    const char *);
-int			 pkg_manifest_set_attr(struct pkg_manifest *,
+int			  pkg_manifest_set_attr(struct pkg_manifest *,
 			    pkg_manifest_attr, const char *);
-int			 pkg_manifest_append_item(struct pkg_manifest *,
+int			  pkg_manifest_append_item(struct pkg_manifest *,
 			    struct pkg_manifest_item *);
-struct pkgfile		*pkg_manifest_get_file(struct pkg_manifest *);
+const char		**pkg_manifest_get_conflicts(struct pkg_manifest *);
+struct pkgfile		 *pkg_manifest_get_file(struct pkg_manifest *);
+struct pkg_manifest_item **pkg_manifest_get_items(struct pkg_manifest *);
 
 /**
  * @}

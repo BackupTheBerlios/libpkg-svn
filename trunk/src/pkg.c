@@ -59,6 +59,7 @@ struct pkg *
 pkg_new(const char *pkg_name,
 		pkg_get_control_files_callback *control_files,
 		pkg_get_control_file_callback *control_file,
+		pkg_get_manifest_callback *get_manifest,
 		pkg_get_dependencies_callback *get_deps,
 		pkg_get_dependencies_callback *get_rdeps,
 		pkg_free_callback *free_pkg)
@@ -86,6 +87,7 @@ pkg_new(const char *pkg_name,
 	/* Add the given callbacks to the struct */
 	pkg->pkg_get_control_files = control_files;
 	pkg->pkg_get_control_file = control_file;
+	pkg->pkg_get_manifest = get_manifest;
 	pkg->pkg_get_deps = get_deps;
 	pkg->pkg_get_rdeps = get_rdeps;
 	pkg->pkg_free = free_pkg;
@@ -208,7 +210,7 @@ pkg_add_callbacks_install (struct pkg *pkg,
 struct pkg*
 pkg_new_empty(const char *pkg_name)
 {
-	return pkg_new(pkg_name, NULL, NULL, NULL, NULL, NULL);
+	return pkg_new(pkg_name, NULL, NULL, NULL, NULL, NULL, NULL);
 }
 
 /**
@@ -274,6 +276,19 @@ pkg_get_prefix(struct pkg *pkg)
 	return pkg->pkg_prefix;
 }
 
+const char **
+pkg_get_conflicts(struct pkg *pkg)
+{
+	if (pkg == NULL)
+		return NULL;
+
+	/* Read the manifest */
+	pkg_get_manifest(pkg);
+
+	/* Get the conflicts */
+	return pkg_manifest_get_conflicts(pkg->pkg_manifest);
+}
+
 /**
  * @brief Gets the control files from a given package
  * @param pkg The package
@@ -327,8 +342,10 @@ pkg_get_dependencies(struct pkg *pkg)
 
 	assert(pkg->pkg_get_deps == NULL ||
 	    pkg->pkg_get_deps != pkg->pkg_get_rdeps);
+
 	if (pkg->pkg_get_deps)
 		return pkg->pkg_get_deps(pkg);
+
 	return NULL;
 }
 
@@ -368,7 +385,12 @@ pkg_get_manifest(struct pkg *pkg)
 {
 	if (pkg == NULL)
 		return NULL;
-	
+
+	if (pkg->pkg_manifest == NULL) {
+		if (pkg->pkg_get_manifest != NULL) {
+			pkg->pkg_get_manifest(pkg);
+		}
+	}
 	return pkg->pkg_manifest;
 }
 
@@ -641,6 +663,9 @@ pkg_free(struct pkg *pkg)
 
 	if (pkg->pkg_prefix != NULL)
 		free(pkg->pkg_prefix);
+
+	if (pkg->pkg_manifest != NULL)
+		pkg_manifest_free(pkg->pkg_manifest);
 
 	if (pkg->pkg_free != NULL)
 		pkg->pkg_free(pkg);

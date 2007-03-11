@@ -172,6 +172,7 @@ freebsd_manifest_get_file(struct pkg_manifest *manifest)
 			break;
 		}
 		case pmt_other:
+		case pmt_error:
 			break;
 		}
 	}
