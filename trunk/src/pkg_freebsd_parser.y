@@ -137,8 +137,10 @@ contents_line
 
 comment_value
 	: DATA {
-		pkg_manifest_item_set_attr(curitem, pmia_other, $1);
+		curitem = pkg_manifest_item_new(pmt_comment, $1);
+		pkg_manifest_append_item(pkg_manifest, curitem);
 		free($1);
+		curdep = NULL;
 	}
 	| DEPORIGIN {
 		pkg_set_origin(curdep, $1);
