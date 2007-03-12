@@ -182,6 +182,7 @@ pkg_manifest_item_type pkg_manifest_item_get_type(struct pkg_manifest_item *);
 const void *pkg_manifest_item_get_data(struct pkg_manifest_item *);
 int	pkg_manifest_item_set_attr(struct pkg_manifest_item *,
 	    pkg_manifest_item_attr, const char *);
+const char *pkg_manifest_get_attr(struct pkg_manifest *,pkg_manifest_item_attr);
 const char *pkg_manifest_item_get_attr(struct pkg_manifest_item *,
 	    pkg_manifest_item_attr);
 int	pkg_manifest_item_set_data(struct pkg_manifest_item *, const char *);
@@ -214,6 +215,7 @@ struct pkg_manifest	 *pkg_manifest_new_freebsd_pkgfile(struct pkgfile *);
 int			  pkg_manifest_free(struct pkg_manifest *);
 int			  pkg_manifest_add_dependency(struct pkg_manifest *,
 			    struct pkg *);
+struct pkg		**pkg_manifest_get_dependencies(struct pkg_manifest *);
 int			  pkg_manifest_add_conflict(struct pkg_manifest *,
 			    const char *);
 int			  pkg_manifest_set_name(struct pkg_manifest *,

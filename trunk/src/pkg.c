@@ -273,9 +273,24 @@ pkg_get_prefix(struct pkg *pkg)
 	if (pkg == NULL)
 		return NULL;
 
+	/* Read the prefix from the manifest */
+	if (pkg->pkg_prefix == NULL && pkg->pkg_manifest != NULL) {
+		const char *prefix;
+
+		prefix = (const char *)pkg_manifest_get_attr(pkg->pkg_manifest,
+		    pkgm_prefix);
+		pkg_set_prefix(pkg, prefix);
+	}
+
 	return pkg->pkg_prefix;
 }
 
+/**
+ * @brief Gets an array of strings describing package conflicts
+ * @param pkg The package
+ * @return A NULL terminated array of conflict strings
+ * @return NULL on no conflicts or NULL
+ */
 const char **
 pkg_get_conflicts(struct pkg *pkg)
 {

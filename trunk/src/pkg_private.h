@@ -113,6 +113,7 @@ struct pkg_manifest {
 	STAILQ_HEAD(, pkgm_items) items;
 
 	/* These are used as caches */
+	struct pkg	**deps_list;
 	char		**conflict_list;
 	struct pkg_manifest_item **item_list;
 

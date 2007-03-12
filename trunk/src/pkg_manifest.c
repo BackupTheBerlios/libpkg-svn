@@ -64,6 +64,7 @@ pkg_manifest_new()
 	manifest->data = NULL;
 	manifest->file = NULL;
 	manifest->name = NULL;
+	manifest->deps_list = NULL;
 	manifest->conflict_list = NULL;
 	manifest->item_list = NULL;
 
@@ -114,6 +115,9 @@ pkg_manifest_free(struct pkg_manifest *manifest)
 		free(item);
 	}
 
+	if (manifest->deps_list != NULL)
+		free(manifest->deps_list);
+
 	if (manifest->conflict_list != NULL)
 		free(manifest->conflict_list);
 
@@ -161,6 +165,48 @@ pkg_manifest_add_dependency(struct pkg_manifest *manifest, struct pkg *dep)
 	STAILQ_INSERT_TAIL(&manifest->deps, the_dep, list);
 
 	return 0;
+}
+
+/**
+ * @brief Gets an array of packages depended on
+ * @param manifest The manifest
+ * @return A NULL terminated array of packages
+ * @return NULL on error or no dependencies
+ */
+struct pkg **
+pkg_manifest_get_dependencies(struct pkg_manifest *manifest)
+{
+	struct pkgm_deps *dep;
+	unsigned int count;
+
+	if (manifest == NULL)
+		return NULL;
+
+	if (manifest->deps_list != NULL)
+		return manifest->deps_list;
+
+	/* Find out how much space is needed */
+	count = 0;
+	STAILQ_FOREACH(dep, &manifest->deps, list) {
+		count++;
+	}
+	if (count == 0)
+		return NULL;
+
+	/* Allocate the space for the conflict list */
+	manifest->deps_list = malloc((count + 1) * sizeof(struct pkg *));
+	if (manifest->deps_list == NULL)
+		return NULL;
+
+	/* Populate the conflict list */
+	count = 0;
+	STAILQ_FOREACH(dep, &manifest->deps, list) {
+		manifest->deps_list[count] = dep->pkg;
+		count++;
+	}
+	manifest->deps_list[count] = NULL;
+
+	return manifest->deps_list;
 }
 
 /**
@@ -525,6 +571,29 @@ pkg_manifest_item_set_attr(struct pkg_manifest_item *item,
 	}
 
 	return 0;
+}
+
+/**
+ * @brief Gets the given attribute from a manifest
+ * @param manifest The manifest to read
+ * @param attr The attribute to retrieve
+ * @return The attribute
+ * @return NULL on error or no attribute
+ */
+const char *
+pkg_manifest_get_attr(struct pkg_manifest *manifest,
+    pkg_manifest_item_attr attr)
+{
+	if (manifest == NULL)
+		return NULL;
+
+	if (attr >= pkgm_max)
+		return NULL;
+
+	if (manifest->attrs == NULL)
+		return NULL;
+
+	return manifest->attrs[attr];
 }
 
 /**

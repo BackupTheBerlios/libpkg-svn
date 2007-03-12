@@ -251,9 +251,7 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	struct freebsd_package *fpkg;
 
 	/* Create the package */
-	pkg = pkg_new(pkg_name, freebsd_get_control_files,
-	    freebsd_get_control_file, freebsd_get_manifest, freebsd_get_deps,
-	    freebsd_get_rdeps, freebsd_free);
+	pkg = pkg_new(pkg_name, NULL, NULL, NULL, NULL, NULL, freebsd_free);
 	if (pkg == NULL)
 		return NULL;
 
@@ -349,6 +347,7 @@ freebsd_get_version(struct pkg *pkg)
 
 /**
  * @brief Callback for pkg_get_origin()
+ * @param pkg The package to find the origin for
  * 
  * @return A string containing the origin of the Package. Do not free.
  */
@@ -363,33 +362,16 @@ freebsd_get_origin(struct pkg *pkg)
 	assert(fpkg != NULL);
 	assert(fpkg->pkg_type != fpkg_unknown);
 
-	/* The origin must be set previously on an empty package */
-	if (fpkg->pkg_type == fpkg_from_empty)
-		return fpkg->origin;
-
-	/* Find the origin line and cache it */
 	if (fpkg->origin == NULL) {
-		unsigned int line;
+		pkg_get_manifest(pkg);
 
-		/* Load the contents file */
-		freebsd_parse_contents(fpkg);
-		if (fpkg->contents == NULL)
+		if (pkg->pkg_manifest == NULL)
 			return NULL;
-		assert(fpkg->contents->lines != NULL);
 
-		/* Find the line with the origin */
-		for (line = 0; line < fpkg->contents->line_count; line++) {
-			if (fpkg->contents->lines[line].line_type ==
-			    PKG_LINE_COMMENT) {
-				if (strncmp("ORIGIN:",
-				    fpkg->contents->lines[line].data, 7) == 0) {
-					fpkg->origin =
-					    fpkg->contents->lines[line].data +7;
-					break;
-				}
-			}
-		}
+		fpkg->origin = strdup(pkg_manifest_get_attr(pkg->pkg_manifest,
+		    pkgm_origin));
 	}
+
 	return fpkg->origin;
 }
 
@@ -885,55 +867,20 @@ freebsd_get_next_file(struct pkg *pkg)
 
 /**
  * @brief Callback for pkg_get_dependencies()
- * @todo Write
- * @return An array of empty package objects, or NULL
+ * @param pkg The package to find the dependencies for
+ * @return An array of empty package objects
+ * @return NULL on error
  */
 static struct pkg **
 freebsd_get_deps(struct pkg *pkg)
 {
-	struct freebsd_package *fpkg;
-	struct pkgfile *contents_file;
-	struct pkg **pkgs;
-	unsigned int pkg_count;
-	size_t pkg_size;
-	unsigned int line;
-
 	assert(pkg != NULL);
 
-	fpkg = pkg->data;
-	assert(fpkg != NULL);
-	assert(fpkg->pkg_type != fpkg_unknown);
-	assert(fpkg->pkg_type != fpkg_from_empty);
-
-	freebsd_open_control_files(fpkg);
-	assert(fpkg->control != NULL);
-
-	freebsd_parse_contents(fpkg);
-	assert(fpkg->contents != NULL);
-
-	contents_file = pkg_get_control_file(pkg, "+CONTENTS");
-	if (contents_file == NULL)
+	pkg_get_manifest(pkg);
+	if (pkg->pkg_manifest == NULL)
 		return NULL;
 
-	pkg_count = 0;
-	pkg_size = sizeof(struct pkg *);
-	pkgs = malloc(pkg_size);
-	if (pkgs == NULL)
-		return NULL;
-	pkgs[0] = NULL;
-
-	for (line = 0; line < fpkg->contents->line_count; line++) {
-		if (fpkg->contents->lines[line].line_type == PKG_LINE_PKGDEP) {
-			pkg_size += sizeof(struct pkg *);
-			pkgs = realloc(pkgs, pkg_size);
-			pkgs[pkg_count] = pkg_new_empty
-			    (fpkg->contents->lines[line].data);
-			pkg_count++;
-			pkgs[pkg_count] = NULL;
-		}
-	}
-		
-	return pkgs;
+	return pkg_manifest_get_dependencies(pkg->pkg_manifest);
 }
 
 static struct pkg **
@@ -983,7 +930,7 @@ freebsd_get_rdeps(struct pkg *pkg)
 #define addPkg(pkg_name) \
 	{ \
 		struct pkg *dep; \
-		dep = pkg_new_empty(pkg_name); \
+		dep = pkg_new_freebsd_empty(pkg_name); \
 		ret_size += sizeof(struct pkg **); \
 		ret = realloc(ret, ret_size); \
 		ret[ret_count] = dep; \
