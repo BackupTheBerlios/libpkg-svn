@@ -30,7 +30,27 @@ static struct pkg_manifest *pkg_manifest = NULL;
 
 %%
 contents_file:
-	COMMENT FORMAT_1_1 NL head_1_1 data_1_1 {
+	COMMENT FORMAT_1_1 NL head_1_1 CWD NL data_1_1 {
+		assert(pkg_manifest != NULL);
+
+		/* Set the package prefix */
+		pkg_manifest_set_attr(pkg_manifest, pkgm_prefix, $5);
+		free($5);
+
+		(*YYPARSE_PARAM) = pkg_manifest;
+
+		/* Reset static values for the next run */
+		curitem = NULL;
+		curdep = NULL;
+		pkg_manifest = NULL;
+	}
+	| CWD NL COMMENT FORMAT_1_1 NL head_1_1 data_1_1 {
+		assert(pkg_manifest != NULL);
+
+		/* Set the package prefix */
+		pkg_manifest_set_attr(pkg_manifest, pkgm_prefix, $1);
+		free($1);
+
 		(*YYPARSE_PARAM) = pkg_manifest;
 
 		/* Reset static values for the next run */
@@ -40,7 +60,7 @@ contents_file:
 	}
 
 head_1_1:
-	NAME NL COMMENT ORIGIN NL CWD NL {
+	NAME NL COMMENT ORIGIN NL {
 		assert(pkg_manifest == NULL);
 		if (pkg_manifest == NULL)
 			pkg_manifest = pkg_manifest_new();
@@ -50,10 +70,6 @@ head_1_1:
 		/* Set the package origin */
 		pkg_manifest_set_attr(pkg_manifest, pkgm_origin, $4);
 		free($4);
-
-		/* Set the package prefix */
-		pkg_manifest_set_attr(pkg_manifest, pkgm_prefix, $6);
-		free($6);
 	}
 
 data_1_1:
