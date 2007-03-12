@@ -316,30 +316,25 @@ static const char *
 freebsd_get_version(struct pkg *pkg)
 {
 	struct freebsd_package *fpkg;
-	char *s;
 
 	assert(pkg != NULL);
 
 	fpkg = pkg->data;
 	assert(fpkg != NULL);
 	assert(fpkg->pkg_type != fpkg_unknown);
-	assert(fpkg->pkg_type != fpkg_from_empty);
 
 	if (fpkg->version == NULL) {
-		freebsd_parse_contents(fpkg);
-		assert(fpkg->contents != NULL);
-		assert(fpkg->contents->lines != NULL);
-		/** @todo Make a +CONTENTS structure check */
-		assert(fpkg->contents->lines[0].data != NULL);
-		assert(fpkg->contents->lines[0].line_type == PKG_LINE_COMMENT);
-		assert(strcmp("PKG_FORMAT_REVISION:1.1", fpkg->contents->lines[0].data) == 0);
-		s = strchr(fpkg->contents->lines[0].data, ':');
-		if (s == NULL)
+		const char *version;
+
+		pkg_get_manifest(pkg);
+		if (pkg->pkg_manifest == NULL)
 			return NULL;
-		s++;
-		if (s[0] == '\0')
+
+		version = pkg_manifest_get_manifest_version(pkg->pkg_manifest);
+		if (version == NULL)
 			return NULL;
-		fpkg->version = s;
+
+		fpkg->version = strdup(version);
 	}
 	
 	return fpkg->version;

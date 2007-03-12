@@ -37,6 +37,8 @@ contents_file:
 		pkg_manifest_set_attr(pkg_manifest, pkgm_prefix, $5);
 		free($5);
 
+		pkg_manifest_set_manifest_version(pkg_manifest, "1.1");
+
 		(*YYPARSE_PARAM) = pkg_manifest;
 
 		/* Reset static values for the next run */
@@ -50,6 +52,8 @@ contents_file:
 		/* Set the package prefix */
 		pkg_manifest_set_attr(pkg_manifest, pkgm_prefix, $1);
 		free($1);
+
+		pkg_manifest_set_manifest_version(pkg_manifest, "1.1");
 
 		(*YYPARSE_PARAM) = pkg_manifest;
 

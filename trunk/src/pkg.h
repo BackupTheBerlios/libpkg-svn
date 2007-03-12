@@ -213,6 +213,10 @@ typedef enum _pkg_manifest_attr {
 struct pkg_manifest	 *pkg_manifest_new(void);
 struct pkg_manifest	 *pkg_manifest_new_freebsd_pkgfile(struct pkgfile *);
 int			  pkg_manifest_free(struct pkg_manifest *);
+int			  pkg_manifest_set_manifest_version(
+			    struct pkg_manifest *, const char *);
+const char		 *pkg_manifest_get_manifest_version(
+			    struct pkg_manifest *);
 int			  pkg_manifest_add_dependency(struct pkg_manifest *,
 			    struct pkg *);
 struct pkg		**pkg_manifest_get_dependencies(struct pkg_manifest *);
