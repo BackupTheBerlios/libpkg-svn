@@ -63,6 +63,7 @@ pkg_manifest_new()
 
 	manifest->data = NULL;
 	manifest->file = NULL;
+	manifest->manifest_version = NULL;
 	manifest->name = NULL;
 	manifest->deps_list = NULL;
 	manifest->conflict_list = NULL;
@@ -135,9 +136,48 @@ pkg_manifest_free(struct pkg_manifest *manifest)
 
 	pkgfile_free(manifest->file);
 
+	if (manifest->manifest_version != NULL)
+		free(manifest->manifest_version);
+
 	free(manifest);
 
 	return 0;
+}
+
+/**
+ * @brief Sets the version of the manifest
+ * @param manifest The manifest to set the verion
+ * @param version A string containing the version
+ * @return  0 on success
+ * @return -1 on error
+ */
+int
+pkg_manifest_set_manifest_version(struct pkg_manifest *manifest,
+    const char *version)
+{
+	if (manifest == NULL)
+		return -1;
+	
+	manifest->manifest_version = strdup(version);
+	if (manifest->manifest_version == NULL)
+		return -1;
+	
+	return 0;
+}
+
+/**
+ * @brief Gets the version of the manifest
+ * @param manifest The manifest to get the verion of
+ * @return The manifest's version
+ * @return NULL on error or no version set
+ */
+const char *
+pkg_manifest_get_manifest_version(struct pkg_manifest *manifest)
+{
+	if (manifest == NULL)
+		return NULL;
+	
+	return manifest->manifest_version;
 }
 
 /**

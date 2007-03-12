@@ -104,6 +104,7 @@ struct pkgm_items {
 struct pkg_manifest {
 	void		 *data;
 
+	char		 *manifest_version;
 	struct pkgfile	 *file;
 	char		 *name;
 
