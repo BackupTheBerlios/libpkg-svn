@@ -741,7 +741,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 
 	/* Register reverse dependency */
 	deps = pkg_get_dependencies(pkg);
-	for (pos=0; deps[pos] != NULL; pos++) {
+	for (pos=0; deps != NULL && deps[pos] != NULL; pos++) {
 		char required_by[FILENAME_MAX];
 		const char *name;
 		FILE *fd;
@@ -766,7 +766,6 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		fwrite("\n", 1, 1, fd);
 		fclose(fd);
 	}
-	pkg_list_free(deps);
 	
 	pkg_action(PKG_DB_INFO, "Package %s registered in %s",
 	    pkg_get_name(pkg), real_dir);
