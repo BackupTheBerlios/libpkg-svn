@@ -64,4 +64,16 @@ elif [ ${TESTNO} -eq 10 ] ; then
 	if [ $? -ne 0 ] ; then
 		exit 1
 	fi
+elif [ ${TESTNO} -eq 11 ] ; then
+	pkg_add ./${PACKAGE}.tbz
+	pkg_info -V ${PACKAGE}
+	if [ $? -ne 0 ] ; then
+		exit 1
+	fi
+elif [ ${TESTNO} -eq 12 ] ; then
+	pkg_add -p /usr/pkg ./${PACKAGE}.tbz
+	pkg_info -V ${PACKAGE}
+	if [ $? -ne 0 ] ; then
+		exit 1
+	fi
 fi
