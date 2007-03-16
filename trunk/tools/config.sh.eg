@@ -1,0 +1,16 @@
+# This is the test configuration script. Copy it to
+# config.sh and change it to suite your environment
+
+
+# Set this to the parent directory to extract the chroot environment to
+#BASE_DIR=/a
+# The file to extract to create the chroot environment
+# This must extract the the files to base/*
+#BASE_TARBALL=${BASE_DIR}/base.tar
+
+# The location of the package files to copy to the chroot
+#PACKAGE_DIR=/some/dir/containing/packages
+# The packages to copy
+#PACKAGES="bash-3.0.16_1.tbz gettext-0.14.5.tbz libiconv-1.9.2_1.tbz"
+#the package to install
+#PACKAGE=bash-3.0.16_1
