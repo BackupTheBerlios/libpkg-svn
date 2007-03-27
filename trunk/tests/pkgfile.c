@@ -94,8 +94,14 @@ basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
 				fail_unless(strncmp(file->name, data, length)
 				    == 0, NULL);
 			}
+		} else {
+			fail_unless(pkgfile_get_data(file) == NULL, NULL);
+			fail_unless(file->data == NULL, NULL);
 		}
 	}
+
+	/* XXX Test pkgfile_get_fileptr */
+	/* XXX Test pkgfile_get_type_string */
 
 	/* Test setting the file's mode */
 	fail_unless(pkgfile_set_mode(file, 100) == 0, NULL);
@@ -106,6 +112,8 @@ basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
 	if (type == pkgfile_regular && length == 0) {
 		/* Not all seek tests will work with an empty file */
 		fail_unless(pkgfile_seek(file, 0, SEEK_SET) == 0, NULL);
+		fail_unless(file->offset == 0, NULL);
+		fail_unless(pkgfile_seek(file, 1, SEEK_SET) == 0, NULL);
 		fail_unless(file->offset == 0, NULL);
 	} else if (type == pkgfile_regular) {
 		int pos;
@@ -794,20 +802,26 @@ END_TEST
 
 START_TEST(pkgfile_misc_bad_args)
 {
-	fail_unless(pkgfile_get_size(NULL) == 0, NULL);
-	fail_unless(pkgfile_get_data(NULL) == NULL, NULL);
-	fail_unless(pkgfile_set_checksum_md5(NULL, NULL) == -1, NULL);
-	fail_unless(pkgfile_set_checksum_md5(NULL, "1234567890123456789012") == -1, NULL);
-	fail_unless(pkgfile_compare_checksum_md5(NULL) == -1, NULL);
-	fail_unless(pkgfile_unlink(NULL) == -1, NULL);
-	fail_unless(pkgfile_seek(NULL, 0, SEEK_SET) == -1, NULL);
-	fail_unless(pkgfile_set_mode(NULL, 1) == -1, NULL);
-	fail_unless(pkgfile_remove_line(NULL, NULL) == -1, NULL);
-	fail_unless(pkgfile_remove_line(NULL, "") == -1, NULL);
 	fail_unless(pkgfile_append(NULL, NULL, 0) == -1, NULL);
 	fail_unless(pkgfile_append(NULL, "1234567890", 10) == -1, NULL);
-	fail_unless(pkgfile_write(NULL) == -1, NULL);
+	fail_unless(pkgfile_compare_checksum_md5(NULL) == -1, NULL);
 	fail_unless(pkgfile_free(NULL) == -1, NULL);
+	fail_unless(pkgfile_get_data(NULL) == NULL, NULL);
+	fail_unless(pkgfile_get_fileptr(NULL) == NULL, NULL);
+	fail_unless(pkgfile_get_name(NULL) == NULL, NULL);
+	fail_unless(pkgfile_get_size(NULL) == 0, NULL);
+	fail_unless(pkgfile_get_type_string(NULL) == NULL, NULL);
+	fail_unless(pkgfile_remove_line(NULL, NULL) == -1, NULL);
+	fail_unless(pkgfile_remove_line(NULL, "") == -1, NULL);
+	fail_unless(pkgfile_seek(NULL, 0, SEEK_SET) == -1, NULL);
+	fail_unless(pkgfile_set_checksum_md5(NULL, NULL) == -1, NULL);
+	fail_unless(pkgfile_set_checksum_md5(NULL, "1234567890123456789012") ==
+	    -1, NULL);
+	fail_unless(pkgfile_set_cwd(NULL, NULL) == -1, NULL);
+	fail_unless(pkgfile_set_cwd(NULL, "/a/dir") == -1, NULL);
+	fail_unless(pkgfile_set_mode(NULL, 1) == -1, NULL);
+	fail_unless(pkgfile_unlink(NULL) == -1, NULL);
+	fail_unless(pkgfile_write(NULL) == -1, NULL);
 }
 END_TEST
 
