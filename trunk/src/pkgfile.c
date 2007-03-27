@@ -435,8 +435,6 @@ pkgfile_get_data(struct pkgfile *file)
 	case pkgfile_hardlink:
 		assert(file->loc == pkgfile_loc_mem);
 		if (file->loc == pkgfile_loc_mem) {
-			if (file->data == NULL)
-				return NULL;
 			return file->data;
 		}
 		break;
