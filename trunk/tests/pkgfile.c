@@ -49,8 +49,8 @@
 #define DEPTH_DIR "testdir/dir"
 #define DEPTH_FILE DEPTH_DIR "/DEPTH"
 
-static void basic_file_tests(struct pkgfile *, pkgfile_type, pkgfile_loc,
-	const char *, unsigned int);
+static void basic_file_tests(struct pkgfile *, const char *, pkgfile_type,
+	pkgfile_loc, const char *, unsigned int);
 static void test_checksums(struct pkgfile *, const char *);
 static void existing_regular_test(struct pkgfile *);
 static void existing_symlink_test(struct pkgfile *);
@@ -65,14 +65,30 @@ static void check_directory_data(const char *);
  * Check a pkgfile object is correct after it has been created
  */
 static void
-basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
-	const char *data, unsigned int length)
+basic_file_tests(struct pkgfile *file, const char *filename, pkgfile_type type,
+	pkgfile_loc loc, const char *data, unsigned int length)
 {
+	FILE *fd;
+	const char *file_type;
+
 	fail_unless(file->loc == loc, NULL);
 	fail_unless(file->type == type, NULL);
 	fail_unless(file->fd == NULL, NULL);
 	fail_unless(file->mode == 0, NULL);
 	fail_unless(file->md5[0] == '\0', NULL);
+
+	fail_unless(strcmp(pkgfile_get_name(file), filename) == 0, NULL);
+	fail_unless(strcmp(file->name, filename) == 0, NULL);
+
+	/* Basic bad data test */
+	fail_unless(pkgfile_append(file, NULL, 5) == -1, NULL);
+	fail_unless(pkgfile_append_string(file, NULL) == -1, NULL);
+	fail_unless(pkgfile_remove_line(file, NULL) == -1, NULL);
+	fail_unless(pkgfile_set_checksum_md5(file, NULL) == -1, NULL);
+	fail_unless(pkgfile_set_checksum_md5(file, "12345") == -1, NULL);
+	fail_unless(pkgfile_set_checksum_md5(NULL, "1234567890123456789012") ==
+	    -1, NULL);
+	fail_unless(pkgfile_set_cwd(file, NULL) == -1, NULL);
 
 	/* Test the file length */
 	fail_unless(pkgfile_get_size(file) == length, NULL);
@@ -100,8 +116,27 @@ basic_file_tests(struct pkgfile *file, pkgfile_type type, pkgfile_loc loc,
 		}
 	}
 
-	/* XXX Test pkgfile_get_fileptr */
-	/* XXX Test pkgfile_get_type_string */
+	fd = pkgfile_get_fileptr(file);
+	fail_unless(fd != NULL, NULL);
+
+	fail_unless((file_type = pkgfile_get_type_string(file)) != NULL, NULL);
+	switch (type) {
+	case pkgfile_none:
+		fail_unless(strcmp(file_type, "none") == 0, NULL);
+		break;
+	case pkgfile_regular:
+		fail_unless(strcmp(file_type, "file") == 0, NULL);
+		break;
+	case pkgfile_hardlink:
+		fail_unless(strcmp(file_type, "hardlink") == 0, NULL);
+		break;
+	case pkgfile_symlink:
+		fail_unless(strcmp(file_type, "symlink") == 0, NULL);
+		break;
+	case pkgfile_dir:
+		fail_unless(strcmp(file_type, "directory") == 0, NULL);
+		break;
+	}
 
 	/* Test setting the file's mode */
 	fail_unless(pkgfile_set_mode(file, 100) == 0, NULL);
@@ -262,9 +297,8 @@ empty_regular_file_tests(const char *buf)
 
 	fail_unless((file = pkgfile_new_regular(BASIC_FILE, buf, 0))
 	    != NULL, NULL);
-	fail_unless(strcmp(pkgfile_get_name(file), BASIC_FILE) == 0, NULL);
-	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, NULL, 0);
+	basic_file_tests(file, BASIC_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    NULL, 0);
 
 	fail_unless(pkgfile_get_data(file) == NULL, NULL);
 
@@ -363,10 +397,8 @@ START_TEST(pkgfile_regular_data_test)
 	/* Create a file with data */
 	fail_unless((file = pkgfile_new_regular(BASIC_FILE, "0123456789", 10))
 	    != NULL, NULL);
-	fail_unless(strcmp(pkgfile_get_name(file), BASIC_FILE) == 0, NULL);
-	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, "0123456789",
-	    10);
+	basic_file_tests(file, BASIC_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    "0123456789", 10);
 
 	/* The md5 of 0123456789 string is 781e5e245d69b566979b86e28d23f2c7 */
 	test_checksums(file, "781e5e245d69b566979b86e28d23f2c7");
@@ -389,6 +421,7 @@ START_TEST(pkgfile_regular_existing_regular_test)
 
 	/* Test if pkgfile_write will fail with a regular file */
 	file = pkgfile_new_regular(BASIC_FILE, "0123456789", 10);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_regular_test(file);
 	pkgfile_free(file);
 }
@@ -400,6 +433,7 @@ START_TEST(pkgfile_regular_existing_symlink_test)
 
 	/* Test if pkgfile_write will fail with a symlink */
 	file = pkgfile_new_regular(BASIC_FILE, "0123456789", 10);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_symlink_test(file);
 	pkgfile_free(file);
 }
@@ -411,6 +445,7 @@ START_TEST(pkgfile_regular_existing_directory_test)
 
 	/* Test if pkgfile_write will fail with a directory */
 	file = pkgfile_new_regular(BASIC_FILE, "0123456789", 10);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_directory_test(file);
 	pkgfile_free(file);
 }
@@ -425,6 +460,7 @@ START_TEST(pkgfile_regular_depth_test)
 	struct pkgfile *file;
 
 	file = pkgfile_new_regular(DEPTH_FILE, "0123456789", 10);
+	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
 	check_regular_file_data(DEPTH_FILE, "0123456789", 10, 1);
@@ -441,6 +477,7 @@ START_TEST(pkgfile_regular_depth_exists_test)
 
 	/* Test pkg_write will fail when it can't create a parent directory */
 	file = pkgfile_new_regular(DEPTH_FILE, "0123456789", 10);
+	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
 	depth_test_fail_write(file);
 	pkgfile_free(file);
 }
@@ -453,10 +490,12 @@ START_TEST(pkgfile_regular_modify_test)
 
 	sprintf(data, "12345\n");
 	file = pkgfile_new_regular(DEPTH_FILE, data, 6);
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 6);
+	basic_file_tests(file, DEPTH_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    data, 6);
 	fail_unless(pkgfile_append(file, "67890", 5) == 0, NULL);
 	sprintf(data, "12345\n67890");
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 11);
+	basic_file_tests(file, DEPTH_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    data, 11);
 	pkgfile_free(file);
 
 	/* Remove the first line in a file */
@@ -464,7 +503,8 @@ START_TEST(pkgfile_regular_modify_test)
 	file = pkgfile_new_regular(DEPTH_FILE, data, 11);
 	fail_unless(pkgfile_remove_line(file, "12345") == 0, NULL);
 	sprintf(data, "67890");
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 5);
+	basic_file_tests(file, DEPTH_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    data, 5);
 	pkgfile_free(file);
 
 	/* Remove a middle line from a file */
@@ -472,7 +512,8 @@ START_TEST(pkgfile_regular_modify_test)
 	file = pkgfile_new_regular(DEPTH_FILE, data, 11);
 	fail_unless(pkgfile_remove_line(file, "67") == 0, NULL);
 	sprintf(data, "12345\n89");
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 8);
+	basic_file_tests(file, DEPTH_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    data, 8);
 	pkgfile_free(file);
 
 	/* Remove the Last line in a file */
@@ -480,7 +521,8 @@ START_TEST(pkgfile_regular_modify_test)
 	file = pkgfile_new_regular(DEPTH_FILE, data, 11);
 	fail_unless(pkgfile_remove_line(file, "12345") == 0, NULL);
 	sprintf(data, "67890");
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 5);
+	basic_file_tests(file, DEPTH_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    data, 5);
 	pkgfile_free(file);
 }
 END_TEST
@@ -492,10 +534,12 @@ START_TEST(pkgfile_regular_modify_empty_test)
 	char data[6];
 
 	file = pkgfile_new_regular(DEPTH_FILE, "", 0);
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, "", 0);
+	basic_file_tests(file, DEPTH_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    "", 0);
 	fail_unless(pkgfile_append(file, "67890", 5) == 0, NULL);
 	sprintf(data, "67890");
-	basic_file_tests(file, pkgfile_regular, pkgfile_loc_mem, data, 5);
+	basic_file_tests(file, DEPTH_FILE, pkgfile_regular, pkgfile_loc_mem,
+	    data, 5);
 	pkgfile_free(file);
 }
 END_TEST
@@ -516,8 +560,8 @@ START_TEST(pkgfile_symlink_good_test)
 
 	fail_unless((file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET))
 	    != NULL, NULL);
-	basic_file_tests(file, pkgfile_symlink, pkgfile_loc_mem, LINK_TARGET,
-	    LINK_TARGET_LENGTH);
+	basic_file_tests(file, BASIC_FILE, pkgfile_symlink, pkgfile_loc_mem,
+	    LINK_TARGET, LINK_TARGET_LENGTH);
 	test_checksums(file, LINK_TARGET_MD5);
 
 	SETUP_TESTDIR();
@@ -541,6 +585,7 @@ START_TEST(pkgfile_symlink_existing_regular_test)
 
 	/* Test if pkgfile_write will fail with a regular file */
 	file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_regular_test(file);
 	pkgfile_free(file);
 }
@@ -552,6 +597,7 @@ START_TEST(pkgfile_symlink_existing_symlink_test)
 
 	/* Test if pkgfile_write will fail with a symlink */
 	file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_symlink_test(file);
 	pkgfile_free(file);
 }
@@ -563,6 +609,7 @@ START_TEST(pkgfile_symlink_existing_directory_test)
 
 	/* Test if pkgfile_write will fail with a directory */
 	file = pkgfile_new_symlink(BASIC_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_directory_test(file);
 	pkgfile_free(file);
 }
@@ -577,6 +624,7 @@ START_TEST(pkgfile_symlink_depth_test)
 	struct pkgfile *file;
 
 	file = pkgfile_new_symlink(DEPTH_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
 	check_symlink_data(DEPTH_FILE, LINK_TARGET);
@@ -596,6 +644,7 @@ START_TEST(pkgfile_symlink_depth_exists_test)
 	 * is already a file named testdir/foo
 	 */
 	file = pkgfile_new_symlink(DEPTH_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
 	depth_test_fail_write(file);
 	pkgfile_free(file);
 }
@@ -617,8 +666,8 @@ START_TEST(pkgfile_hardlink_test)
 
 	fail_unless((file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET))
 	    != NULL, NULL);
-	basic_file_tests(file, pkgfile_hardlink, pkgfile_loc_mem, LINK_TARGET,
-	    LINK_TARGET_LENGTH);
+	basic_file_tests(file, BASIC_FILE, pkgfile_hardlink, pkgfile_loc_mem,
+	    LINK_TARGET, LINK_TARGET_LENGTH);
 
 	SETUP_TESTDIR();
 	system("echo -n 0123456789 > " LINK_TARGET);
@@ -649,6 +698,7 @@ START_TEST(pkgfile_hardlink_existing_regular_test)
 
 	/* Test if pkgfile_write will fail with a regular file */
 	file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_regular_test(file);
 	pkgfile_free(file);
 }
@@ -660,6 +710,7 @@ START_TEST(pkgfile_hardlink_existing_symlink_test)
 
 	/* Test if pkgfile_write will fail with a symlink */
 	file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_symlink_test(file);
 	pkgfile_free(file);
 }
@@ -671,6 +722,7 @@ START_TEST(pkgfile_hardlink_existing_directory_test)
 
 	/* Test if pkgfile_write will fail with a directory */
 	file = pkgfile_new_hardlink(BASIC_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_directory_test(file);
 	pkgfile_free(file);
 }
@@ -685,6 +737,7 @@ START_TEST(pkgfile_hardlink_depth_test)
 	struct pkgfile *file;
 
 	file = pkgfile_new_hardlink(DEPTH_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
 	SETUP_TESTDIR();
 	system("echo -n 0123456789 > " LINK_TARGET);
 	fail_unless(pkgfile_write(file) == 0, NULL);
@@ -706,6 +759,7 @@ START_TEST(pkgfile_hardlink_depth_exists_test)
 	 * is already a file named testdir/foo
 	 */
 	file = pkgfile_new_hardlink(DEPTH_FILE, LINK_TARGET);
+	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
 	depth_test_fail_write(file);
 	pkgfile_free(file);
 }
@@ -724,8 +778,8 @@ START_TEST(pkgfile_directory_test)
 	struct pkgfile *file;
 
 	fail_unless((file = pkgfile_new_directory(BASIC_FILE)) != NULL, NULL);
-	basic_file_tests(file, pkgfile_dir, pkgfile_loc_mem, BASIC_FILE,
-	    BASIC_FILE_LENGTH);
+	basic_file_tests(file, BASIC_FILE, pkgfile_dir, pkgfile_loc_mem,
+	    BASIC_FILE, BASIC_FILE_LENGTH);
 
 	/* Test the file length */
 	fail_unless(pkgfile_get_size(file) == BASIC_FILE_LENGTH, NULL);
@@ -751,6 +805,7 @@ START_TEST(pkgfile_directory_existing_regular_test)
 
 	/* Test if pkgfile_write should fail with a regular file */
 	file = pkgfile_new_directory(BASIC_FILE);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_regular_test(file);
 	pkgfile_free(file);
 }
@@ -762,6 +817,7 @@ START_TEST(pkgfile_directory_existing_symlink_test)
 
 	/* Test if pkgfile_write should fail with a symlink */
 	file = pkgfile_new_directory(BASIC_FILE);
+	fail_unless(strcmp(file->name, BASIC_FILE) == 0, NULL);
 	existing_symlink_test(file);
 	pkgfile_free(file);
 }
@@ -776,6 +832,7 @@ START_TEST(pkgfile_directory_depth_test)
 	struct pkgfile *file;
 
 	file = pkgfile_new_directory(DEPTH_FILE);
+	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
 	SETUP_TESTDIR();
 	fail_unless(pkgfile_write(file) == 0, NULL);
 	check_directory_data(DEPTH_FILE);
@@ -795,6 +852,7 @@ START_TEST(pkgfile_directory_depth_exists_test)
 	 * is already a file named testdir/foo
 	 */
 	file = pkgfile_new_directory(DEPTH_FILE);
+	fail_unless(strcmp(file->name, DEPTH_FILE) == 0, NULL);
 	depth_test_fail_write(file);
 	pkgfile_free(file);
 }
@@ -803,7 +861,11 @@ END_TEST
 START_TEST(pkgfile_misc_bad_args)
 {
 	fail_unless(pkgfile_append(NULL, NULL, 0) == -1, NULL);
+	fail_unless(pkgfile_append(NULL, NULL, 1) == -1, NULL);
 	fail_unless(pkgfile_append(NULL, "1234567890", 10) == -1, NULL);
+	fail_unless(pkgfile_append_string(NULL, NULL) == -1, NULL);
+	fail_unless(pkgfile_append_string(NULL, "") == -1, NULL);
+	fail_unless(pkgfile_append_string(NULL, "%s", "string") == -1, NULL);
 	fail_unless(pkgfile_compare_checksum_md5(NULL) == -1, NULL);
 	fail_unless(pkgfile_free(NULL) == -1, NULL);
 	fail_unless(pkgfile_get_data(NULL) == NULL, NULL);
