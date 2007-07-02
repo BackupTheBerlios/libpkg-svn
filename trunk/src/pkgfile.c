@@ -487,6 +487,9 @@ pkgfile_get_fileptr(struct pkgfile *file)
 const char *
 pkgfile_get_type_string(struct pkgfile *file)
 {
+	if (file == NULL)
+		return NULL;
+
 	pkgfile_get_type(file);
 	return pkgfile_types[file->type];
 }
