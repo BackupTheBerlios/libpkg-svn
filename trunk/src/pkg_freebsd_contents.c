@@ -124,6 +124,7 @@ pkg_freebsd_contents_new(const char *contents, uint64_t length)
 		 * and be a valid string
 		 */
 		cont->lines[0].line = cont->file;
+		cont->lines[0].data = NULL;
 		pos = 1;
 		while (pos < cont->line_count) {
 			cont->lines[pos].data = NULL;
@@ -146,22 +147,29 @@ pkg_freebsd_contents_new(const char *contents, uint64_t length)
 	         * Set the data part of the line. ie not the control word 
 	         * Set the line_type
 	         */
-		pos = 0;
-		while (pos < cont->line_count) {
+		for(pos = 0; pos < cont->line_count; pos++) {
 			char *space;
 
 			if (cont->lines[pos].line[0] != '@') {
 				cont->lines[pos].line_type = PKG_LINE_FILE;
 				assert(cont->lines[pos].data == NULL);
-				pos++;
+				continue;
+			} else if (!strcmp(cont->lines[pos].line, "@ignore")) {
+				cont->lines[pos].line_type = PKG_LINE_IGNORE;
+				assert(cont->lines[pos].data == NULL);
 				continue;
 			}
+
 			space = strchr(cont->lines[pos].line, ' ');
 			if (space && space[0] != '\0') {
 				space[0] = '\0';
 				space++;
 				if (space[0] != '\0')
 					cont->lines[pos].data = space;
+			} else {
+				/* There must be a space in the line */
+				pkg_freebsd_contents_free(cont);
+				return NULL;
 			}
 
 			/* Get the correct line type for the line */
@@ -180,8 +188,6 @@ pkg_freebsd_contents_new(const char *contents, uint64_t length)
 				cont->lines[pos].line_type = PKG_LINE_EXEC;
 			} else if (!strcmp(cont->lines[pos].line, "@unexec")) {
 				cont->lines[pos].line_type = PKG_LINE_UNEXEC;
-			} else if (!strcmp(cont->lines[pos].line, "@ignore")) {
-				cont->lines[pos].line_type = PKG_LINE_IGNORE;
 			} else if (!strcmp(cont->lines[pos].line, "@dirrm")) {
 				cont->lines[pos].line_type = PKG_LINE_DIRRM;
 			} else if (!strcmp(cont->lines[pos].line, "@mtree")) {
@@ -193,7 +199,6 @@ pkg_freebsd_contents_new(const char *contents, uint64_t length)
 				fprintf(stderr, "Unknown line type %s\n",
 				    cont->lines[pos].line);
 			}
-			pos++;
 		}
 	}
 	return cont;
