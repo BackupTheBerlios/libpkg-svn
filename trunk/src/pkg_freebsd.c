@@ -509,6 +509,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 		pkg_db_install_file *install_file, pkg_db_exec *do_exec,
 		pkg_db_register *pkg_register)
 {
+	struct pkg_manifest_item **items;
 	int ret;
 	unsigned int pos;
 	struct pkgfile **control;
@@ -546,6 +547,39 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	    pkgfile_get_size(contents_file));
 	if (contents == NULL) {
 		return -1;
+	}
+
+	pkg_get_manifest(pkg);
+	assert(pkg->pkg_manifest != NULL);
+
+	items = pkg_manifest_get_items(pkg->pkg_manifest);
+	for (pos = 0; items[pos] != NULL; pos++) {
+		switch(pkg_manifest_item_get_type(items[pos])) {
+		/* Unused item types */
+		case pmt_comment:
+		case pmt_dir:
+		case pmt_dirlist:
+			break;
+		case pmt_file:
+			printf("%s\n", (const char *)pkg_manifest_item_get_data(items[pos]));
+			break;
+		case pmt_chdir:
+			printf("%s\n", (const char *)pkg_manifest_item_get_data(items[pos]));
+			break;
+		case pmt_output:
+			printf("%s\n", (const char *)pkg_manifest_item_get_data(items[pos]));
+			break;
+		case pmt_execute:
+			printf("%s\n", (const char *)pkg_manifest_item_get_data(items[pos]));
+			break;
+		case pmt_other:
+		case pmt_error:
+		default:
+			warnx("ERROR: Incorrect line in +CONTENTS file "
+			    "\"%s %s\"\n", contents->lines[pos].line,
+			    contents->lines[pos].data);
+			break;
+		}
 	}
 
 	for (pos = 0; pos < contents->line_count; pos++) {
