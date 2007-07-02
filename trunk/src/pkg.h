@@ -179,12 +179,11 @@ struct pkg_manifest_item *pkg_manifest_item_new(pkg_manifest_item_type,
 	    const char *);
 int	pkg_manifest_item_free(struct pkg_manifest_item *);
 pkg_manifest_item_type pkg_manifest_item_get_type(struct pkg_manifest_item *);
+const char *pkg_manifest_item_get_attr(struct pkg_manifest_item *,
+	    pkg_manifest_item_attr);
 const void *pkg_manifest_item_get_data(struct pkg_manifest_item *);
 int	pkg_manifest_item_set_attr(struct pkg_manifest_item *,
 	    pkg_manifest_item_attr, const char *);
-const char *pkg_manifest_get_attr(struct pkg_manifest *,pkg_manifest_item_attr);
-const char *pkg_manifest_item_get_attr(struct pkg_manifest_item *,
-	    pkg_manifest_item_attr);
 int	pkg_manifest_item_set_data(struct pkg_manifest_item *, const char *);
 
 /**
@@ -213,6 +212,9 @@ typedef enum _pkg_manifest_attr {
 struct pkg_manifest	 *pkg_manifest_new(void);
 struct pkg_manifest	 *pkg_manifest_new_freebsd_pkgfile(struct pkgfile *);
 int			  pkg_manifest_free(struct pkg_manifest *);
+
+const char 		 *pkg_manifest_get_attr(struct pkg_manifest *,
+			    pkg_manifest_item_attr);
 int			  pkg_manifest_set_manifest_version(
 			    struct pkg_manifest *, const char *);
 const char		 *pkg_manifest_get_manifest_version(
