@@ -152,12 +152,19 @@ int
 pkg_manifest_set_manifest_version(struct pkg_manifest *manifest,
     const char *version)
 {
-	if (manifest == NULL)
+	char *new_version;
+
+	if (manifest == NULL || version == NULL)
 		return -1;
-	
-	manifest->manifest_version = strdup(version);
-	if (manifest->manifest_version == NULL)
+
+	new_version = strdup(version);
+	if (new_version == NULL)
 		return -1;
+
+	if (manifest->manifest_version != NULL)
+		free(manifest->manifest_version);
+
+	manifest->manifest_version = new_version;
 	
 	return 0;
 }
