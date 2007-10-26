@@ -89,23 +89,6 @@ START_TEST(pkg_freebsd_contents_good_basic_test)
 }
 END_TEST
 
-static const char *pkg_freebsd_contents_line_str[] = {
-	"",
-	"",
-	"@comment",
-	"@name",
-	"@cwd",
-	"@pkgdep",
-	"@conflicts",
-	"@exec",
-	"@unexec",
-	"@ignore",
-	"@dirrm",
-	"@mtree",
-	"@display",
-	NULL
-};
-
 static void
 check_good_command(struct pkg_freebsd_contents *contents, int line_type)
 {
