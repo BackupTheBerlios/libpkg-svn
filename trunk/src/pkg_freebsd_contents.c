@@ -47,7 +47,7 @@
 /**
  * @brief All possible line types in a +CONTENTS file
  */
-static const char *pkg_freebsd_contents_line_str[] = {
+const char *pkg_freebsd_contents_line_str[] = {
 	"",
 	"",
 	"@comment",
