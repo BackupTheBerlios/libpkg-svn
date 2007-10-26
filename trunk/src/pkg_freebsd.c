@@ -369,7 +369,7 @@ freebsd_get_origin(struct pkg *pkg)
 }
 
 /**
- * @brief Callback for pkg_get_origin()
+ * @brief Callback for pkg_set_origin()
  * @param pkg The package to set the origin for
  * @param origin The new origin to set
  * @return  0 on success
