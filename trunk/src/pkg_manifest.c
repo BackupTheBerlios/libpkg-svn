@@ -199,6 +199,11 @@ pkg_manifest_add_dependency(struct pkg_manifest *manifest, struct pkg *dep)
 	if (manifest == NULL || dep == NULL)
 		return -1;
 
+	if (manifest->deps_list != NULL) {
+		free(manifest->deps_list);
+		manifest->deps_list = NULL;
+	}
+
 	/* Create the new dependency */
 	the_dep = malloc(sizeof(struct pkgm_deps));
 	if (the_dep == NULL)
@@ -268,6 +273,11 @@ pkg_manifest_add_conflict(struct pkg_manifest *manifest, const char *conflict)
 	if (manifest == NULL || conflict == NULL)
 		return -1;
 
+	if (manifest->conflict_list != NULL) {
+		free(manifest->conflict_list);
+		manifest->conflict_list = NULL;
+	}
+
 	/* Create the new conflict */
 	the_conflict = malloc(sizeof(struct pkgm_conflicts));
 	if (the_conflict == NULL)
@@ -303,6 +313,21 @@ pkg_manifest_set_name(struct pkg_manifest *manifest, const char *name)
 
 	manifest->name = new_name;
 	return -0;
+}
+
+/**
+ * @brief Gets the package's name
+ * @param manifest the package manifest
+ * @return The pakage's name
+ * @return NULL on error or no name set
+ */
+const char *
+pkg_manifest_get_name(struct pkg_manifest *manifest)
+{
+	if (manifest == NULL)
+		return NULL;
+
+	return manifest->name;
 }
 
 /**
@@ -345,6 +370,21 @@ pkg_manifest_set_attr(struct pkg_manifest *manifest, pkg_manifest_attr attr,
 }
 
 /**
+ * @brief Gets the package manifest's attributes
+ * @param manifest The manifest to get the attributes from
+ * @return An array of size pkgm_max containing the attributes
+ * @return NULL on error
+ */
+const char **
+pkg_manifest_get_attrs(struct pkg_manifest *manifest)
+{
+	if (manifest == NULL)
+		return NULL;
+
+	return manifest->attrs;
+}
+
+/**
  * @brief Adds a manifest item to a package manifest
  * @param manifest The manifest to append the item to
  * @param item The item to append to the manifest
@@ -359,6 +399,11 @@ pkg_manifest_append_item(struct pkg_manifest *manifest,
 
 	if (manifest == NULL || item == NULL)
 		return -1;
+
+	if (manifest->item_list) {
+		free(manifest->item_list);
+		manifest->item_list = NULL;
+	}
 
 	/* Create the new item */
 	the_item = malloc(sizeof(struct pkgm_items));

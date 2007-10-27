@@ -224,8 +224,10 @@ int			  pkg_manifest_add_conflict(struct pkg_manifest *,
 			    const char *);
 int			  pkg_manifest_set_name(struct pkg_manifest *,
 			    const char *);
+const char		 *pkg_manifest_get_name(struct pkg_manifest *);
 int			  pkg_manifest_set_attr(struct pkg_manifest *,
 			    pkg_manifest_attr, const char *);
+const char		**pkg_manifest_get_attrs(struct pkg_manifest *);
 int			  pkg_manifest_append_item(struct pkg_manifest *,
 			    struct pkg_manifest_item *);
 const char		**pkg_manifest_get_conflicts(struct pkg_manifest *);
