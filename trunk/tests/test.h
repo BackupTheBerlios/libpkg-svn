@@ -7,4 +7,6 @@ int cleanup_testdir(void);
 
 Suite *pkgfile_suite(void);
 Suite *pkg_freebsd_contents_suite(void);
+Suite *pkg_manifest_suite(void);
+Suite *pkg_manifest_item_suite(void);
 
