@@ -671,12 +671,11 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		pkg_db_chdir *db_chdir, pkg_db_install_file *deinstall_file,
 		pkg_db_exec *do_exec, pkg_db_deregister *pkg_deregister)
 {
+	struct pkg_manifest_item **items;
 	int ret;
 	unsigned int pos;
 	struct pkgfile **control;
-	struct pkgfile *contents_file;
-	struct pkg_freebsd_contents *contents;
-	const char *file_data;
+	const char *cwd, *dir;
 
 	assert(pkg != NULL);
 	assert(pkg_action != NULL);
@@ -687,7 +686,6 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	assert(pkg_deregister != NULL);
 
 	ret = -1;
-	contents = NULL;
 
 	/* Get the control files from the package */
 	control = pkg_get_control_files(pkg);
@@ -696,77 +694,78 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		return -1;
 	}
 
-	/* Find the +CONTENTS file in the control files */
-	contents_file = pkg_get_control_file(pkg, "+CONTENTS");
-	assert(contents_file != NULL);
-	if (contents_file == NULL) {
-		return -1;
-	}
+	/* Read the package manifest */
+	pkg_get_manifest(pkg);
+	assert(pkg->pkg_manifest != NULL);
 
-	file_data = pkgfile_get_data(contents_file);
-	contents = pkg_freebsd_contents_new(file_data,
-	    pkgfile_get_size(contents_file));
-	assert(contents != NULL);
-	if (contents == NULL) {
-		return -1;
-	}
+	dir = pkg_manifest_get_attr(pkg->pkg_manifest, pkgm_prefix);
+	cwd = dir;
+	db_chdir(pkg, pkg_action, data, dir);
 
-	for (pos = 0; pos < contents->line_count; pos++) {
-		switch (contents->lines[pos].line_type) {
-		case PKG_LINE_IGNORE:
-			/* Skip 2 lines for the file and checksum */
-			pos += 2;
+	items = pkg_manifest_get_items(pkg->pkg_manifest);
+	for (pos = 0; items[pos] != NULL; pos++) {
+		switch(pkg_manifest_item_get_type(items[pos])) {
+		/* Unused item types */
+		case pmt_comment:
+		case pmt_dirlist:
 			break;
-		case PKG_LINE_COMMENT:
-		case PKG_LINE_EXEC:
-		case PKG_LINE_MTREE:
-		case PKG_LINE_PKGDEP:
-		case PKG_LINE_CONFLICTS:
-		case PKG_LINE_NAME:
-			/* These are not used when removing packages */
-			break;
-		case PKG_LINE_CWD:
+		case pmt_dir:
+		case pmt_file:
 		{
-			const char *dir = contents->lines[pos].data;
-
-			if (dir != NULL)
-				db_chdir(pkg, pkg_action, data, dir);
-			break;
-		}
-		case PKG_LINE_DIRRM:
-		case PKG_LINE_FILE:
-		{
+			const char *attr, *file_name;
 			struct pkgfile *file;
 
-			if (contents->lines[pos].line_type == PKG_LINE_FILE) {
-				file = pkgfile_new_from_disk(
-				    contents->lines[pos].line, 0);
-			} else {
-				file = pkgfile_new_from_disk(
-				    contents->lines[pos].data, 0);
+			attr =
+			    pkg_manifest_item_get_attr(items[pos], pmia_ignore);
+
+			if (attr == NULL || strcasecmp(attr, "NO") == 0) {
+				file_name =
+				    pkg_manifest_item_get_data(items[pos]);
+				file = pkgfile_new_from_disk(file_name, 0);
+				deinstall_file(pkg, pkg_action, data, file);
 			}
-			deinstall_file(pkg, pkg_action, data, file);
 			break;
 		}
-		case PKG_LINE_UNEXEC:
-			do_exec(pkg, pkg_action, data,
-			    contents->lines[pos].data);
+		case pmt_chdir:
+			dir = pkg_manifest_item_get_data(items[pos]);
+
+			if (dir != NULL) {
+				cwd = dir;
+				db_chdir(pkg, pkg_action, data, dir);
+			}
+
 			break;
-		default:
-			warnx("ERROR: Incorrect line in +CONTENTS file "
-			    "\"%s %s\"\n", contents->lines[pos].line,
-			    contents->lines[pos].data);
+		case pmt_output:
+			break;
+		case pmt_execute:
+		{
+			const char *cmd, *attr;
+
+			attr = pkg_manifest_item_get_attr(items[pos],
+			    pmia_deinstall);
+			if (attr != NULL && strcasecmp(attr, "YES") == 0) {
+				cmd = pkg_manifest_item_get_data(items[pos]);
+				do_exec(pkg, pkg_action, data, cmd);
+			}
+			break;
+		}
+		case pmt_other:
+		case pmt_error:
+			/*
+			 * This should never happen as pmt_other and
+			 * pmt_error don't appear in pkg_freebsd_parser.y
+			 */
+			abort();
+			break;
 		}
 	}
+
 	db_chdir(pkg, pkg_action, data, ".");
 	/* Register the package */
 	pkg_deregister(pkg, pkg_action, data, control);
 
 	/* Set the return to 0 as we have fully installed the package */
 	ret = 0;
-
-	if (contents != NULL)
-		pkg_freebsd_contents_free(contents);
 
 	return ret;
 }
