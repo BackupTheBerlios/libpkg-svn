@@ -38,6 +38,7 @@ START_TEST(pkg_manifest_empty)
 	fail_unless(pkg_manifest_set_manifest_version(NULL, "str") == -1);
 	fail_unless(pkg_manifest_get_manifest_version(NULL) == NULL);
 	fail_unless(pkg_manifest_add_dependency(NULL, NULL) == -1);
+	fail_unless(pkg_manifest_replace_dependency(NULL, NULL, NULL) == -1);
 	fail_unless(pkg_manifest_get_dependencies(NULL) == NULL);
 	fail_unless(pkg_manifest_add_conflict(NULL, NULL) == -1);
 	fail_unless(pkg_manifest_add_conflict(NULL, "str") == -1);
@@ -62,6 +63,7 @@ START_TEST(pkg_manifest_bad)
 
 	fail_unless(pkg_manifest_set_manifest_version(manifest, NULL) == -1);
 	fail_unless(pkg_manifest_add_dependency(manifest, NULL) == -1);
+	fail_unless(pkg_manifest_replace_dependency(manifest, NULL, NULL) ==-1);
 	fail_unless(pkg_manifest_add_conflict(manifest, NULL) == -1);
 	fail_unless(pkg_manifest_set_name(manifest, NULL) == -1);
 	fail_unless(pkg_manifest_get_name(manifest) == NULL);
@@ -92,24 +94,36 @@ END_TEST
 START_TEST(pkg_manifest_dependency)
 {
 	struct pkg_manifest *manifest;
-	struct pkg *pkg1, *pkg2, **pkg_list;
+	struct pkg *pkg1, *pkg2, *pkg3, **pkg_list;
 
 	fail_unless((manifest = pkg_manifest_new()) != NULL);
 	fail_unless((pkg1 = pkg_new_freebsd_empty("foo")) != NULL);
 	fail_unless((pkg2 = pkg_new_freebsd_empty("bar")) != NULL);
+	fail_unless((pkg3 = pkg_new_freebsd_empty("baz")) != NULL);
 
 	fail_unless(pkg_manifest_get_dependencies(manifest) == NULL);
 	fail_unless(pkg_manifest_add_dependency(manifest, pkg1) == 0);
 	fail_unless((pkg_list = pkg_manifest_get_dependencies(manifest)) !=
 	    NULL);
 	fail_unless(pkg_list[0] == pkg1);
+	fail_unless(pkg_list[1] == NULL);
 
 	pkg_list = NULL;
 	fail_unless(pkg_manifest_add_dependency(manifest, pkg2) == 0);
 	fail_unless((pkg_list = pkg_manifest_get_dependencies(manifest)) !=
 	    NULL);
-	fail_unless(pkg_list[0] == pkg1);
-	fail_unless(pkg_list[1] == pkg2);
+	fail_unless(pkg_list[0] == pkg1 || pkg_list[0] == pkg2);
+	fail_unless(pkg_list[1] == pkg1 || pkg_list[1] == pkg2);
+	fail_unless(pkg_list[0] != pkg_list[1]);
+	fail_unless(pkg_list[2] == NULL);
+
+	fail_unless(pkg_manifest_replace_dependency(manifest, pkg2, pkg3) == 0);
+	fail_unless((pkg_list = pkg_manifest_get_dependencies(manifest)) !=
+	    NULL);
+	fail_unless(pkg_list[0] == pkg1 || pkg_list[0] == pkg3);
+	fail_unless(pkg_list[1] == pkg1 || pkg_list[1] == pkg3);
+	fail_unless(pkg_list[0] != pkg_list[1]);
+	fail_unless(pkg_list[2] == NULL);
 
 	fail_unless(pkg_manifest_free(manifest) == 0);
 }
