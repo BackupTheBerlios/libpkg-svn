@@ -573,7 +573,7 @@ freebsd_do_chdir(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	pkg_remove_extra_slashes(install_data->directory);
 
 	if (strcmp(dir, ".") == 0) {
-		pkg_action(PKG_DB_PACKAGE, "Change working directory to .");
+		pkg_action(PKG_DB_PACKAGE, "CWD to .");
 	} else {
 		pkg_action(PKG_DB_PACKAGE, "Change working directory to %s",
 		    install_data->directory);
@@ -670,7 +670,7 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	freebsd_format_cmd(the_cmd, FILENAME_MAX, cmd, install_data->directory,
 	    install_data->last_file);
 
-	pkg_action(PKG_DB_PACKAGE, "Execute '%s'", the_cmd);
+	pkg_action(PKG_DB_PACKAGE, "execute '%s'", the_cmd);
 	if (!install_data->fake) {
 		return pkg_exec(the_cmd);
 	}
@@ -734,6 +734,12 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 			}
 			freebsd_install_file(pkg, pkg_action_null, data,
 			    control[pos]);
+
+			/* Make the +INSTALL file installable */
+			if (strcmp(pkgfile_get_name(control[pos]), "+INSTALL")
+			    == 0) {
+				chmod("+INSTALL", 0755);
+			}
 		}
 	}
 
@@ -745,7 +751,7 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		FILE *fd;
 
 		pkg_action(PKG_DB_INFO, "Trying to record dependency on "
-		    "package '%s' with '%s' origin.", pkg_get_name(pkg),
+		    "package '%s' with '%s' origin.", pkg_get_name(deps[pos]),
 		    pkg_get_origin(deps[pos]));
 
 		/* Skip writing to +REQUIRED_BY when in a faked run */
