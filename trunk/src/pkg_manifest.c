@@ -63,8 +63,14 @@ pkg_manifest_new()
 	manifest->file = NULL;
 	manifest->manifest_version = NULL;
 	manifest->name = NULL;
+
+	manifest->deps_list_clean = 1;
+	manifest->deps_list_count = 0;
 	manifest->deps_list = NULL;
+
 	manifest->conflict_list = NULL;
+
+	manifest->item_list_clean = 1;
 	manifest->item_list = NULL;
 
 	for (pos = 0; pos < pkgm_max; pos++) {
@@ -199,10 +205,7 @@ pkg_manifest_add_dependency(struct pkg_manifest *manifest, struct pkg *dep)
 	if (manifest == NULL || dep == NULL)
 		return -1;
 
-	if (manifest->deps_list != NULL) {
-		free(manifest->deps_list);
-		manifest->deps_list = NULL;
-	}
+	manifest->deps_list_clean = 0;
 
 	/* Create the new dependency */
 	the_dep = malloc(sizeof(struct pkgm_deps));
@@ -215,6 +218,38 @@ pkg_manifest_add_dependency(struct pkg_manifest *manifest, struct pkg *dep)
 
 	return 0;
 }
+
+/**
+ * @brief Replaces one dependent package with another
+ * @param manifest The manifest to adjust
+ * @param orig_pkg The original package
+ * @param new_pkg The new package
+ * @return  0 on success
+ * @return -1 on error
+ */
+int
+pkg_manifest_replace_dependency(struct pkg_manifest *manifest,
+    struct pkg *orig_pkg, struct pkg *new_pkg)
+{
+	struct pkgm_deps *dep;
+
+	if (manifest == NULL || orig_pkg == NULL || new_pkg == NULL)
+		return -1;
+
+	/* Replace the old package with the new package */
+	STAILQ_FOREACH(dep, &manifest->deps, list) {
+		if (dep->pkg == orig_pkg) {
+			pkg_free(dep->pkg);
+			dep->pkg = new_pkg;
+			manifest->deps_list_clean = 0;
+
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
 
 /**
  * @brief Gets an array of packages depended on
@@ -231,7 +266,10 @@ pkg_manifest_get_dependencies(struct pkg_manifest *manifest)
 	if (manifest == NULL)
 		return NULL;
 
-	if (manifest->deps_list != NULL)
+	if (manifest->deps_list_clean == 0) {
+	}
+
+	if (manifest->deps_list != NULL && manifest->deps_list_clean != 0)
 		return manifest->deps_list;
 
 	/* Find out how much space is needed */
@@ -242,18 +280,29 @@ pkg_manifest_get_dependencies(struct pkg_manifest *manifest)
 	if (count == 0)
 		return NULL;
 
-	/* Allocate the space for the conflict list */
-	manifest->deps_list = malloc((count + 1) * sizeof(struct pkg *));
-	if (manifest->deps_list == NULL)
-		return NULL;
+	/* Only reallocate the memory when the list is a different size */
+	if (manifest->deps_list_count != count) {
+		if (manifest->deps_list != NULL) {
+			/* remove the old list to be replaces later */
+			free(manifest->deps_list);
+		}
 
-	/* Populate the conflict list */
+		/* Allocate the space for the dependency list */
+		manifest->deps_list = malloc((count + 1) * sizeof(struct pkg*));
+		if (manifest->deps_list == NULL)
+			return NULL;
+
+		manifest->deps_list_count = count;
+	}
+
+	/* Populate the depend list */
 	count = 0;
 	STAILQ_FOREACH(dep, &manifest->deps, list) {
 		manifest->deps_list[count] = dep->pkg;
 		count++;
 	}
 	manifest->deps_list[count] = NULL;
+	manifest->deps_list_clean = 1;
 
 	return manifest->deps_list;
 }
@@ -400,10 +449,7 @@ pkg_manifest_append_item(struct pkg_manifest *manifest,
 	if (manifest == NULL || item == NULL)
 		return -1;
 
-	if (manifest->item_list) {
-		free(manifest->item_list);
-		manifest->item_list = NULL;
-	}
+	manifest->item_list_clean = 0;
 
 	/* Create the new item */
 	the_item = malloc(sizeof(struct pkgm_items));
@@ -494,7 +540,7 @@ pkg_manifest_get_items(struct pkg_manifest *manifest)
 	if (manifest == NULL)
 		return NULL;
 
-	if (manifest->item_list != NULL)
+	if (manifest->item_list != NULL && manifest->item_list_clean != 0)
 		return manifest->item_list;
 
 	/* Find out how much space is needed */
@@ -510,6 +556,7 @@ pkg_manifest_get_items(struct pkg_manifest *manifest)
 	    sizeof(struct pkg_manifest_itemi *));
 	if (manifest->item_list == NULL)
 		return NULL;
+	manifest->item_list_clean = 1;
 
 	/* Populate the conflict list */
 	count = 0;

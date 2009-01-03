@@ -112,8 +112,13 @@ struct pkg_manifest {
 	STAILQ_HEAD(, pkgm_items) items;
 
 	/* These are used as caches */
+	int		deps_list_clean;
+	unsigned int	deps_list_count;
 	struct pkg	**deps_list;
+
 	char		**conflict_list;
+
+	int		item_list_clean;
 	struct pkg_manifest_item **item_list;
 
 	pkg_manifest_get_file_callback	*manifest_get_file;
