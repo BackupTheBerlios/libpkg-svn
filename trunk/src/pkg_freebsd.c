@@ -513,8 +513,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	struct pkgfile **control;
 	struct pkgfile *contents_file;
 	struct pkg_freebsd_contents *contents;
-	const char *file_data, *cwd;
-	int chdir_first = 1;
+	const char *file_data, *cwd, *dir;
 	int only_control_files = 0;
 
 	assert(pkg != NULL);
@@ -550,6 +549,13 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	pkg_get_manifest(pkg);
 	assert(pkg->pkg_manifest != NULL);
 
+	/* chdir to the packages prefix */
+	dir = prefix;
+	if (dir == NULL)
+		dir = pkg_manifest_get_attr(pkg->pkg_manifest, pkgm_prefix);
+	cwd = dir;
+	db_chdir(pkg, pkg_action, data, dir);
+
 	items = pkg_manifest_get_items(pkg->pkg_manifest);
 	for (pos = 0; items[pos] != NULL; pos++) {
 		switch(pkg_manifest_item_get_type(items[pos])) {
@@ -559,87 +565,17 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 		case pmt_dirlist:
 			break;
 		case pmt_file:
-			printf("%s\n", (const char *)pkg_manifest_item_get_data(items[pos]));
-			break;
-		case pmt_chdir:
-			printf("%s\n", (const char *)pkg_manifest_item_get_data(items[pos]));
-			break;
-		case pmt_output:
-			printf("%s\n", (const char *)pkg_manifest_item_get_data(items[pos]));
-			break;
-		case pmt_execute:
-			printf("%s\n", (const char *)pkg_manifest_item_get_data(items[pos]));
-			break;
-		case pmt_other:
-		case pmt_error:
-		default:
-			warnx("ERROR: Incorrect line in +CONTENTS file "
-			    "\"%s %s\"\n", contents->lines[pos].line,
-			    contents->lines[pos].data);
-			break;
-		}
-	}
-
-	for (pos = 0; pos < contents->line_count; pos++) {
-		char ignore;
-
-		ignore = 0;
-		if (contents->lines[pos].line_type == PKG_LINE_IGNORE) {
-			ignore = ~0;
-			pos++;
-		}
-		switch (contents->lines[pos].line_type) {
-		case PKG_LINE_IGNORE:
-			/* Error in contents file */
-			ret = -1;
-			goto exit;
-		case PKG_LINE_COMMENT:
-		case PKG_LINE_UNEXEC:
-		case PKG_LINE_DIRRM:
-		case PKG_LINE_MTREE:
-		case PKG_LINE_PKGDEP:
-		case PKG_LINE_CONFLICTS:
-			break;
-		case PKG_LINE_NAME:
-			/* Check the name is the same as the packages name */
-			if (strcmp(pkg_get_name(pkg),
-			    contents->lines[pos].data) != 0) {
-				ret = -1;
-				goto exit;
-			}
-			break;
-		case PKG_LINE_CWD:
-		{
-			const char *dir = NULL;
-
-			if (strcmp(contents->lines[pos].data, ".") == 0) {
-				if (reg)
-					dir = contents->lines[pos].data;
-			} else {
-				if (chdir_first && prefix != NULL)
-					dir = prefix;
-				else
-					dir = contents->lines[pos].data;
-				chdir_first = 0;
-			}
-			if (dir != NULL) {
-				cwd = dir;
-				db_chdir(pkg, pkg_action, data, dir);
-			}
-
-
-			break;
-		}
-		case PKG_LINE_FILE:
 		{
 			struct pkgfile *file = NULL;
+			const char *name;
 
-			if (!only_control_files)
+			name = pkg_manifest_item_get_data(items[pos]);
+
+			if (only_control_files == 0)
 				file = pkg_get_next_file(pkg);
-			if (only_control_files || file == NULL) {
+			if (only_control_files != 0 || file == NULL) {
 				only_control_files = ~0;
-				file = pkg_get_control_file(pkg,
-				    contents->lines[pos].line);
+				file = pkg_get_control_file(pkg, name);
 			}
 			if (file == NULL) {
 				/* File not found in the package */
@@ -648,44 +584,65 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 			}
 
 			/* Check the file name is correct */
-			if (strcmp(contents->lines[pos].line,
-			    pkgfile_get_name(file)) != 0) {
+			if (strcmp(name, pkgfile_get_name(file)) != 0) {
 				ret = -1;
 				goto exit;
 			}
 
-			if (contents->lines[pos+1].line_type ==
-			    PKG_LINE_COMMENT) {
-				char *p;
-
-				p = strchr(contents->lines[pos+1].data, ':');
-				p++;
-				pkgfile_set_checksum_md5(file, p);
-				if (pkgfile_compare_checksum_md5(file) == 0) {
-					if (!ignore) {
-						pkgfile_set_cwd(file, cwd);
-						install_file(pkg, pkg_action,
-						    data, file);
-					}
-				} else {
-					ret = -1;
-					goto exit;
+			/* Install the file */
+			if (pkgfile_compare_checksum_md5(file) == 0 || 1) {
+				if (pkg_manifest_item_get_attr(items[pos],
+				    pmia_ignore) == NULL) {
+					pkgfile_set_cwd(file, cwd);
+					install_file(pkg, pkg_action, data, file);
 				}
-				pos++;
+			} else {
+				ret = -1;
+				goto exit;
 			}
 			break;
 		}
-		case PKG_LINE_EXEC:
+		case pmt_chdir:
 		{
-			do_exec(pkg, pkg_action, data,
-			    contents->lines[pos].data);
+			const char *new_dir;
+			dir = NULL;
+			new_dir = pkg_manifest_item_get_data(items[pos]);
+			if (strcmp(new_dir, ".") == 0) {
+				if (reg)
+					dir = new_dir;
+			} else
+				dir = new_dir;
+
+			if (dir != NULL) {
+				cwd = dir;
+				db_chdir(pkg, pkg_action, data, dir);
+			}
+
 			break;
 		}
+		case pmt_output:
+			printf("%s\n",
+			  (const char *)pkg_manifest_item_get_data(items[pos]));
+			break;
+		case pmt_execute:
+		{
+			const char *cmd, *attr;
 
+			attr = pkg_manifest_item_get_attr(items[pos],
+			    pmia_deinstall);
+			if (attr == NULL || strcasecmp(attr, "NO") == 0) {
+				cmd = pkg_manifest_item_get_data(items[pos]);
+				do_exec(pkg, pkg_action, data, cmd);
+			}
+			break;
+		}
+		case pmt_other:
+		case pmt_error:
 		default:
 			warnx("ERROR: Incorrect line in +CONTENTS file "
 			    "\"%s %s\"\n", contents->lines[pos].line,
 			    contents->lines[pos].data);
+			break;
 		}
 	}
 
