@@ -219,6 +219,8 @@ const char		 *pkg_manifest_get_manifest_version(
 			    struct pkg_manifest *);
 int			  pkg_manifest_add_dependency(struct pkg_manifest *,
 			    struct pkg *);
+int			  pkg_manifest_replace_dependency(struct pkg_manifest *,
+			    struct pkg *, struct pkg *);
 struct pkg		**pkg_manifest_get_dependencies(struct pkg_manifest *);
 int			  pkg_manifest_add_conflict(struct pkg_manifest *,
 			    const char *);
