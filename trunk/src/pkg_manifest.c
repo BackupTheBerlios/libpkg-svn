@@ -639,11 +639,11 @@ pkg_manifest_item_set_attr(struct pkg_manifest_item *item,
 		return -1;
 
 	if (item->attrs == NULL) {
-		item->attrs = malloc(pmia_max * sizeof(pkg_manifest_item_attr));
+		item->attrs = malloc(pmia_max * sizeof(char *));
 		if (item->attrs == NULL)
 			return -1;
-		memset(item->attrs, 0, pmia_max *
-		    sizeof(pkg_manifest_item_attr));
+		memset(item->attrs, 0x0, pmia_max *
+		    sizeof(char *));
 	}
 
 	if (item->attrs[attr] != NULL) {
