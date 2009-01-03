@@ -149,7 +149,7 @@ contents_line
 	| IGNORE NL PKGFILE {
 		$$ = pkg_manifest_item_new(pmt_file, $3);
 		free($3);
-		pkg_manifest_item_set_attr(curitem, pmia_ignore, "YES");
+		pkg_manifest_item_set_attr($$, pmia_ignore, "YES");
 		curitem = $$;
 		curdep = NULL;
 	}
