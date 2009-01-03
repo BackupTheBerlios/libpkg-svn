@@ -46,6 +46,7 @@
  * @brief Creates a new package and associates callbacks that are used
  * by most types of packages.
  * @param pkg_name The name of the package
+ * @param manifest the package manifest or NULL
  * @param control_files A callback to be used by pkg_get_control_files()
  * @param control_file A callback to be used by pkg_get_control_file()
  * @param get_deps A callback to be used by pkg_get_dependencies()
@@ -54,7 +55,7 @@
  * @return A new pkg object, or NULL on error
  */
 struct pkg *
-pkg_new(const char *pkg_name,
+pkg_new(const char *pkg_name, struct pkg_manifest *manifest,
 		pkg_get_control_files_callback *control_files,
 		pkg_get_control_file_callback *control_file,
 		pkg_get_manifest_callback *get_manifest,
@@ -79,8 +80,8 @@ pkg_new(const char *pkg_name,
 		return NULL;
 	}
 
-	/* Set the manifest to NULL */
-	pkg->pkg_manifest = NULL;
+	/* Set the manifest to the manifest passed (NULL is valid) */
+	pkg->pkg_manifest = manifest;
 
 	/* Add the given callbacks to the struct */
 	pkg->pkg_get_control_files = control_files;
@@ -208,7 +209,7 @@ pkg_add_callbacks_install (struct pkg *pkg,
 struct pkg*
 pkg_new_empty(const char *pkg_name)
 {
-	return pkg_new(pkg_name, NULL, NULL, NULL, NULL, NULL, NULL);
+	return pkg_new(pkg_name, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 }
 
 /**

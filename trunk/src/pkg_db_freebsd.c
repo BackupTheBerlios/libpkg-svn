@@ -90,9 +90,9 @@ static int	freebsd_deinstall_file(struct pkg *, pkg_db_action *, void *,
 static int	freebsd_do_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
 static int	freebsd_register(struct pkg *, pkg_db_action *, void *,
-				struct pkgfile **, const char *);
-static int	freebsd_deregister(struct pkg *, pkg_db_action *, void *,
-				struct pkgfile **);
+				const char *);
+static int	freebsd_deregister(struct pkg *, pkg_db_action *, void *);
+
 /* Internal */
 static void			 freebsd_format_cmd(char *, int, const char *,
 				const char *, const char *);
@@ -685,23 +685,28 @@ freebsd_do_exec(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  */
 static int
 freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
-		struct pkgfile **control, const char *prefix)
+    const char *prefix)
 {
 	unsigned int pos;
 	struct pkg_install_data *install_data;
 	struct pkg_db *db;
 	struct pkg **deps;
 	char dir[PATH_MAX], *real_dir;
+	struct pkgfile **control;
 
 	assert(pkg != NULL);
 	assert(pkg_action != NULL);
 	assert(data != NULL);
-	assert(control != NULL);
 
 	install_data = data;
 	assert(install_data->db);
 	db = install_data->db;
 
+	/* Get the control files from the package */
+	control = pkg_get_control_files(pkg);
+	if (control == NULL) {
+		return -1;
+	}
 	snprintf(dir, PATH_MAX, DB_LOCATION "%s/%s", db->db_base,
 	    pkg_get_name(pkg));
 
@@ -787,18 +792,25 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
  * @return -1 on error
  */
 static int
-freebsd_deregister(struct pkg *pkg, pkg_db_action *pkg_action __unused, void *data,
-		struct pkgfile **control)
+freebsd_deregister(struct pkg *pkg, pkg_db_action *pkg_action __unused,
+    void *data)
 {
 	unsigned int pos;
 	struct pkg_install_data *install_data;
 	struct pkgfile *dir;
 	char db_dir[FILENAME_MAX];
+	struct pkgfile **control;
 
 	install_data = data;
 	assert(install_data->db != NULL);
 
+	/* Get the control files from the package */
+	control = pkg_get_control_files(pkg);
 	assert(control != NULL);
+	if (control == NULL) {
+		return -1;
+	}
+
 	assert(control[0] != NULL);
 	/* Remove the control files */
 	for (pos = 0; control[pos] != NULL; pos++) {

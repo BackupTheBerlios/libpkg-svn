@@ -136,7 +136,7 @@ typedef struct pkgfile   *pkg_get_control_file_callback(struct pkg *,
 typedef struct pkg_manifest *pkg_get_manifest_callback(struct pkg *);
 typedef int		  pkg_free_callback(struct pkg *);
 
-struct pkg		 *pkg_new(const char *,
+struct pkg		 *pkg_new(const char *, struct pkg_manifest *,
 				pkg_get_control_files_callback *,
 				pkg_get_control_file_callback *,
 				pkg_get_manifest_callback *,
@@ -170,9 +170,9 @@ typedef int		  pkg_db_install_file(struct pkg *, pkg_db_action *,
 typedef int		  pkg_db_exec(struct pkg *, pkg_db_action *, void *,
 				const char *);
 typedef int		  pkg_db_register(struct pkg *, pkg_db_action *, void *,
-				struct pkgfile **, const char *);
+				const char *);
 typedef int		  pkg_db_deregister(struct pkg *, pkg_db_action *,
-				void *,	struct pkgfile **);
+				void *);
 typedef int	  	  pkg_install_callback(struct pkg *, const char *, int,
 				pkg_db_action *, void *, pkg_db_chdir *,
 				pkg_db_install_file *, pkg_db_exec *,

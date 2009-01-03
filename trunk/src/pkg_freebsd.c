@@ -123,7 +123,9 @@ pkg_new_freebsd_from_file(FILE *fd)
 {
 	struct pkg *pkg;
 	struct freebsd_package *fpkg;
+	struct pkg_manifest *manifest;
 	const char *pkg_name;
+	int i;
 
 	if (fd == NULL)
 		return NULL;
@@ -140,7 +142,7 @@ pkg_new_freebsd_from_file(FILE *fd)
 	archive_read_support_compression_gzip(fpkg->archive);
 	archive_read_support_format_tar(fpkg->archive);
 	archive_read_open_stream(fpkg->archive, fd, 10240);
-	
+
 	/*
 	 * Get the +CONTENTS file.
 	 * We can't use the callbacks as we need the
@@ -149,16 +151,22 @@ pkg_new_freebsd_from_file(FILE *fd)
 	freebsd_open_control_files(fpkg);
 	assert(fpkg->control != NULL);
 
-	freebsd_parse_contents(fpkg);
-	assert(fpkg->contents != NULL);
-	if (fpkg->contents->lines[1].line_type != PKG_LINE_NAME ||
-	    fpkg->contents->lines[3].line_type != PKG_LINE_CWD) {
-		/** @todo cleanup */
+	/* Read in the manifest to check if this is a FreeBSD package */
+	for (i = 0; fpkg->control[i] != NULL; i++) {
+		if (strcmp("+CONTENTS",
+		    basename(pkgfile_get_name(fpkg->control[i]))) == 0) {
+			manifest =
+			    pkg_manifest_new_freebsd_pkgfile(fpkg->control[i]);
+			break;
+		}
+	}
+	if (manifest == NULL) {
+		/* TODO: Cleanup */
 		return NULL;
 	}
 
-	pkg_name = fpkg->contents->lines[1].data;
-	pkg = pkg_new(pkg_name, freebsd_get_control_files,
+	pkg_name = pkg_manifest_get_name(manifest);
+	pkg = pkg_new(pkg_name, manifest, freebsd_get_control_files,
 	    freebsd_get_control_file, freebsd_get_manifest, freebsd_get_deps,
 	    NULL, freebsd_free);
 	if (pkg == NULL) {
@@ -170,12 +178,6 @@ pkg_new_freebsd_from_file(FILE *fd)
 	pkg_add_callbacks_install(pkg, freebsd_install, NULL,
 	    freebsd_get_next_file, freebsd_run_script);
 	pkg->data = fpkg;
-
-	/*
-	 * Set the prefix to the first @cwd line.
-	 * This should be line 3 otherwise we have a bad package
-	 */
-	pkg->pkg_prefix = strdup(fpkg->contents->lines[3].data);
 
 	return pkg;
 }
@@ -206,7 +208,7 @@ pkg_new_freebsd_installed(const char *pkg_name, const char *pkg_db_dir)
 	if (!S_ISDIR(sb.st_mode))
 		return NULL;
 
-	pkg = pkg_new(pkg_name, freebsd_get_control_files,
+	pkg = pkg_new(pkg_name, NULL, freebsd_get_control_files,
 	    freebsd_get_control_file, freebsd_get_manifest, freebsd_get_deps,
 	    freebsd_get_rdeps, freebsd_free);
 	if (pkg == NULL)
@@ -249,7 +251,7 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	struct freebsd_package *fpkg;
 
 	/* Create the package */
-	pkg = pkg_new(pkg_name, NULL, NULL, NULL, NULL, NULL, freebsd_free);
+	pkg = pkg_new(pkg_name, NULL, NULL, NULL, NULL, NULL,NULL,freebsd_free);
 	if (pkg == NULL)
 		return NULL;
 
@@ -510,10 +512,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	struct pkg_manifest_item **items;
 	int ret;
 	unsigned int pos;
-	struct pkgfile **control;
-	struct pkgfile *contents_file;
-	struct pkg_freebsd_contents *contents;
-	const char *file_data, *cwd, *dir;
+	const char *cwd, *dir;
 	int only_control_files = 0;
 
 	assert(pkg != NULL);
@@ -524,27 +523,7 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 	assert(pkg_register != NULL);
 
 	ret = -1;
-	contents = NULL;
 	cwd = NULL;
-
-	/* Get the control files from the package */
-	control = pkg_get_control_files(pkg);
-	if (control == NULL) {
-		return -1;
-	}
-
-	/* Find the +CONTENTS file in the control files */
-	contents_file = freebsd_get_control_file(pkg, "+CONTENTS");
-	if (contents_file == NULL) {
-		return -1;
-	}
-
-	file_data = pkgfile_get_data(contents_file);
-	contents = pkg_freebsd_contents_new(file_data,
-	    pkgfile_get_size(contents_file));
-	if (contents == NULL) {
-		return -1;
-	}
 
 	pkg_get_manifest(pkg);
 	assert(pkg->pkg_manifest != NULL);
@@ -638,26 +617,24 @@ freebsd_install(struct pkg *pkg, const char *prefix, int reg,
 		}
 		case pmt_other:
 		case pmt_error:
-		default:
-			warnx("ERROR: Incorrect line in +CONTENTS file "
-			    "\"%s %s\"\n", contents->lines[pos].line,
-			    contents->lines[pos].data);
+			/*
+			 * This should never happen as pmt_other and
+			 * pmt_error don't appear in pkg_freebsd_parser.y
+			 */
+			abort();
 			break;
 		}
-	}
-
-	if (reg) {
-		/* Register the package */
-		pkg_register(pkg, pkg_action, data, control, prefix);
 	}
 
 	/* Set the return to 0 as we have fully installed the package */
 	ret = 0;
 
-exit:
-	if (contents != NULL)
-		pkg_freebsd_contents_free(contents);
+	if (reg) {
+		/* Register the package */
+		ret = pkg_register(pkg, pkg_action, data, prefix);
+	}
 
+exit:
 	return ret;
 }
 
@@ -674,7 +651,6 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	struct pkg_manifest_item **items;
 	int ret;
 	unsigned int pos;
-	struct pkgfile **control;
 	const char *cwd, *dir;
 
 	assert(pkg != NULL);
@@ -686,13 +662,6 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 	assert(pkg_deregister != NULL);
 
 	ret = -1;
-
-	/* Get the control files from the package */
-	control = pkg_get_control_files(pkg);
-	assert(control != NULL);
-	if (control == NULL) {
-		return -1;
-	}
 
 	/* Read the package manifest */
 	pkg_get_manifest(pkg);
@@ -762,7 +731,7 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 
 	db_chdir(pkg, pkg_action, data, ".");
 	/* Register the package */
-	pkg_deregister(pkg, pkg_action, data, control);
+	pkg_deregister(pkg, pkg_action, data);
 
 	/* Set the return to 0 as we have fully installed the package */
 	ret = 0;
