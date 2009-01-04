@@ -746,6 +746,7 @@ freebsd_deinstall(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 static struct pkgfile *
 freebsd_get_next_file(struct pkg *pkg)
 {
+	struct pkg_manifest_item **items;
 	struct freebsd_package *fpkg;
 	struct pkgfile *file;
 
@@ -765,43 +766,75 @@ freebsd_get_next_file(struct pkg *pkg)
 		fpkg->next_file = NULL;
 	} else if (fpkg->archive == NULL)  {
 		/* Read the file from disk */
-		freebsd_parse_contents(fpkg);
-		while (fpkg->line < fpkg->contents->line_count) {
-			if (fpkg->contents->lines[fpkg->line].line_type ==
-			    PKG_LINE_CWD) {
+		items = pkg_manifest_get_items(pkg->pkg_manifest);
+		for (; items[fpkg->line] != NULL; fpkg->line++) {
+			switch(pkg_manifest_item_get_type(items[fpkg->line])) {
+			/* Unused item types */
+			case pmt_comment:
+			case pmt_dir:
+			case pmt_dirlist:
+			case pmt_output:
+			case pmt_execute:
+				break;
+			case pmt_chdir:
+			{
+				const char *dir;
 				if (fpkg->curdir != NULL)
 					free(fpkg->curdir);
-				fpkg->curdir = strdup(
-				    fpkg->contents->lines[fpkg->line].data);
+				dir = pkg_manifest_item_get_data(
+				    items[fpkg->line]);
+				fpkg->curdir = strdup(dir);
+				break;
 			}
-			if (fpkg->contents->lines[fpkg->line].line_type ==
-			    PKG_LINE_FILE) {
+			case pmt_file:
+			{
+				const char *file_name, *md5;
 				char the_file[FILENAME_MAX + 1];
 
+				/*
+				 * We will always return from
+				 * this so increment the line
+				 * now to stop an infinite loop
+				*/
+				fpkg->line++;
+
+				/* Get the file's absolute name */
+				file_name = pkg_manifest_item_get_data(
+				    items[fpkg->line]);
 				snprintf(the_file, FILENAME_MAX, "%s/%s",
-				    fpkg->curdir,
-				    fpkg->contents->lines[fpkg->line].line);
+				    fpkg->curdir, file_name);
 				/* Remove extra slashes from the path */
 				pkg_remove_extra_slashes(the_file);
 
+				/* Open the file */
 				file = pkgfile_new_from_disk(the_file, 1);
 
 				if (file == NULL)
 					return NULL;
-				fpkg->line++;
 
 				/* Add the recorded md5 to the file */
-				if (fpkg->contents->lines[fpkg->line].line_type
-				  == PKG_LINE_COMMENT) {
-					strncpy(file->md5,
-					    fpkg->contents->lines[fpkg->line].data + 4,
-					    32);
+				md5 = pkg_manifest_item_get_attr(
+				    items[fpkg->line], pmia_md5);
+				if (md5 != NULL) {
+					strncpy(file->md5, md5, 32);
 					file->md5[33] = '\0';
 				}
 				return file;
 			}
-			fpkg->line++;
+			case pmt_other:
+			case pmt_error:
+				/*
+				 * This should never happen as
+				 * pmt_other and pmt_error don't
+				 * appear in pkg_freebsd_parser.y
+				 */
+				abort();
+				break;
+			}
 		}
+
+
+		/* If we are here there must be no more files in the manifest */
 		fpkg->line = 0;
 		return NULL;
 	} else {
