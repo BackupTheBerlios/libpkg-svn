@@ -51,9 +51,9 @@ main(int argc __unused, char *argv[] __unused)
 	SRunner *sr;
 
 	sr = srunner_create(pkgfile_suite());
-	srunner_add_suite(sr, pkg_freebsd_contents_suite());
 	srunner_add_suite(sr, pkg_manifest_item_suite());
 	srunner_add_suite(sr, pkg_manifest_suite());
+	srunner_add_suite(sr, pkg_manifest_freebsd_suite());
 
 	srunner_run_all(sr, CK_NORMAL);
 	fail_count = srunner_ntests_failed(sr);
