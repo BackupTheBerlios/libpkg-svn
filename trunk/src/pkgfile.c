@@ -150,11 +150,15 @@ pkgfile_get_type(struct pkgfile *file)
 	if (file->type == pkgfile_none) {
 		struct stat sb;
 
-		if (lstat(pkgfile_real_name(file), &sb) != 0)
-			return -1;
+		if (file->follow_link) {
+			if (stat(pkgfile_real_name(file), &sb) != 0)
+				return -1;
+		} else {
+			if (lstat(pkgfile_real_name(file), &sb) != 0)
+				return -1;
+		}
 
-		if (S_ISREG(sb.st_mode) ||
-		    (file->follow_link && S_ISLNK(sb.st_mode))) {
+		if (S_ISREG(sb.st_mode)) {
 			file->type = pkgfile_regular;
 			file->length = sb.st_size;
 		} else if(S_ISLNK(sb.st_mode)) {
