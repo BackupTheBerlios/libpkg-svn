@@ -58,7 +58,10 @@ pkg_manifest_new_freebsd_pkgfile(struct pkgfile *file)
 
 	pkgfile_seek(file, 0, SEEK_SET);
 	pkg_freebsd_in = pkgfile_get_fileptr(file);
-	pkg_freebsd_parse(&manifest);
+	manifest = NULL;
+	if (pkg_freebsd_parse(&manifest) != 0) {
+		return NULL;
+	}
 
 	manifest->manifest_get_file = freebsd_manifest_get_file;
 
