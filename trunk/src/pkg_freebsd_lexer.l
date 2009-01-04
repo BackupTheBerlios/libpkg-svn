@@ -37,6 +37,11 @@ void pkg_freebsd_error(const char *);
 static unsigned int pkg_line = 1;
 
 #define YY_NO_UNPUT
+
+#ifdef ECHO
+#undef ECHO
+#endif
+#define ECHO
 %}
 
 %x IN_COMMENT
@@ -120,5 +125,5 @@ pkg_freebsd_wrap()
 void
 pkg_freebsd_error(const char *msg __unused)
 {
-	printf("ERROR line %d: %s\n", pkg_line, msg);
+	/* Do nothing */
 }
