@@ -272,6 +272,9 @@ pkg_get_prefix(struct pkg *pkg)
 	if (pkg == NULL)
 		return NULL;
 
+	if (pkg->pkg_manifest == NULL)
+		pkg_get_manifest(pkg);
+
 	/* Read the prefix from the manifest */
 	if (pkg->pkg_prefix == NULL && pkg->pkg_manifest != NULL) {
 		const char *prefix;
