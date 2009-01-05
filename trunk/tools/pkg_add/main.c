@@ -293,7 +293,7 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 
 	/* Get the package's dependencies */
 	deps = pkg_get_dependencies(pkg);
-	for (i = 0, extras = 0; deps[i] != NULL; i++) {
+	for (i = 0, extras = 0; deps != NULL && deps[i] != NULL; i++) {
 		struct pkg *new_pkg;
 
 		/* Replace the empty package with one from disk */
@@ -304,16 +304,16 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 			pkg_list_free(deps);
 			return -1;
 		}
-		pkg_free(deps[i]);
-		deps[i] = new_pkg;
+		pkg_manifest_replace_dependency(pkg_get_manifest(pkg), deps[i],
+		    new_pkg);
 
 		action(PKG_DB_INFO,
 		    "Package '%s' depends on '%s' with '%s' origin.",
-		    pkg_get_name(pkg), pkg_get_name(deps[i]),
-		    pkg_get_origin(deps[i]));
+		    pkg_get_name(pkg), pkg_get_name(new_pkg),
+		    pkg_get_origin(new_pkg));
 
 		/* Skip installed packages */
-		if (pkg_db_is_installed(db, deps[i]) == 0)
+		if (pkg_db_is_installed(db, new_pkg) == 0)
 			continue;
 
 		if (run) {
@@ -321,7 +321,7 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 			 * Install the dependency. The record flag
 			 * is not passed down to be compatible
 			 */
-			if (install_package(deps[i], repo, db, prefix, prefix,
+			if (install_package(new_pkg, repo, db, prefix, prefix,
 			    flags & ~(no_record_install_flag)) != 0 &&
 			    (flags & force_flag) != force_flag) {
 				pkg_list_free(deps);
@@ -339,7 +339,6 @@ install_package(struct pkg *pkg, struct pkg_repo *repo, struct pkg_db *db,
 			}
 		}
 	}
-	pkg_list_free(deps);
 
 	ret = -1;
 
