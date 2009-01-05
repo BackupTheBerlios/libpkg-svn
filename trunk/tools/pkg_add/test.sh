@@ -13,7 +13,7 @@ shift
 TEST_MAX=9
 TOOL_NAME=pkg_add
 
-# Runs the tests for either the libpkg or cvs version of pkg_add
+# Runs the tests for either the libpkg or FreeBSD version of pkg_add
 do_tests() {
 	RUN=$1
 	LIBPKG=$2
