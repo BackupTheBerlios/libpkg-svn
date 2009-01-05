@@ -8,6 +8,9 @@ LDADD+=		-L/usr/local/lib -lcheck
 LDADD+=		${.OBJDIR}/../src/libpkg.a
 LDADD+=		-larchive -lmd
 
+DPADD+=		${.CURDIR}/../src/libpkg.a
+DPADD+=		${LIBMD} ${LIBARCHIVE}
+
 MAN=
 WARNS=	6
 
