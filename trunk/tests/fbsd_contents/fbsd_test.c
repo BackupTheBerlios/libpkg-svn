@@ -30,7 +30,6 @@
 #include <err.h>
 #include <pkg.h>
 #include <pkg_db.h>
-#include <pkg_freebsd.h>
 #include <stdlib.h>
 
 int
@@ -45,11 +44,9 @@ main(int argc __unused, char *argv[] __unused)
 	}
 
 	while((de = readdir(d)) != NULL) {
-		char *buf;
-		struct pkg_freebsd_contents *contents;
 		char file[FILENAME_MAX];
-		struct stat sb;
-		FILE *fd;
+		struct pkg_manifest *manifest;
+		struct pkgfile *pfile;
 
 		if (de->d_name[0] == '.')
 			continue;
@@ -57,25 +54,23 @@ main(int argc __unused, char *argv[] __unused)
 		if (de->d_type != DT_DIR)
 			continue;
 
-		printf("%s ", de->d_name);
 		snprintf(file, FILENAME_MAX, "/var/db/pkg/%s/+CONTENTS",
 		    de->d_name);
 
-		stat(file, &sb);
-		buf = malloc(sb.st_size);
+		pfile = pkgfile_new_from_disk(file, 0);
+		if (!pfile)
+			continue;
 
-		fd = fopen(file, "r");
-		fread(buf, sb.st_size, 1, fd);
-		fclose(fd);
-
-		contents = pkg_freebsd_contents_new(buf, sb.st_size);
-		if (contents == NULL) {
+		printf("%s ", de->d_name);
+		manifest = pkg_manifest_new_freebsd_pkgfile(pfile);
+		if (manifest == NULL) {
 			printf("FAILED\n");
 		} else {
 			printf("Ok\n");
 		}
-		pkg_freebsd_contents_free(contents);
-		free(buf);
+
+		pkg_manifest_free(manifest);
+		pkgfile_free(pfile);
 	}
 
 	closedir(d);
