@@ -27,8 +27,6 @@
 #include "test.h"
 
 #include <pkg.h>
-#include <pkg_freebsd.h>
-#include <pkg_freebsd_private.h>
 
 #include <string.h>
 
@@ -268,7 +266,7 @@ START_TEST(pkg_manifest_freebsd_good_conflicts_test)
 	const char *pkg_data = pkg_manifest_default "@conflicts data\n";
 	struct pkgfile *file;
 	struct pkg_manifest *manifest;
-	struct pkg **conflicts;
+	const char **conflicts;
 
 	file = pkgfile_new_regular("+CONTENTS", pkg_data, strlen(pkg_data));
 	manifest = pkg_manifest_new_freebsd_pkgfile(file);
