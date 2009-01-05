@@ -27,8 +27,6 @@
 
 #include "pkg.h"
 #include "pkg_private.h"
-#include "pkg_freebsd.h"
-#include "pkg_freebsd_private.h"
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -76,8 +74,6 @@ static struct freebsd_package	 *freebsd_package_new(void);
 static int			  freebsd_open_control_files(
 					struct freebsd_package *);
 static struct pkgfile		 *freebsd_get_next_entry(struct archive *);
-static int			  freebsd_parse_contents(
-					struct freebsd_package *);
 
 typedef enum {
 	fpkg_unknown,
@@ -93,7 +89,6 @@ struct freebsd_package {
 	const char *version;
 	char *origin;
 	struct pkgfile **control;
-	struct pkg_freebsd_contents *contents;
 	struct pkgfile *next_file;
 	struct pkgfile *cur_file;
 	unsigned int line;
@@ -141,7 +136,7 @@ pkg_new_freebsd_from_file(FILE *fd)
 	archive_read_support_compression_bzip2(fpkg->archive);
 	archive_read_support_compression_gzip(fpkg->archive);
 	archive_read_support_format_tar(fpkg->archive);
-	archive_read_open_stream(fpkg->archive, fd, 10240);
+	archive_read_open_FILE(fpkg->archive, fd);
 
 	/*
 	 * Get the +CONTENTS file.
@@ -269,25 +264,6 @@ pkg_new_freebsd_empty(const char *pkg_name)
 	fpkg->pkg_type = fpkg_from_empty;
 
 	return pkg;
-}
-
-/**
- * @brief Gets the contents struct from a package
- *
- * This will go away before 0.2
- * @return The contents struct
- */
-struct pkg_freebsd_contents *
-pkg_freebsd_get_contents(struct pkg *pkg)
-{
-	struct freebsd_package *fpkg;
-
-	if (pkg == NULL || pkg->data == NULL)
-		return NULL;
-	fpkg = pkg->data;
-	freebsd_open_control_files(fpkg);
-
-	return fpkg->contents;
 }
 
 /**
@@ -482,16 +458,12 @@ freebsd_get_control_file(struct pkg *pkg, const char *filename)
 static struct pkg_manifest *
 freebsd_get_manifest(struct pkg *pkg)
 {
-	struct freebsd_package *fpkg;
 	struct pkgfile *contents_file;
 
 	assert(pkg != NULL);
 	assert(pkg->pkg_manifest == NULL);
 
 	/* Get the +CONTENTS file */
-	fpkg = pkg->data;
-	assert(fpkg != NULL);
-	freebsd_parse_contents(fpkg);
 	contents_file = pkg_get_control_file(pkg, "+CONTENTS");
 
 	pkg->pkg_manifest = pkg_manifest_new_freebsd_pkgfile(contents_file);
@@ -1106,8 +1078,6 @@ freebsd_free(struct pkg *pkg)
 			fclose(fpkg->fd);
 		if (fpkg->archive != NULL)
 			archive_read_finish(fpkg->archive);
-		if (fpkg->contents != NULL)
-			pkg_freebsd_contents_free(fpkg->contents);
 
 		if (fpkg->curdir != NULL)
 			free(fpkg->curdir);
@@ -1156,7 +1126,6 @@ freebsd_package_new()
 	fpkg->archive = NULL;
 	fpkg->db_dir = NULL;
 	fpkg->control = NULL;
-	fpkg->contents = NULL;
 	fpkg->origin = NULL;
 	fpkg->version = NULL;
 	fpkg->next_file = NULL;
@@ -1326,42 +1295,6 @@ freebsd_get_next_entry(struct archive *a)
 
 	pkgfile_set_mode(file, sb->st_mode);
 	return file;
-}
-
-/**
- * @brief Parses the packages +CONTENTS file
- * @return 0 on success, or -1 on error
- */
-static int
-freebsd_parse_contents(struct freebsd_package *fpkg)
-{
-	const char *file_data;
-	struct pkgfile *contents_file;
-	int i;
-	
-	assert(fpkg != NULL);
-
-	if (fpkg->contents != NULL)
-		return 0;
-
-	freebsd_open_control_files(fpkg);
-
-	contents_file = NULL;
-	for (i = 0; fpkg->control[i] != NULL; i++) {
-		if (strcmp("+CONTENTS",
-		    basename(pkgfile_get_name(fpkg->control[i]))) == 0) {
-			contents_file = fpkg->control[i];
-			break;
-		}
-	}
-	if (contents_file == NULL)
-		return -1;
-
-	file_data = pkgfile_get_data(contents_file);
-	fpkg->contents = pkg_freebsd_contents_new(file_data,
-	    pkgfile_get_size(contents_file));
-
-	return 0;
 }
 
 /**

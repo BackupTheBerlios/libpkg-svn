@@ -40,10 +40,8 @@
 
 #include "pkg.h"
 #include "pkg_db.h"
-#include "pkg_freebsd.h"
 #include "pkg_private.h"
 #include "pkg_db_private.h"
-#include "pkg_freebsd_private.h"
 
 #define DB_LOCATION	"/var/db/pkg"
 
@@ -725,24 +723,24 @@ freebsd_register(struct pkg *pkg, pkg_db_action *pkg_action, void *data,
 		 * as we don't need any output from this.
 		 */
 		for (pos = 0; control[pos] != NULL; pos++) {
+			struct pkgfile *file;
 			if (prefix != NULL &&
 			    strcmp(pkgfile_get_name(control[pos]),
 			    "+CONTENTS") == 0) {
-				struct pkg_freebsd_contents *contents;
-				contents = pkg_freebsd_get_contents(pkg);
+				struct pkg_manifest *manifest;
 
-				pkg_freebsd_contents_update_prefix(contents,
-				    prefix);
-				pkgfile_free(control[pos]);
-				control[pos] = pkg_freebsd_contents_get_file(
-				    contents);
-			}
-			freebsd_install_file(pkg, pkg_action_null, data,
-			    control[pos]);
+				manifest = pkg_get_manifest(pkg);
+				pkg_manifest_set_attr(pkg->pkg_manifest,
+				    pkgm_prefix, prefix);
 
-			/* Make the +INSTALL file installable */
-			if (strcmp(pkgfile_get_name(control[pos]), "+INSTALL")
-			    == 0) {
+				file = pkg_manifest_get_file(manifest);
+			} else
+				file = control[pos];
+			freebsd_install_file(pkg, pkg_action_null, data, file);
+
+			/* Make the +INSTALL file executable */
+			if (strcmp(pkgfile_get_name(control[pos]),
+			    "+INSTALL") == 0) {
 				chmod("+INSTALL", 0755);
 			}
 		}

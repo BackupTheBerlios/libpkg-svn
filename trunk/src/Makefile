@@ -9,7 +9,7 @@ SRCS		+= pkg.c pkg_freebsd.c
 SRCS		+= pkg_manifest.c pkg_manifest_freebsd.c
 
 # Handle FreeBSD +CONTENTS files
-SRCS		+= pkg_freebsd_contents.c pkg_freebsd_parser.c pkg_freebsd_lexer.c
+SRCS		+= pkg_freebsd_parser.c pkg_freebsd_lexer.c
 
 # Package files
 SRCS		+= pkgfile.c
