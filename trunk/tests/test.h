@@ -32,7 +32,6 @@ int cleanup_testdir(void);
 #define CLEANUP_TESTDIR() fail_unless(cleanup_testdir() == 0, "Couldn't cleanup the test dir")
 
 Suite *pkgfile_suite(void);
-Suite *pkg_freebsd_contents_suite(void);
 Suite *pkg_manifest_suite(void);
 Suite *pkg_manifest_item_suite(void);
 Suite *pkg_manifest_freebsd_suite(void);
