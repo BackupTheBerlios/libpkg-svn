@@ -16,8 +16,8 @@ ALL_TESTS="pkg_delete"
 # Builds the chroot dir for the test
 build_chroot() {
 	# Remove the base dir
-	rm -fr ${BASE_DIR}/base
-	chflags -R noschg ${BASE_DIR}/base
+	rm -fr ${BASE_DIR}/base > /dev/null 2>&1
+	chflags -R noschg ${BASE_DIR}/base > /dev/null 2>&1
 	rm -fr ${BASE_DIR}/base
 
 	# Extract a clean base dir
@@ -48,7 +48,7 @@ do_test() {
 	fi
 	chroot ${BASE_DIR}/base /run.sh ${PACKAGE} ${i} > ${RUN}.stdout.${i} 2> ${RUN}.stderr.${i}
 	# Get the mtree file to use to compare the filesystems
-	mtree -c -p ${BASE_DIR}/base | grep -v "^\#[[:space:]]*date:" | sed "s/time=[^ ]*//" | grep -v "^[ ]*${TOOL_NAME}[^\.]" > ${RUN}.mtree.${i}
+	mtree -c -K cksum -p ${BASE_DIR}/base | grep -v "^\#[[:space:]]*date:" | sed "s/time=[^ ]*//" | grep -v "^[ ]*${TOOL_NAME}[^\.]" > ${RUN}.mtree.${i}
 	# Create a tarball of the important dir's to compare later
 	rm ${BASE_DIR}/${RUN}-${i}.tar
 	tar -cf ${BASE_DIR}/${RUN}-${i}.tar ${BASE_DIR}/base/var/db/pkg ${BASE_DIR}/base/usr/local ${BASE_DIR}/base/usr/pkg
@@ -72,10 +72,12 @@ run_test() {
 			fi
 		done
 	else
-		# Get the reference data from the FreeBSD cvs pkg_info
+		# Get the reference data from the FreeBSD SVN pkg_*
 		do_tests cvs
-		# Get the test data from out pkg_info
+		# Get the test data from our pkg_* tool
 		do_tests libpkg true
+
+		# Remove the files that are identical as they passed
 		i=1
 		while [ $i -le $TEST_MAX ] ; do
 			for file in stdout stderr mtree; do
