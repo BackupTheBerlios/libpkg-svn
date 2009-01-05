@@ -12,6 +12,10 @@ LDADD	 = ${.CURDIR}/../../src/libpkg_p.a
 LDADD	 = ${.CURDIR}/../../src/libpkg.a
 .endif
 LDADD	+= -lmd -larchive -lbz2 -lz
+
+DPADD	+= ${.CURDIR}/../../src/libpkg.a
+DPADD	+= ${LIBMD} ${LIBARCHIVE} ${LIBBZ2} ${LIBZ}
+
 NOMAN	 = 1
 NO_MAN	 = 1
 
