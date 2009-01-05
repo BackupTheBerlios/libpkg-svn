@@ -1,6 +1,11 @@
 #!/bin/sh
 
-. `dirname $0`/../test.sh
+cd `dirname $0`
+DIR=`pwd`
+
+cd ..
+. ${DIR}/../test.sh
+cd ${DIR}
 
 TEST_NO=$1
 shift
@@ -8,7 +13,7 @@ shift
 TEST_MAX=7
 TOOL_NAME=pkg_delete
 
-# Runs the tests for either the libpkg or cvs version of pkg_delete
+# Runs the tests for either the libpkg or FreeBSD version of pkg_delete
 do_tests() {
 	RUN=$1
 	LIBPKG=$2
