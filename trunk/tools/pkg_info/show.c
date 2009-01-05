@@ -290,7 +290,7 @@ show_prefix(struct pkg *pkg, const char *seperator, const char *title,
 	if (!quiet)
 		printf("%s%s", seperator, title);
 
-	printf("\tCWD %s\n", pkg_get_prefix(pkg));
+	printf("\tCWD to %s\n", pkg_get_prefix(pkg));
 }
 
 static void
@@ -324,7 +324,7 @@ show_plist(struct pkg *pkg, const char *seperator, const char *title, int quiet)
 		printf("\tComment: PKG_FORMAT_REVISION:1.1\n");
 		printf("\tPackage name: %s\n",pkg_get_name(pkg));
 		printf("\tPackage origin: %s\n", pkg_get_origin(pkg));
-		printf("\tCWD %s\n", pkg_get_prefix(pkg));
+		printf("\tCWD to %s\n", pkg_get_prefix(pkg));
 
 		/* Print the dependencies of the contents file */
 		deps = pkg_get_dependencies(pkg);
